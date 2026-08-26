@@ -18,8 +18,8 @@ function renderAuth(mode='login',message=''){
   const el=document.getElementById('authContent');
   if(mode==='login') el.innerHTML=`<div class="auth-title"><h1>Welcome back</h1><p>Login to your NR BizPro business account.</p></div>${message?`<div class="notice">${esc(message)}</div>`:''}<form onsubmit="login(event)"><label>Email or Mobile<input id="loginId" required autocomplete="username" placeholder="you@example.com"></label><label>Password<input id="loginPassword" required type="password" autocomplete="current-password" placeholder="••••••••"></label><button class="primary auth-btn">Login</button></form><p class="auth-switch">New business? <button onclick="renderAuth('signup')">Create account</button></p>`;
   if(mode==='signup') el.innerHTML=`<div class="auth-title"><h1>Create your business account</h1><p>Sign up first. Billing activates only after subscription payment.</p></div>${message?`<div class="notice">${esc(message)}</div>`:''}<form onsubmit="signup(event)"><div class="auth-grid"><label>Business Name<input id="suBusiness" required placeholder="ABC Traders"></label><label>Owner Name<input id="suOwner" required placeholder="Owner name"></label><label>Mobile<input id="suMobile" required inputmode="tel" placeholder="10 digit mobile"></label><label>Email<input id="suEmail" required type="email" placeholder="you@example.com"></label><label>Business Category<input id="suCategory" required placeholder="Garage / Retail / Service..."></label><label>GSTIN <span>(optional)</span><input id="suGst" placeholder="Optional"></label></div><label>Password<input id="suPassword" required minlength="6" type="password" placeholder="Minimum 6 characters"></label><button class="primary auth-btn">Continue to Plans</button></form><p class="auth-switch">Already registered? <button onclick="renderAuth('login')">Login</button></p>`;
-  if(mode==='plans') el.innerHTML=`<div class="auth-title"><h1>Choose your plan</h1><p>Subscription is paid to NR BizPro. Your customers' payments are never collected by this software.</p></div><div class="plans"><button class="plan" onclick="startSubscription('monthly')"><b>Monthly</b><strong>${money(PLAN_MONTHLY)}</strong><span>30 days billing access</span></button><button class="plan featured" onclick="startSubscription('yearly')"><b>Yearly</b><strong>${money(PLAN_YEARLY)}</strong><span>12 months billing access</span><em>Best value</em></button></div><p class="small-note">Payment screen below is a test activation flow for the current static build. A real gateway must be connected before selling subscriptions.</p>`;
-  if(mode==='payment') el.innerHTML=`<div class="auth-title"><h1>Subscription payment</h1><p>Selected plan: <b>${currentUser.pendingPlan==='yearly'?'Yearly':'Monthly'}</b> — <b>${money(currentUser.pendingAmount)}</b></p></div><div class="payment-box"><div class="fake-card"><span>NR BizPro Subscription</span><strong>${money(currentUser.pendingAmount)}</strong><small>Secure payment gateway will be connected here</small></div><button class="primary auth-btn" onclick="completeTestPayment()">Pay & Activate (Test)</button><button class="secondary auth-btn" onclick="renderAuth('plans')">Back to Plans</button></div><p class="small-note">This test button does not move real money. It only lets us verify activation and expiry logic before gateway credentials are added.</p>`;
+  if(mode==='plans') el.innerHTML=`<div class="auth-title"><h1>Choose your plan</h1><p>Subscription is paid to NR BizPro. Your customers' payments are never collected by this software.</p></div><div class="plans"><button class="plan" onclick="startSubscription('monthly')"><b>Monthly</b><strong>${money(PLAN_MONTHLY)}</strong><span>30 days billing access</span></button><button class="plan featured" onclick="startSubscription('yearly')"><b>Yearly</b><strong>${money(PLAN_YEARLY)}</strong><span>12 months billing access</span><em>Best value</em></button></div>${message?`<div class="notice">${esc(message)}</div>`:''}<p class="small-note">Payments are securely processed by Razorpay. Billing access is activated only after payment signature verification.</p>`;
+  if(mode==='payment') el.innerHTML=`<div class="auth-title"><h1>Subscription payment</h1><p>Selected plan: <b>${currentUser.pendingPlan==='yearly'?'Yearly':'Monthly'}</b> — <b>${money(currentUser.pendingAmount)}</b></p></div><div class="payment-box"><div class="fake-card"><span>NR BizPro Subscription</span><strong>${money(currentUser.pendingAmount)}</strong><small>Secure checkout by Razorpay</small></div><button class="primary auth-btn" onclick="openRazorpayCheckout()">Pay with Razorpay</button><button class="secondary auth-btn" onclick="renderAuth('plans')">Back to Plans</button></div><p class="small-note">You will complete payment on Razorpay Checkout. NR BizPro never collects your business customers' payments.</p>`;
 }
 
 function signup(e){
@@ -27,7 +27,7 @@ function signup(e){
   const business=document.getElementById('suBusiness').value.trim(),owner=document.getElementById('suOwner').value.trim(),mobile=document.getElementById('suMobile').value.trim(),email=document.getElementById('suEmail').value.trim().toLowerCase(),category=document.getElementById('suCategory').value.trim(),gst=document.getElementById('suGst').value.trim(),password=document.getElementById('suPassword').value;
   const users=readUsers();
   if(users.some(u=>u.email===email||u.mobile===mobile)){renderAuth('login','An account already exists with this email or mobile.');return;}
-  currentUser={id:crypto.randomUUID(),business,owner,mobile,email,category,gst,password,status:'pending',plan:null,subscriptionEnds:null,pendingPlan:null,pendingAmount:0};
+  currentUser={id:crypto.randomUUID(),business,owner,mobile,email,category,gst,password,status:'pending',plan:null,subscriptionEnds:null,pendingPlan:null,pendingAmount:0,lastPaymentId:null};
   users.push(currentUser);writeUsers(users);renderAuth('plans');
 }
 
@@ -36,11 +36,39 @@ function startSubscription(plan){
   currentUser.pendingPlan=plan;currentUser.pendingAmount=plan==='yearly'?PLAN_YEARLY:PLAN_MONTHLY;
   persistUser();renderAuth('payment');
 }
-function completeTestPayment(){
-  const days=currentUser.pendingPlan==='yearly'?365:30;
-  const end=new Date();end.setDate(end.getDate()+days);
-  currentUser.status='active';currentUser.plan=currentUser.pendingPlan;currentUser.subscriptionEnds=end.toISOString();currentUser.pendingPlan=null;currentUser.pendingAmount=0;persistUser();localStorage.setItem(SESSION_KEY,currentUser.id);state=loadData(currentUser.id);state.settings.name=currentUser.business;state.settings.category=currentUser.category;state.settings.mobile=currentUser.mobile;state.settings.gst=currentUser.gst;save();showApp();
+
+async function openRazorpayCheckout(){
+  if(!currentUser?.pendingPlan)return;
+  if(typeof Razorpay==='undefined'){alert('Razorpay Checkout did not load. Please refresh and try again.');return;}
+  const btn=document.querySelector('.auth-btn');if(btn){btn.disabled=true;btn.textContent='Opening secure payment...';}
+  try{
+    const orderRes=await fetch('/api/create-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:currentUser.pendingPlan,businessName:currentUser.business,email:currentUser.email,mobile:currentUser.mobile})});
+    const order=await orderRes.json();
+    if(!orderRes.ok)throw new Error(order.error||'Could not create payment order.');
+    const options={key:order.keyId,amount:order.amount,currency:order.currency,name:'NR BizPro',description:`${currentUser.pendingPlan==='yearly'?'Yearly':'Monthly'} Billing Software`,order_id:order.orderId,prefill:{name:currentUser.owner,email:currentUser.email,contact:currentUser.mobile},notes:{business_id:currentUser.id,plan:currentUser.pendingPlan},theme:{color:'#172033'},modal:{ondismiss:()=>{if(btn){btn.disabled=false;btn.textContent='Pay with Razorpay';}}},handler:async function(response){await verifyRazorpayPayment(response);}};
+    const rzp=new Razorpay(options);
+    rzp.on('payment.failed',function(response){alert(response.error?.description||'Payment failed. Please try again.');if(btn){btn.disabled=false;btn.textContent='Pay with Razorpay';}});
+    rzp.open();
+  }catch(error){alert(error.message||'Unable to start payment.');if(btn){btn.disabled=false;btn.textContent='Pay with Razorpay';}}
 }
+
+async function verifyRazorpayPayment(response){
+  try{
+    const res=await fetch('/api/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(response)});
+    const data=await res.json();
+    if(!res.ok||!data.verified)throw new Error(data.error||'Payment verification failed.');
+    activateAfterVerifiedPayment(data.paymentId);
+  }catch(error){alert(error.message||'Payment verification failed. Your account was not activated.');}
+}
+
+function activateAfterVerifiedPayment(paymentId){
+  const days=currentUser.pendingPlan==='yearly'?365:30;
+  const now=new Date();
+  const base=currentUser.status==='active'&&currentUser.subscriptionEnds&&new Date(currentUser.subscriptionEnds)>now?new Date(currentUser.subscriptionEnds):now;
+  base.setDate(base.getDate()+days);
+  currentUser.status='active';currentUser.plan=currentUser.pendingPlan;currentUser.subscriptionEnds=base.toISOString();currentUser.pendingPlan=null;currentUser.pendingAmount=0;currentUser.lastPaymentId=paymentId;persistUser();localStorage.setItem(SESSION_KEY,currentUser.id);state=loadData(currentUser.id);state.settings.name=currentUser.business;state.settings.category=currentUser.category;state.settings.mobile=currentUser.mobile;state.settings.gst=currentUser.gst;save();showApp();
+}
+
 function persistUser(){const users=readUsers().map(u=>u.id===currentUser.id?currentUser:u);writeUsers(users);}
 function login(e){
   e.preventDefault();const id=document.getElementById('loginId').value.trim().toLowerCase(),password=document.getElementById('loginPassword').value;const user=readUsers().find(u=>(u.email===id||u.mobile===id)&&u.password===password);
@@ -48,7 +76,7 @@ function login(e){
   currentUser=user;
   if(user.status==='active'&&user.subscriptionEnds&&new Date(user.subscriptionEnds)<=new Date()){currentUser.status='expired';persistUser();}
   if(currentUser.status==='pending'||currentUser.status==='expired'){renderAuth('plans',currentUser.status==='expired'?'Your subscription has expired. Renew to continue billing.':'Your account is created. Choose a subscription to activate billing.');return;}
-  localStorage.setItem(SESSION_KEY,currentUser.id);state=loadData(currentUser.id);showApp();
+  localStorage.setItem(SESSION_KEY,currentUser.id);state=loadData(user.id);showApp();
 }
 function logout(){localStorage.removeItem(SESSION_KEY);currentUser=null;state=null;document.getElementById('app').classList.add('hidden');document.getElementById('authScreen').classList.remove('hidden');renderAuth('login');}
 function checkSession(){const id=getSession();if(!id){renderAuth('login');return}const user=readUsers().find(u=>u.id===id);if(!user){logout();return}currentUser=user;if(user.status!=='active'||!user.subscriptionEnds||new Date(user.subscriptionEnds)<=new Date()){currentUser.status='expired';persistUser();localStorage.removeItem(SESSION_KEY);renderAuth('plans','Subscription expired. Renew to restore billing access.');return}state=loadData(user.id);showApp();}
@@ -71,4 +99,5 @@ function printBill(id){const b=state.bills.find(x=>x.id===id),s=state.settings,r
 function saveSettings(){state.settings={name:document.getElementById('businessName').value.trim()||'Your Business',category:document.getElementById('businessCategory').value.trim(),mobile:document.getElementById('businessMobile').value.trim(),gst:document.getElementById('businessGst').value.trim(),address:document.getElementById('businessAddress').value.trim()};currentUser.business=state.settings.name;currentUser.category=state.settings.category;currentUser.mobile=state.settings.mobile;currentUser.gst=state.settings.gst;persistUser();save();alert('Business settings saved.')}
 function updateStats(){document.getElementById('billCount').textContent=state.bills.length;document.getElementById('itemCount').textContent=state.items.length;const d=new Date().toDateString();document.getElementById('todaySales').textContent=money(state.bills.filter(b=>new Date(b.date).toDateString()===d).reduce((a,b)=>a+b.total,0))}
 function loadSettings(){document.getElementById('businessName').value=state.settings.name;document.getElementById('businessCategory').value=state.settings.category;document.getElementById('businessMobile').value=state.settings.mobile;document.getElementById('businessGst').value=state.settings.gst;document.getElementById('businessAddress').value=state.settings.address}
+
 checkSession();

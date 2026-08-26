@@ -1,0 +1,8 @@
+{
+  "name": "nrbizpro",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@vercel/postgres": "latest"
+  }
+}

@@ -8,9 +8,18 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="authScreen" class="auth-screen"><div class="auth-card"><div class="auth-brand"><span class="brand-mark">NR</span><div><strong>NR BizPro</strong><small>One Platform. Every Business.</small></div></div><div id="authContent"></div></div></div>
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-mark">NR</span><div><strong>NR BizPro</strong><small>One Platform. Every Business.</small></div></div>
+      <div id="authContent"></div>
+    </div>
+  </div>
+
   <div id="app" class="hidden">
-    <header class="topbar"><div class="brand"><span class="brand-mark">NR</span><div><strong>NR BizPro</strong><small>One Platform. Every Business.</small></div></div><div class="top-actions"><span class="status-dot"></span><span id="accountStatus">Active</span><button class="logout" onclick="logout()">Logout</button></div></header>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">NR</span><div><strong>NR BizPro</strong><small>One Platform. Every Business.</small></div></div>
+      <div class="top-actions"><span class="status-dot"></span><span id="accountStatus">Active</span><button class="logout" onclick="logout()">Logout</button></div>
+    </header>
     <main class="shell">
       <section class="hero"><div><p class="eyebrow">BILLING PLATFORM</p><h1>Simple billing. Clean history.</h1><p class="muted">Create bills, manage your own product/service list, set margins and keep every invoice in one place.</p></div><button class="primary" onclick="openBillModal()">+ New Bill</button></section>
       <section class="stats"><div class="stat"><span>Today</span><strong id="todaySales">₹0</strong></div><div class="stat"><span>Total Bills</span><strong id="billCount">0</strong></div><div class="stat"><span>Items</span><strong id="itemCount">0</strong></div><div class="stat"><span>Subscription</span><strong id="subscriptionStat" class="active">Active</strong></div></section>
@@ -22,6 +31,7 @@
     </main>
   </div>
   <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h2 id="modalTitle">Add Item</h2><button onclick="closeModal()">×</button></div><div id="modalBody"></div></div></div>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

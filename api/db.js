@@ -6,14 +6,19 @@ export async function initDb(){
   if(ready) return ready;
   ready=(async()=>{
     await sql`CREATE TABLE IF NOT EXISTS businesses (id text PRIMARY KEY,business text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL UNIQUE,category text NOT NULL,gst text,password_hash text NOT NULL,status text NOT NULL DEFAULT 'pending',plan text,subscription_ends timestamptz,pending_plan text,pending_amount numeric DEFAULT 0,last_payment_id text,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS phone_verified boolean NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`;
     await sql`CREATE TABLE IF NOT EXISTS business_data (business_id text PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,items jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',settings jsonb NOT NULL DEFAULT '{}'::jsonb,updated_at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE TABLE IF NOT EXISTS sessions (token text PRIMARY KEY,business_id text REFERENCES businesses(id) ON DELETE CASCADE,admin boolean NOT NULL DEFAULT false,expires_at timestamptz NOT NULL)`;
     await sql`CREATE TABLE IF NOT EXISTS admins (email text PRIMARY KEY,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`CREATE TABLE IF NOT EXISTS otp_challenges (business_id text PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,phone_req_id text,email_hash text,phone_sent_at timestamptz,email_sent_at timestamptz,phone_attempts integer NOT NULL DEFAULT 0,email_attempts integer NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now())`;
   })();
   return ready;
 }
 export function hashPassword(password){return new Promise((resolve,reject)=>crypto.scrypt(password,'NRBizPro-v1',64,(e,k)=>e?reject(e):resolve(k.toString('hex'))));}
 export function verifyPassword(password,hash){return hashPassword(password).then(h=>crypto.timingSafeEqual(Buffer.from(h,'hex'),Buffer.from(hash,'hex'))).catch(()=>false)}
+export function hashOtp(otp){return crypto.createHash('sha256').update(`NRBizPro-OTP-v1:${otp}`).digest('hex')}
+export function makeOtp(){return String(crypto.randomInt(100000,1000000))}
 export function token(){return crypto.randomBytes(32).toString('hex')}
 export function cookie(res,name,value,maxAge=60*60*24*30){res.setHeader('Set-Cookie',`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`)}
 export function clearCookie(res,name){res.setHeader('Set-Cookie',`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`)}

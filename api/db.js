@@ -48,6 +48,15 @@ export async function initDb(){
     await sql`CREATE TABLE IF NOT EXISTS sessions (token text PRIMARY KEY,business_id text REFERENCES businesses(id) ON DELETE CASCADE,admin boolean NOT NULL DEFAULT false,expires_at timestamptz NOT NULL)`;
     await sql`CREATE TABLE IF NOT EXISTS admins (email text PRIMARY KEY,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE TABLE IF NOT EXISTS otp_challenges (business_id text PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,phone_req_id text,email_hash text,phone_sent_at timestamptz,email_sent_at timestamptz,phone_attempts integer NOT NULL DEFAULT 0,email_attempts integer NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now())`;
+
+    // Keep a non-OTP demo account available for testing the billing UI.
+    const demoHash=await hashPassword('Demo@12345');
+    const demoId='demo-nrbizpro';
+    await sql`INSERT INTO businesses(id,business,owner,mobile,email,category,gst,password_hash,status,plan,subscription_ends,phone_verified,email_verified)
+      VALUES(${demoId},'NR BizPro Demo','Demo Owner','9000000000','demo@nrbizpro.in','SERVICE','',${demoHash},'active','demo',now()+interval '365 days',true,true)
+      ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash,status='active',plan='demo',subscription_ends=EXCLUDED.subscription_ends,phone_verified=true,email_verified=true,updated_at=now()`;
+    await sql`INSERT INTO business_data(business_id,settings) VALUES(${demoId},${JSON.stringify({name:'NR BizPro Demo',category:'SERVICE',mobile:'9000000000',gst:'',address:''})}::jsonb)
+      ON CONFLICT(business_id) DO NOTHING`;
   })();
   return ready;
 }

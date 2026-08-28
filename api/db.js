@@ -1,5 +1,15 @@
-import { sql } from '@vercel/postgres';
+import { createClient } from '@vercel/postgres';
 import crypto from 'node:crypto';
+
+// Vercel is currently providing a direct Postgres connection string.
+// The tagged `sql` helper expects a pooled connection string, so use
+// createClient() for direct connections and expose a compatible tagged helper.
+export async function sql(strings,...values){
+  const client=createClient();
+  await client.connect();
+  try{return await client.sql(strings,...values)}
+  finally{await client.end()}
+}
 
 let ready;
 export async function initDb(){
@@ -26,4 +36,3 @@ export function getCookie(req,name){const raw=req.headers.cookie||'';return raw.
 export async function sessionBusiness(req){await initDb();const t=getCookie(req,'nr_session');if(!t)return null;const r=await sql`SELECT b.* FROM sessions s JOIN businesses b ON b.id=s.business_id WHERE s.token=${t} AND s.admin=false AND s.expires_at>now()`;return r.rows[0]||null}
 export async function sessionAdmin(req){await initDb();const t=getCookie(req,'nr_admin');if(!t)return false;const r=await sql`SELECT 1 FROM sessions WHERE token=${t} AND admin=true AND expires_at>now()`;return !!r.rowCount}
 export async function ensureAdmin(){await initDb();const email=process.env.ADMIN_EMAIL||'admin@nrbizpro.in';const pass=process.env.ADMIN_PASSWORD||'NRBizPro@2026';const h=await hashPassword(pass);await sql`INSERT INTO admins(email,password_hash) VALUES(${email},${h}) ON CONFLICT(email) DO NOTHING`;return {email,defaulted:!process.env.ADMIN_EMAIL||!process.env.ADMIN_PASSWORD}}
-export { sql };

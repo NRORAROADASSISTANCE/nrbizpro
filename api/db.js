@@ -1,11 +1,17 @@
 import { createClient } from '@vercel/postgres';
 import crypto from 'node:crypto';
 
-// Vercel is currently providing a direct Postgres connection string.
-// The tagged `sql` helper expects a pooled connection string, so use
-// createClient() for direct connections and expose a compatible tagged helper.
+// Prefer the direct Postgres URL when Vercel has not exposed
+// POSTGRES_URL_NON_POOLING. This fixes production auth when the
+// project already has a direct POSTGRES_URL configured.
+function getConnectionString(){
+  return process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
+}
+
 export async function sql(strings,...values){
-  const client=createClient();
+  const connectionString=getConnectionString();
+  if(!connectionString) throw new Error('Database connection is not configured. Add POSTGRES_URL_NON_POOLING or POSTGRES_URL in Vercel.');
+  const client=createClient({connectionString});
   await client.connect();
   try{return await client.sql(strings,...values)}
   finally{await client.end()}

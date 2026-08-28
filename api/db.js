@@ -1,19 +1,40 @@
-import { createClient } from '@vercel/postgres';
+import pg from 'pg';
 import crypto from 'node:crypto';
 
-// Support the direct connection already configured as POSTGRES_URL.
-// Fall back to the standard non-pooling/direct variables when available.
-function dbClient(){
-  const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || process.env.DATABASE_URL;
-  if(!connectionString) throw new Error('Database connection is not configured.');
-  return createClient({ connectionString });
+const { Pool } = pg;
+
+// Prisma Postgres is standard PostgreSQL. Use the pooled DATABASE_URL for
+// application traffic instead of @vercel/postgres' Prisma/HTTP adapter.
+function getConnectionString(){
+  return process.env.DATABASE_URL
+    || process.env.POSTGRES_URL
+    || process.env.POSTGRES_PRISMA_URL
+    || process.env.POSTGRES_URL_NON_POOLING
+    || process.env.DIRECT_URL;
 }
 
+function dbPool(){
+  const connectionString=getConnectionString();
+  if(!connectionString) throw new Error('Database connection is not configured.');
+
+  if(!globalThis.__NRBIZPRO_POOL){
+    const needsSsl=/sslmode=require/i.test(connectionString) || /\.db\.prisma\.io/i.test(connectionString);
+    globalThis.__NRBIZPRO_POOL=new Pool({
+      connectionString,
+      max:5,
+      idleTimeoutMillis:10000,
+      connectionTimeoutMillis:10000,
+      ...(needsSsl ? {ssl:{rejectUnauthorized:false}} : {})
+    });
+  }
+  return globalThis.__NRBIZPRO_POOL;
+}
+
+// Small tagged-template wrapper compatible with the existing API code.
+// Example: sql`SELECT * FROM users WHERE id=${id}`
 export async function sql(strings,...values){
-  const client=dbClient();
-  await client.connect();
-  try{return await client.sql(strings,...values)}
-  finally{await client.end()}
+  const text=strings.reduce((out,s,i)=>out+s+(i<values.length?`$${i+1}`:''),'');
+  return dbPool().query(text,values);
 }
 
 let ready;

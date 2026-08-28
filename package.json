@@ -1,12 +1,12 @@
 {
   "name": "nrbizpro",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "@vercel/postgres": "0.10.0"
+    "pg": "8.16.3"
   }
 }

@@ -2,12 +2,20 @@
   "name": "nrbizpro-desktop",
   "version": "1.0.0",
   "private": true,
-  "description": "NR BizPro Windows desktop shell",
+  "description": "NR BizPro Windows desktop client",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder --win"
   },
   "devDependencies": {
-    "electron": "^38.0.0"
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "in.nrbizpro.desktop",
+    "productName": "NR BizPro",
+    "files": ["**/*"],
+    "win": { "target": ["nsis", "portable"] }
   }
 }

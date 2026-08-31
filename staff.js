@@ -8,4 +8,6 @@
   window.toggleStaff=async function(id){try{await api('/api/staff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'toggle',staffId:id})});closeModal();openStaffManager()}catch(err){alert(err.message)}};
   window.deleteStaff=async function(id){if(!confirm('Delete this staff login?'))return;try{await api('/api/staff',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',staffId:id})});closeModal();openStaffManager()}catch(err){alert(err.message)}};
   window.showStaffTab=function(){if(typeof showTab==='function')showTab('staff');openStaffManager()};
+  const baseRenderAuth=window.renderAuth;
+  window.renderAuth=function(mode='login',message=''){baseRenderAuth(mode,message);if(mode==='login'){const el=document.getElementById('authContent');if(el&&!el.querySelector('[data-staff-login]')){const box=document.createElement('div');box.className='auth-switch';box.innerHTML='<button class="secondary auth-btn" data-staff-login>Staff Login</button>';box.querySelector('button').onclick=()=>window.renderStaffLogin();el.appendChild(box)}}};
 })();

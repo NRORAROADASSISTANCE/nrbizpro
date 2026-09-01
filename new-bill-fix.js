@@ -43,5 +43,19 @@
   }
 
   document.addEventListener('click',captureClick,true);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){});
+
+  // EV showroom module is loaded only after the logged-in business profile is available.
+  function loadEVModuleWhenReady(){
+    try{
+      var c='';
+      if(typeof currentUser!=='undefined' && currentUser) c=currentUser.category||'';
+      if(!c && typeof state!=='undefined' && state && state.settings) c=state.settings.category||'';
+      if(!/ev two|electric two|ev 2|ev scooter|ev bike/i.test(String(c))){
+        setTimeout(loadEVModuleWhenReady,700); return;
+      }
+      if(window.__nrEvModuleLoaded || document.getElementById('nrEvModuleScript')) return;
+      var s=document.createElement('script'); s.id='nrEvModuleScript'; s.src='ev-two-wheeler-module.js'; s.onload=function(){window.__nrEvModuleLoaded=true;}; document.head.appendChild(s);
+    }catch(e){ setTimeout(loadEVModuleWhenReady,700); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadEVModuleWhenReady); else loadEVModuleWhenReady();
 })();

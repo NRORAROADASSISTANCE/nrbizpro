@@ -2,11 +2,12 @@
 (function(){
  function categoryKey(){
    let c='';
-   try{if(typeof currentUser!=='undefined'&&currentUser)c=currentUser.category||'';}catch(e){}
-   try{if(!c&&typeof state!=='undefined'&&state)c=state.settings?.category||'';}catch(e){}
+   try{if(window.currentUser)c=window.currentUser.category||window.currentUser.businessCategory||'';}catch(e){}
+   try{if(!c&&typeof state!=='undefined'&&state)c=state.settings?.category||state.settings?.businessCategory||'';}catch(e){}
+   try{if(!c&&typeof currentUser!=='undefined'&&currentUser)c=currentUser.category||currentUser.businessCategory||'';}catch(e){}
    if(!c)c=document.getElementById('businessCategory')?.value||'';
    c=String(c).toLowerCase();
-   if(/ev two|ev 2|electric two|ev scooter|ev bike/.test(c))return'evtwo';
+   if(/ev two|ev 2|electric two|ev scooter|ev bike|electric vehicle/.test(c))return'evtwo';
    if(/foot|chappal|shoe|slipper/.test(c))return'footwear';
    if(/fertil|agri/.test(c))return'fertilizer';
    if(/garage|service center/.test(c))return'garage';

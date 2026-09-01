@@ -1,4 +1,4 @@
-// Final New Bill fallback. Independent of app.js/billing-fix.js readiness.
+// Final New Bill launcher. Capture the click so it works even if older billing handlers interfere.
 (function(){
   function fallbackBill(){
     var modal=document.getElementById('modal'), title=document.getElementById('modalTitle'), body=document.getElementById('modalBody');
@@ -14,19 +14,34 @@
     window.billCart=[];
     if(typeof window.renderCart==='function') window.renderCart();
     var s=document.getElementById('bSearch'); if(s) s.focus();
-    return false;
+    return true;
   }
   function launch(){
-    if(typeof window.openBillModal==='function' && window.openBillModal!==launch) return window.openBillModal();
-    return fallbackBill();
+    try{
+      if(typeof window.openBillModal==='function') return window.openBillModal();
+      return fallbackBill();
+    }catch(err){
+      console.error('NR BizPro New Bill error:',err);
+      return fallbackBill();
+    }
   }
   window.launchNewBill=launch;
-  function bind(){
-    ['newBillButton','createBillButton'].forEach(function(id){
-      var b=document.getElementById(id); if(!b)return;
-      b.onclick=function(e){e.preventDefault();e.stopImmediatePropagation();return launch();};
-    });
+
+  function isNewBillButton(el){
+    var b=el && el.closest ? el.closest('button') : null;
+    if(!b) return false;
+    var text=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
+    var onclick=b.getAttribute('onclick')||'';
+    return text.includes('new bill') || text.includes('create bill') || onclick.includes('launchNewBill');
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
-  window.addEventListener('load',bind);
+
+  function captureClick(e){
+    if(!isNewBillButton(e.target)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    launch();
+  }
+
+  document.addEventListener('click',captureClick,true);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){});
 })();

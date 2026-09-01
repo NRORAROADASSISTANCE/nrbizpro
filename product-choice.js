@@ -1,6 +1,13 @@
 // Separate product entry points on the public auth/create-account screen.
 (function(){
+  function addStyles(){
+    if(document.getElementById('nrProductChoiceStyles'))return;
+    const s=document.createElement('style');s.id='nrProductChoiceStyles';
+    s.textContent='.nr-product-choice{margin:0 0 18px;padding:16px;border:1px solid #e5e9f0;border-radius:14px;background:#fbfcfe}.nr-product-choice-head h3{margin:0 0 5px;font-size:16px;color:#172033}.nr-product-choice-head p{margin:0 0 13px;color:#748094;font-size:12px;line-height:1.45}.nr-product-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.nr-product-choice-card{border:1px solid #dce2eb;background:#fff;border-radius:12px;padding:14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:5px}.nr-product-choice-card:hover,.nr-product-choice-card.nr-selected{border-color:#172033;box-shadow:0 5px 18px rgba(15,23,42,.07)}.nr-product-choice-card span{font-size:21px}.nr-product-choice-card b{font-size:13px;color:#172033}.nr-product-choice-card small{font-size:11px;color:#748094;line-height:1.4}@media(max-width:760px){.nr-product-choice-grid{grid-template-columns:1fr}}';
+    document.head.appendChild(s);
+  }
   function install(){
+    addStyles();
     if(typeof window.renderAuth!=='function' || window.__productChoiceInstalled)return;
     window.__productChoiceInstalled=true;
     const original=window.renderAuth;
@@ -8,12 +15,10 @@
       original(mode,message);
       if(mode!=='signup')return;
       const el=document.getElementById('authContent');
-      if(!el || el.querySelector('.product-choice'))return;
-      const title=document.createElement('div');
-      title.className='product-choice';
-      title.innerHTML=`<div class="product-choice-head"><h3>Choose a NR product</h3><p>Select the product you want to use. Billing and Smart Print are separate services.</p></div><div class="product-choice-grid"><button type="button" class="product-choice-card selected" onclick="document.querySelector('.product-choice-card').classList.add('selected');document.getElementById('smartPrintChoice')?.classList.remove('selected');document.getElementById('suBusiness')?.focus()"><span>🧾</span><b>NR BizPro Billing Software</b><small>Create a business account for billing, stock, customers and reports.</small></button><button id="smartPrintChoice" type="button" class="product-choice-card" onclick="window.location.href='smart-print.html'"><span>🖨️</span><b>NR Smart Print</b><small>Separate print utility for invoices and document formats.</small></button></div>`;
-      const form=el.querySelector('form');
-      if(form)el.insertBefore(title,form); else el.prepend(title);
+      if(!el || el.querySelector('.nr-product-choice'))return;
+      const box=document.createElement('div');box.className='nr-product-choice';
+      box.innerHTML='<div class="nr-product-choice-head"><h3>Choose Product</h3><p>Billing Software and Smart Print are separate services.</p></div><div class="nr-product-choice-grid"><button type="button" class="nr-product-choice-card nr-selected" onclick="document.getElementById(\'suBusiness\')?.focus()"><span>🧾</span><b>Billing Software</b><small>NR BizPro billing, stock, customers and reports.</small></button><button type="button" class="nr-product-choice-card" onclick="window.location.href=\'smart-print.html\'"><span>🖨️</span><b>Smart Print</b><small>Separate print utility. No Billing Software login.</small></button></div>';
+      const form=el.querySelector('form');if(form)el.insertBefore(box,form);else el.prepend(box);
     };
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();

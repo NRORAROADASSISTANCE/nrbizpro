@@ -1,70 +1,15 @@
-// NR BizPro — final EV showroom UI fixes
+// NR BizPro — final EV showroom + delivery bill fix
 (function(){
-  const isEV=()=>/ev two|electric two|ev 2|ev scooter|ev bike/i.test(String((typeof currentUser!=='undefined'&&currentUser?.category)||(typeof state!=='undefined'&&state?.settings?.category)||''));
-  const moneySafe=n=>typeof money==='function'?money(n):new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(n)||0);
-  const escSafe=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-  function renderItemsFixed(){
-    const tb=document.getElementById('itemTable');
-    if(!tb || typeof state==='undefined' || !state) return;
-    const items=Array.isArray(state.items)?state.items:[];
-    if(!items.length){tb.innerHTML='<tr><td colspan="8" class="empty">No products yet.</td></tr>';return;}
-    tb.innerHTML=items.map(i=>`<tr><td><b>${escSafe(i.name||'—')}</b></td><td>${escSafe(i.barcode||'—')}</td><td>${escSafe(i.type||'Product')}</td><td>${moneySafe(i.cost)}</td><td><b>${moneySafe(i.sell)}</b></td><td>${Number(i.gst)||0}%</td><td><b>${Number(i.stock)||0}</b></td><td><button class="secondary" type="button" data-fix-delete="${i.id}">Delete</button></td></tr>`).join('');
-    tb.querySelectorAll('[data-fix-delete]').forEach(b=>b.onclick=()=>{if(typeof deleteItem==='function')deleteItem(b.dataset.fixDelete);});
-  }
-
-  function addRtoNotApplicable(){
-    const s=document.getElementById('evRto');
-    if(!s)return;
-    if(!Array.from(s.options).some(o=>o.value==='Not Applicable')){
-      const o=document.createElement('option');o.value='Not Applicable';o.textContent='Not Applicable';s.insertBefore(o,s.firstChild);
-    }
-  }
-
-  function addSpeedToBill(){
-    if(document.getElementById('evSpeed'))return;
-    const model=document.getElementById('evVehicle');
-    if(!model)return;
-    const label=document.createElement('label');label.className='field';label.innerHTML='Speed<input id="evSpeed" placeholder="45 km/h">';
-    model.closest('.field')?.parentElement?.appendChild(label);
-  }
-
-  function patchEvBill(){
-    if(!isEV() || typeof window.openEVBill!=='function')return;
-    const original=window.openEVBill;
-    if(original.__nrFinalFix)return;
-    function wrapped(){
-      original();
-      setTimeout(()=>{
-        addRtoNotApplicable();
-        addSpeedToBill();
-        const btn=document.getElementById('evGenerate');
-        if(btn && !btn.__nrSpeedFix){
-          const old=btn.onclick;
-          btn.onclick=function(){
-            const speed=document.getElementById('evSpeed')?.value?.trim()||'';
-            if(typeof old==='function')old();
-            if(typeof state!=='undefined'&&state?.bills?.[0] && speed){state.bills[0].vehicle=state.bills[0].vehicle||{};state.bills[0].vehicle.speed=speed;save();}
-          };
-          btn.__nrSpeedFix=true;
-        }
-      },0);
-    }
-    wrapped.__nrFinalFix=true;
-    window.openEVBill=wrapped;
-    window.openBillModal=wrapped;
-    window.launchEVNewBill=wrapped;
-    window.launchNewBill=wrapped;
-  }
-
-  function install(){
-    window.renderItems=renderItemsFixed;
-    if(isEV() && typeof window.openBusinessProductModal==='function') window.openItemModal=window.openBusinessProductModal;
-    patchEvBill();
-    renderItemsFixed();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
-  window.addEventListener('load',()=>setTimeout(install,100));
-  window.addEventListener('authReady',install);
-  window.addEventListener('loginSuccess',install);
+ const isEV=()=>/ev two|electric two|ev 2|ev scooter|ev bike/i.test(String((typeof currentUser!=='undefined'&&currentUser?.category)||(typeof state!=='undefined'&&state?.settings?.category)||''))||!!(typeof state!=='undefined'&&state?.items?.some(i=>/EV-TWO-WHEELER/i.test(String(i.businessCategory||i.industry||''))));
+ const moneySafe=n=>typeof money==='function'?money(n):new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(n)||0);
+ const escSafe=v=>typeof esc==='function'?esc(v):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ function renderItemsFixed(){const tb=document.getElementById('itemTable');if(!tb||!state)return;const a=Array.isArray(state.items)?state.items:[];tb.innerHTML=a.length?a.map(i=>`<tr><td><b>${escSafe(i.name||'—')}</b></td><td>${escSafe(i.barcode||'—')}</td><td>${escSafe(i.type||'Product')}</td><td>${moneySafe(i.cost)}</td><td><b>${moneySafe(i.sell)}</b></td><td>${Number(i.gst)||0}%</td><td><b>${Number(i.stock)||0}</b></td><td><button class="secondary" type="button" data-fix-delete="${i.id}">Delete</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">No products yet.</td></tr>';tb.querySelectorAll('[data-fix-delete]').forEach(b=>b.onclick=()=>typeof deleteItem==='function'&&deleteItem(b.dataset.fixDelete));}
+ function addInput(id,label,after,placeholder){if(document.getElementById(id)||!after)return;const l=document.createElement('label');l.className='field';l.innerHTML=label+`<input id="${id}" placeholder="${placeholder||''}">`;after.closest('.field')?.parentElement?.appendChild(l)}
+ function patchProduct(){if(!isEV()||typeof window.openItemModal!=='function'||window.openItemModal.__nrDelivery)return;const original=window.openItemModal;function wrapped(){original();setTimeout(()=>{const range=document.getElementById('evpRange');if(range)addInput('evpSpeed','Top Speed',range,'45 km/h');const btn=document.getElementById('evpSave');if(btn&&!btn.__nrSpeed){const old=btn.onclick;btn.onclick=function(){const speed=document.getElementById('evpSpeed')?.value?.trim()||'';if(typeof old==='function')old();if(speed&&state?.items?.length){state.items[state.items.length-1].topSpeed=speed;save();renderItemsFixed();}};btn.__nrSpeed=true;}},0)}wrapped.__nrDelivery=true;window.openItemModal=wrapped}
+ function addBillFields(){const model=document.getElementById('evVehicle');if(!model)return;addInput('evSpeed','Top Speed',model,'45 km/h');const r=document.getElementById('evRto');if(r&&!Array.from(r.options).some(o=>o.value==='Not Applicable')){const o=document.createElement('option');o.value='Not Applicable';o.textContent='Not Applicable';r.insertBefore(o,r.firstChild)}if(r)r.value='Not Applicable'}
+ function autoVehicle(){const box=document.getElementById('evLines');if(!box||!state)return;const first=(window.billCart||[]).map(l=>state.items.find(i=>i.id===l.id)).find(i=>i&&String(i.type).toLowerCase()==='vehicle');if(!first)return;const set=(id,v)=>{const x=document.getElementById(id);if(x&&!x.value)x.value=v||''};set('evBrand',first.brand);set('evVehicle',first.name);set('evVariant',first.variant);set('evColour',first.color);set('evBatteryNo',first.serial);set('evSpeed',first.topSpeed||first.speed);set('evChassis',first.chassis);set('evEngine',first.motorNumber)}
+ function patchBill(){if(!isEV()||typeof window.openEVBill!=='function'||window.openEVBill.__nrDelivery)return;const original=window.openEVBill;function wrapped(){original();setTimeout(()=>{addBillFields();autoVehicle();const lines=document.getElementById('evLines');if(lines&&!lines.__nrObserver){new MutationObserver(autoVehicle).observe(lines,{childList:true,subtree:true});lines.__nrObserver=true}const btn=document.getElementById('evGenerate');if(btn&&!btn.__nrDeliverySave){const old=btn.onclick;btn.onclick=function(){const speed=document.getElementById('evSpeed')?.value?.trim()||'';if(typeof old==='function')old();if(state?.bills?.[0]){state.bills[0].vehicle=state.bills[0].vehicle||{};state.bills[0].vehicle.speed=speed;save();}};btn.__nrDeliverySave=true;}},0)}wrapped.__nrDelivery=true;window.openEVBill=wrapped;window.openBillModal=wrapped;window.launchEVNewBill=wrapped;window.launchNewBill=wrapped}
+ function patchPrint(){if(typeof window.printBill!=='function'||window.printBill.__nrDeliveryPrint)return;const old=window.printBill;function print(id){const b=state?.bills?.find(x=>x.id===id);if(!b||!b.vehicle)return old(id);const s=state.settings||{},v=b.vehicle||{},w=window.open('','_blank');if(!w)return;const rows=(b.items||[]).map(i=>`<tr><td>${escSafe(i.name)}</td><td>${escSafe(i.type||'')}</td><td>${i.qty}</td><td>${moneySafe(i.price)}</td><td>${moneySafe((+i.price||0)*(+i.qty||0))}</td></tr>`).join('');w.document.write(`<html><head><title>${escSafe(b.invoice)}</title><style>@page{size:A4;margin:14mm}body{font-family:Arial,sans-serif;max-width:800px;margin:auto;color:#111}.head{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px}.muted{color:#555}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{padding:8px;border:1px solid #ccc}th{background:#f3f3f3}.box{border:1px solid #bbb;padding:12px;margin-top:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.right{text-align:right}.total{font-size:20px;font-weight:bold}.delivery{margin-top:22px;border:2px solid #111;padding:14px}</style></head><body><div class="head"><div><h1>${escSafe(s.name||'Your Business')}</h1><div class="muted">${escSafe(s.address||'')}<br>${escSafe(s.mobile||'')}${s.gst?' | GSTIN: '+escSafe(s.gst):''}</div></div><div><b>VEHICLE DELIVERY BILL</b><br>${escSafe(b.invoice)}<br>${new Date(b.date).toLocaleDateString('en-IN')}</div></div><div class="box"><b>Customer Details</b><div class="grid"><div>Name: ${escSafe(b.customer)}</div><div>Mobile: ${escSafe(b.mobile||'')}</div></div></div><div class="box"><b>Vehicle Details</b><div class="grid"><div>Brand: ${escSafe(v.brand)}</div><div>Model: ${escSafe(v.model)}</div><div>Variant: ${escSafe(v.variant)}</div><div>Colour: ${escSafe(v.color)}</div><div>Range: ${escSafe(v.range||'')}</div><div>Top Speed: ${escSafe(v.speed||'')}</div><div>Battery No.: ${escSafe(v.batteryNo)}</div><div>Chassis No.: ${escSafe(v.chassisNo)}</div><div>Motor No.: ${escSafe(v.engineNo)}</div><div>Registration No.: ${escSafe(v.registrationNo)}</div></div></div><div class="box"><b>RTO & Insurance</b><div class="grid"><div>RTO Status: ${escSafe(b.rto?.status||'')}</div><div>Registration Tracking: ${escSafe(b.rto?.tracking||'')}</div><div>Insurance: ${escSafe(b.insurance?.status||'')}</div><div>Policy No.: ${escSafe(b.insurance?.policyNo||'')}</div></div></div><table><thead><tr><th>Item / Vehicle</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><div class="box right"><div>Subtotal: ${moneySafe(b.subtotal||b.total)}</div><div>Discount: -${moneySafe(b.discount||0)}</div><div>GST: ${moneySafe(b.gstTotal||0)}</div><div class="total">Net Amount: ${moneySafe(b.total)}</div><div>Paid: ${moneySafe(b.paid||0)} | Due: ${moneySafe(b.due||0)}</div></div><div class="delivery"><b>DELIVERY CONFIRMATION</b><p>Vehicle delivered to customer in good condition.</p><p>Customer Signature: __________________________</p><p>Delivery Date: _______________________________</p></div><script>window.onload=()=>window.print()</script></body></html>`);w.document.close()}print.__nrDeliveryPrint=true;window.printBill=print}
+ function install(){renderItemsFixed();if(isEV()){patchProduct();patchBill()}patchPrint()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();window.addEventListener('load',()=>setTimeout(install,200));window.addEventListener('authReady',install);window.addEventListener('loginSuccess',install);
 })();

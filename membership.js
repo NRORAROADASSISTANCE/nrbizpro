@@ -37,11 +37,11 @@
     if(!/^[A-Za-z0-9-]{8,40}$/.test(utr||''))return alert('Enter a valid UTR / transaction reference (8-40 characters).');
     btn.disabled=true;btn.textContent='Submitting...';
     try{
-      const d=await apiJson('/api/direct-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'submit',plan:pendingUser.pendingPlan,utr})});
+      await apiJson('/api/direct-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'submit',plan:pendingUser.pendingPlan,utr})});
       document.getElementById('directStatus').innerHTML='<div class="notice">Payment details submitted successfully. Your account will be activated after admin verification.</div>';
       btn.textContent='Submitted ✓';
     }catch(err){btn.disabled=false;btn.textContent='Submit Payment for Verification';alert(err.message)}
   }
   window.login=async function(e){e.preventDefault();const id=document.getElementById('loginId').value.trim().toLowerCase(),password=document.getElementById('loginPassword').value;try{const d=await apiJson('/api/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',id,password})});if(d.paymentRequired&&d.user){pendingUser=d.user;localStorage.setItem(USERS_KEY,JSON.stringify([d.user]));return renderAuth('plans','Membership payment is required before using NR BizPro.')}localStorage.setItem(USERS_KEY,JSON.stringify([d.user]));localStorage.setItem(SESSION_KEY,d.user.id);location.reload()}catch(err){alert(err.message)}};
-  renderAuth('login');
+  // Do not render the login screen automatically on page load. The public landing is the root page.
 })();

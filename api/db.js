@@ -3,8 +3,6 @@ import crypto from 'node:crypto';
 
 const { Pool } = pg;
 
-// Prisma Postgres is standard PostgreSQL. Use the pooled DATABASE_URL for
-// application traffic instead of @vercel/postgres' Prisma/HTTP adapter.
 function getConnectionString(){
   return process.env.DATABASE_URL
     || process.env.POSTGRES_URL
@@ -16,27 +14,19 @@ function getConnectionString(){
 function dbPool(){
   const connectionString=getConnectionString();
   if(!connectionString) throw new Error('Database connection is not configured.');
-
   if(!globalThis.__NRBIZPRO_POOL){
     const needsSsl=/sslmode=require/i.test(connectionString) || /\.db\.prisma\.io/i.test(connectionString);
     globalThis.__NRBIZPRO_POOL=new Pool({
-      connectionString,
-      max:5,
-      idleTimeoutMillis:10000,
-      connectionTimeoutMillis:10000,
+      connectionString,max:5,idleTimeoutMillis:10000,connectionTimeoutMillis:10000,
       ...(needsSsl ? {ssl:{rejectUnauthorized:false}} : {})
     });
   }
   return globalThis.__NRBIZPRO_POOL;
 }
-
-// Small tagged-template wrapper compatible with the existing API code.
-// Example: sql`SELECT * FROM users WHERE id=${id}`
 export async function sql(strings,...values){
   const text=strings.reduce((out,s,i)=>out+s+(i<values.length?`$${i+1}`:''),'');
   return dbPool().query(text,values);
 }
-
 let ready;
 export async function initDb(){
   if(ready) return ready;
@@ -48,15 +38,13 @@ export async function initDb(){
     await sql`CREATE TABLE IF NOT EXISTS sessions (token text PRIMARY KEY,business_id text REFERENCES businesses(id) ON DELETE CASCADE,admin boolean NOT NULL DEFAULT false,expires_at timestamptz NOT NULL)`;
     await sql`CREATE TABLE IF NOT EXISTS admins (email text PRIMARY KEY,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE TABLE IF NOT EXISTS otp_challenges (business_id text PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,phone_req_id text,email_hash text,phone_sent_at timestamptz,email_sent_at timestamptz,phone_attempts integer NOT NULL DEFAULT 0,email_attempts integer NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now())`;
-
-    // Keep a non-OTP demo account available for testing the billing UI.
+    await sql`CREATE TABLE IF NOT EXISTS direct_payments (id text PRIMARY KEY,business_id text NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,plan text NOT NULL,amount numeric NOT NULL,utr text NOT NULL UNIQUE,status text NOT NULL DEFAULT 'pending',admin_note text,created_at timestamptz NOT NULL DEFAULT now(),reviewed_at timestamptz)`;
     const demoHash=await hashPassword('Demo@12345');
     const demoId='demo-nrbizpro';
     await sql`INSERT INTO businesses(id,business,owner,mobile,email,category,gst,password_hash,status,plan,subscription_ends,phone_verified,email_verified)
       VALUES(${demoId},'NR BizPro Demo','Demo Owner','9000000000','demo@nrbizpro.in','SERVICE','',${demoHash},'active','demo',now()+interval '365 days',true,true)
       ON CONFLICT(email) DO UPDATE SET password_hash=EXCLUDED.password_hash,status='active',plan='demo',subscription_ends=EXCLUDED.subscription_ends,phone_verified=true,email_verified=true,updated_at=now()`;
-    await sql`INSERT INTO business_data(business_id,settings) VALUES(${demoId},${JSON.stringify({name:'NR BizPro Demo',category:'SERVICE',mobile:'9000000000',gst:'',address:''})}::jsonb)
-      ON CONFLICT(business_id) DO NOTHING`;
+    await sql`INSERT INTO business_data(business_id,settings) VALUES(${demoId},${JSON.stringify({name:'NR BizPro Demo',category:'SERVICE',mobile:'9000000000',gst:'',address:''})}::jsonb) ON CONFLICT(business_id) DO NOTHING`;
   })();
   return ready;
 }

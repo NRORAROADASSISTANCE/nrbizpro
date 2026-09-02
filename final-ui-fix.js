@@ -15,6 +15,14 @@
       tb.innerHTML=state.items.map(i=>`<tr><td><b>${escx(i.name||'—')}</b></td><td>${escx(i.barcode||'—')}</td><td>${escx(i.type||'Product')}</td><td>${moneyx(i.cost)}</td><td><b>${moneyx(i.sell)}</b></td><td>${Number(i.gst)||0}%</td><td><b>${Number(i.stock)||0}</b></td><td></td></tr>`).join('');
     }catch(e){console.error('NR stock table fix',e)}
   }
+  function ensureCustomersTable(){
+    if(!appVisible())return;
+    const section=document.getElementById('customers');if(!section||document.getElementById('customerTable'))return;
+    const wrap=document.createElement('div');wrap.className='table-wrap';
+    wrap.innerHTML='<table><thead><tr><th>Name</th><th>Mobile</th><th>Email</th><th>Address</th><th>Bills</th><th>Total Purchase</th></tr></thead><tbody id="customerTable"></tbody></table>';
+    section.appendChild(wrap);
+    try{if(typeof window.renderCustomers==='function')window.renderCustomers()}catch(e){console.error('NR customer table fix',e)}
+  }
   function ensureRawProduct(){
     if(!appVisible())return;
     const sel=document.getElementById('mType');if(!sel)return;
@@ -26,7 +34,7 @@
     function wrapped(){old();setTimeout(ensureRawProduct,0);setTimeout(ensureRawProduct,100)}
     wrapped.__finalUiFix=true;window.openItemModal=wrapped;
   }
-  function run(){if(!appVisible())return;renderStockTable();patchModal();ensureRawProduct()}
+  function run(){if(!appVisible())return;ensureCustomersTable();renderStockTable();patchModal();ensureRawProduct()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   window.addEventListener('load',()=>{setTimeout(run,300);setTimeout(run,1000)});
   setInterval(run,5000);

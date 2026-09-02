@@ -1,5 +1,4 @@
-// Server-auth gate: use the server session and prevent an old /me check from
-// sending the user back to login after a successful login.
+// Server-auth bridge and public landing gate.
 (function(){
   const originalShowApp=window.showApp;
   let authGeneration=0;
@@ -7,6 +6,8 @@
   function forceLogin(message){
     const app=document.getElementById('app');
     const screen=document.getElementById('authScreen');
+    const landing=document.getElementById('publicLanding');
+    if(landing)landing.remove();
     if(app)app.classList.add('hidden');
     if(screen)screen.classList.remove('hidden');
     if(typeof window.renderAuth==='function')window.renderAuth('login',message||'Please log in to continue.');
@@ -17,22 +18,12 @@
     const myGeneration=++authGeneration;
     const id=document.getElementById('loginId')?.value.trim()||'';
     const password=document.getElementById('loginPassword')?.value||'';
-
     try{
-      const r=await fetch('/api/auth?action=login',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        credentials:'include',
-        body:JSON.stringify({action:'login',id,password})
-      });
+      const r=await fetch('/api/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'login',id,password})});
       const d=await r.json();
       if(myGeneration!==authGeneration)return;
       if(!r.ok){
-        if(d.paymentRequired&&d.user){
-          window.currentUser=d.user;
-          if(typeof window.renderAuth==='function')window.renderAuth('plans','Membership payment is required before using NR BizPro.');
-          return;
-        }
+        if(d.paymentRequired&&d.user){window.currentUser=d.user;if(typeof window.renderAuth==='function')window.renderAuth('plans','Membership payment is required before using NR BizPro.');return;}
         return window.renderAuth('login',d.error||'Invalid login details.');
       }
       window.currentUser=d.user;
@@ -66,8 +57,6 @@
     }
   };
 
-  // Public website layer: keep the application login available, but do not make
-  // Razorpay visitors pass through the login screen before reviewing the site.
   function showPublicLanding(){
     if(document.getElementById('publicLanding'))return;
     const landing=document.createElement('div');
@@ -105,34 +94,9 @@
         @media(max-width:520px){#publicLanding .pl-grid{grid-template-columns:1fr}#publicLanding .pl-links a:not(:last-child){display:none}}
       </style>
       <div class="pl-wrap">
-        <nav class="pl-nav">
-          <div class="pl-brand"><span class="pl-mark">NR</span><span>NR BizPro</span></div>
-          <div class="pl-links">
-            <a href="pricing.html">Pricing</a><a href="services.html">Services</a><a href="contact.html">Contact</a>
-            <button class="pl-login" onclick="window.openBizLogin()">Login</button>
-          </div>
-        </nav>
-        <section class="pl-hero">
-          <div>
-            <span class="pl-badge">UNIVERSAL BILLING & BUSINESS MANAGEMENT</span>
-            <h1>One platform.<br>Every business.</h1>
-            <p class="pl-sub">Create invoices, manage products and stock, track customers, and run your business from one simple workspace.</p>
-            <div class="pl-actions"><button class="pl-primary" onclick="window.openBizSignup()">Create Business Account</button><a class="pl-secondary" href="services.html">Explore Features</a></div>
-          </div>
-          <div class="pl-card">
-            <h3>Everything you need to bill</h3>
-            <div class="pl-feature"><span class="pl-check">✓</span><span>Fast billing with product and barcode support</span></div>
-            <div class="pl-feature"><span class="pl-check">✓</span><span>Products, pricing, GST and stock management</span></div>
-            <div class="pl-feature"><span class="pl-check">✓</span><span>Customer records, bill history and printing</span></div>
-            <div class="pl-feature"><span class="pl-check">✓</span><span>Business-specific tools for different categories</span></div>
-          </div>
-        </section>
-        <section class="pl-section"><h2>Built for different businesses</h2><div class="pl-grid">
-          <div class="pl-mini">Retail & Grocery<span>Products, stock, GST and quick billing.</span></div>
-          <div class="pl-mini">EV Showrooms<span>Vehicle products, customer enquiries and sales.</span></div>
-          <div class="pl-mini">Service Centers<span>Service-oriented products, customers and billing.</span></div>
-          <div class="pl-mini">Wholesale & Distribution<span>Stock and invoice management for growing businesses.</span></div>
-        </div></section>
+        <nav class="pl-nav"><div class="pl-brand"><span class="pl-mark">NR</span><span>NR BizPro</span></div><div class="pl-links"><a href="pricing.html">Pricing</a><a href="services.html">Services</a><a href="contact.html">Contact</a><button class="pl-login" onclick="window.openBizLogin()">Login</button></div></nav>
+        <section class="pl-hero"><div><span class="pl-badge">UNIVERSAL BILLING & BUSINESS MANAGEMENT</span><h1>One platform.<br>Every business.</h1><p class="pl-sub">Create invoices, manage products and stock, track customers, and run your business from one simple workspace.</p><div class="pl-actions"><button class="pl-primary" onclick="window.openBizSignup()">Create Business Account</button><a class="pl-secondary" href="services.html">Explore Features</a></div></div><div class="pl-card"><h3>Everything you need to bill</h3><div class="pl-feature"><span class="pl-check">✓</span><span>Fast billing with product and barcode support</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Products, pricing, GST and stock management</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Customer records, bill history and printing</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Business-specific tools for different categories</span></div></div></section>
+        <section class="pl-section"><h2>Built for different businesses</h2><div class="pl-grid"><div class="pl-mini">Retail & Grocery<span>Products, stock, GST and quick billing.</span></div><div class="pl-mini">EV Showrooms<span>Vehicle products, customer enquiries and sales.</span></div><div class="pl-mini">Service Centers<span>Service-oriented products, customers and billing.</span></div><div class="pl-mini">Wholesale & Distribution<span>Stock and invoice management for growing businesses.</span></div></div></section>
         <section class="pl-section"><h2>Simple, transparent pricing</h2><div class="pl-price"><span>NR BizPro subscription</span><strong>Plans available</strong><button class="pl-primary" onclick="window.openBizSignup()">Get Started</button></div></section>
         <footer class="pl-footer"><span>© NR BizPro. Universal Billing & Business Management.</span><span><a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="refund.html">Refund Policy</a></span></footer>
       </div>`;
@@ -142,22 +106,12 @@
   }
 
   function setupPublicLayer(){
-    const hasSessionCookie=document.cookie.split(';').some(x=>x.trim().startsWith('nr_bizpro_session='));
+    const hasSessionCookie=document.cookie.split(';').some(x=>x.trim().startsWith('nr_session='));
     const app=document.getElementById('app');
     if(app&&!app.classList.contains('hidden'))return;
-    if(!hasSessionCookie)showPublicLanding();
-    const watcher=setInterval(()=>{
-      const a=document.getElementById('app');
-      const l=document.getElementById('publicLanding');
-      if(a&&!a.classList.contains('hidden')&&l)l.remove();
-    },500);
-    setTimeout(()=>clearInterval(watcher),20000);
+    if(!hasSessionCookie){showPublicLanding();return;}
+    window.checkSession();
   }
 
-  // Keep public landing visible for logged-out visitors while server auth remains intact.
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupPublicLayer);else setupPublicLayer();
-
-  // Do not call forceLogin() before the server-session check. The auth screen is
-  // already the initial page, and checkSession() decides whether to show the app.
-  window.checkSession();
 })();

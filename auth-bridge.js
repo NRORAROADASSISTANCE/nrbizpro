@@ -10,7 +10,6 @@
     if(screen)screen.classList.remove('hidden');
     if(typeof window.renderAuth==='function')window.renderAuth('login',message||'Please log in to continue.');
   }
-
   async function serverLogin(e){
     e.preventDefault();
     const myGeneration=++authGeneration;
@@ -33,16 +32,19 @@
     }
   }
   window.login=serverLogin;
-  // membership.js is loaded after this file and replaces window.login; restore the server login after all scripts finish.
   window.addEventListener('load',()=>{window.login=serverLogin});
 
   window.checkSession=async function(){
     const myGeneration=authGeneration;
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),2500);
     try{
-      const r=await fetch('/api/auth?action=me',{credentials:'include'}),d=await r.json();
+      const r=await fetch('/api/auth?action=me',{credentials:'include',signal:controller.signal});
+      clearTimeout(timer);
+      const d=await r.json();
       if(myGeneration!==authGeneration)return;
       if(r.ok&&d.user){window.currentUser=d.user;if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);originalShowApp();return;}
-    }catch(e){if(myGeneration!==authGeneration)return}
+    }catch(e){clearTimeout(timer);if(myGeneration!==authGeneration)return;}
     if(myGeneration===authGeneration){localStorage.removeItem('nr-bizpro-session-v1');forceLogin()}
   };
 
@@ -58,12 +60,11 @@
     window.openBizSignup=function(){landing.remove();document.getElementById('authScreen')?.classList.remove('hidden');window.renderAuth?.('signup')};
   }
 
-  // Root URL is always the public website. Do not call /api/auth?action=me here.
-  // This removes the initial auth race and guarantees visitors see the public landing first.
   function setupPublicLayer(){
     const app=document.getElementById('app');
     if(app&&!app.classList.contains('hidden'))return;
     showPublicLanding();
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupPublicLayer);else setupPublicLayer();
+  // This script is loaded at the end of index.html, so render immediately; do not wait for DOMContentLoaded.
+  setupPublicLayer();
 })();

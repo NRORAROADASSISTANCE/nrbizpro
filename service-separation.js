@@ -12,6 +12,11 @@
   function action(label,desc,fn){const b=document.createElement('button');b.type='button';b.className='industry-feature';b.innerHTML='<b>'+label+'</b><span>'+desc+'</span>';b.onclick=fn;return b}
   function render(){
     const p=getProfile(),panel=document.getElementById('industryModule');if(!p||!panel)return;
+    // Do not rebuild the module on a timer. Rebuilding innerHTML was causing visible
+    // layout/scroll jumps every few seconds. Render only when the selected profile changes.
+    const profileKey=p.label;
+    if(panel.dataset.renderedProfile===profileKey)return;
+    panel.dataset.renderedProfile=profileKey;
     const core={'Paint Product Management':()=>window.showTab?.('items'),'Plumbing Product Management':()=>window.showTab?.('items'),'Product Management':()=>window.showTab?.('items'),'Customer Management':()=>window.showTab?.('customers'),'Customer Sales History':()=>window.showTab?.('customers'),'Sales Billing':()=>window.launchNewBill?.(),'Discount Management':()=>window.launchNewBill?.(),'Bill History / Reprint':()=>window.showTab?.('bills'),'Stock & Reorder':()=>window.showTab?.('items'),'Pipe / Size Management':()=>window.showTab?.('items'),'Pipe / Size / Unit Management':()=>window.showTab?.('items'),'Brand / Shade Management':()=>window.showTab?.('items'),'Brand Management':()=>window.showTab?.('items'),'Unit Management':()=>window.showTab?.('items'),'Credit / Due Tracking':()=>window.showTab?.('customers'),'Sales Reports':()=>window.showTab?.('bills')};
     panel.innerHTML='<div class="panel-head"><div><p class="eyebrow">BUSINESS MODULE</p><h2>'+p.icon+' '+p.label+'</h2><p class="muted">Complete product, customer and sales management for this business.</p></div><button class="secondary" type="button" id="ppFeatureTest">Quick Guide</button></div><div class="quick-grid" id="ppActions"></div><div class="card" style="margin-top:16px;padding:16px"><b>Recommended product setup</b><p class="muted" style="margin:7px 0 0">'+p.products+'</p><p class="muted" style="margin:7px 0 0">Use <b>Products / Services</b> to enter purchase price, selling price, GST, barcode and opening stock. Use <b>New Bill</b> for customer sales and apply either percentage or fixed-amount discount. Credit sales can have a due date and reminder.</p></div>';
     const box=document.getElementById('ppActions');p.features.forEach(f=>box.appendChild(action(f,f==='Discount Management'?'Percentage (%) or Fixed Amount (₹) in New Bill':'Open '+f,core[f]||(()=>{}))));
@@ -19,5 +24,6 @@
   }
   function loadCredit(){if(document.querySelector('script[src="credit-reminders.js"]'))return;const s=document.createElement('script');s.src='credit-reminders.js';s.defer=true;document.body.appendChild(s)}
   function boot(){addCategories();removeExtras();render();loadCredit()}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();window.addEventListener('load',boot);setInterval(function(){addCategories();removeExtras();render();loadCredit()},3000);
+  window.NRBizProBusinessModules={getProfile,render,boot};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

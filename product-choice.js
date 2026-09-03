@@ -12,9 +12,18 @@
       if(text.indexOf('Smart Print')>=0 || text.indexOf('Rewards')>=0)b.remove();
     });
   }
+  function loadIsolation(){
+    if(window.__nrBusinessProductIsolationLoading||window.__nrBusinessProductIsolationLoaded)return;
+    window.__nrBusinessProductIsolationLoading=true;
+    const s=document.createElement('script');
+    s.src='business-product-isolation.js?v=20260903-01';
+    s.onload=function(){window.__nrBusinessProductIsolationLoaded=true};
+    document.head.appendChild(s);
+  }
   function install(){
     addStyles();
     removeBillingLinks();
+    loadIsolation();
     if(typeof window.renderAuth!=='function' || window.__productChoiceInstalled)return;
     window.__productChoiceInstalled=true;
     const original=window.renderAuth;

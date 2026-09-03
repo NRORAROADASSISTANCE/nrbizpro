@@ -49,4 +49,24 @@ function renderBills(){const q=(billSearch?.value||'').toLowerCase(),tb=document
 function printBill(id){const b=state.bills.find(x=>x.id===id);if(!b)return;const s=state.settings,w=window.open('','_blank');w.document.write(`<html><head><title>${b.invoice}</title><style>body{font-family:Arial;padding:30px;max-width:700px;margin:auto}table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}.r{text-align:right}</style></head><body><h1>${esc(s.name)}</h1><p>${esc(s.address)}<br>${esc(s.mobile)} ${s.gst?'| GSTIN: '+esc(s.gst):''}</p><h2>Invoice ${b.invoice}</h2><p>Customer: ${esc(b.customer)} ${b.mobile?'| '+esc(b.mobile):''}</p><table><tr><th>Item</th><th>Qty</th><th class="r">Price</th><th class="r">Amount</th></tr>${b.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.qty}</td><td class="r">${money(i.price)}</td><td class="r">${money(i.price*i.qty)}</td></tr>`).join('')}</table><h2 class="r">Total: ${money(b.total)}</h2><script>window.print()</script></body></html>`);w.document.close()}
 function renderCustomers(){const tb=document.getElementById('customerTable');if(!tb)return;tb.innerHTML=state.customers.length?state.customers.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.mobile)}</td><td>${esc(c.email||'')}</td><td>${c.bills}</td><td>${money(c.total)}</td></tr>`).join(''):'<tr><td colspan="5" class="empty">No customers yet.</td></tr>'}
 function loadSettings(){businessName.value=state.settings.name||currentUser.business;businessCategory.value=state.settings.category||currentUser.category;businessMobile.value=state.settings.mobile||currentUser.mobile;businessGst.value=state.settings.gst||currentUser.gst;businessAddress.value=state.settings.address||''}function saveSettings(){state.settings={name:businessName.value.trim(),category:businessCategory.value,mobile:businessMobile.value.trim(),gst:businessGst.value.trim(),address:businessAddress.value.trim()};save();alert('Settings saved')}
-function updateStats(){const today=new Date().toDateString();todaySales.textContent=money(state.bills.filter(b=>new Date(b.date).toDateString()===today).reduce((a,b)=>a+b.total,0));billCount.textContent=state.bills.length;itemCount.textContent=state.items.length}document.addEventListener('DOMContentLoaded',checkSession);
+function updateStats(){const today=new Date().toDateString();todaySales.textContent=money(state.bills.filter(b=>new Date(b.date).toDateString()===today).reduce((a,b)=>a+b.total,0));billCount.textContent=state.bills.length;itemCount.textContent=state.items.length}
+document.addEventListener('DOMContentLoaded',checkSession);
+
+// Start public authentication immediately after the core app loads. Optional modules
+// must never block the login/signup screen from appearing.
+(function installFastPublicAuth(){
+ const open=(mode)=>{
+  const landing=document.getElementById('publicLanding');
+  const screen=document.getElementById('authScreen');
+  if(landing)landing.style.display='none';
+  if(screen)screen.classList.remove('hidden');
+  if(typeof window.renderAuth==='function')window.renderAuth(mode);
+ };
+ const loginBtn=document.getElementById('publicLogin');
+ const signupBtn=document.getElementById('publicSignup');
+ const signup2Btn=document.getElementById('publicSignup2');
+ if(loginBtn)loginBtn.addEventListener('click',()=>open('login'));
+ if(signupBtn)signupBtn.addEventListener('click',()=>open('signup'));
+ if(signup2Btn)signup2Btn.addEventListener('click',()=>open('signup'));
+ if(new URLSearchParams(location.search).get('auth')==='login')open('login');
+})();

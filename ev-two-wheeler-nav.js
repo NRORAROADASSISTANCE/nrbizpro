@@ -9,7 +9,25 @@
   if(typeof normalBill==='function')window.launchNewBill=()=>isEV()?(typeof window.openEVBill==='function'?window.openEVBill():normalBill()):normalBill();
   if(typeof normalItem==='function')window.openItemModal=()=>isEV()?(typeof window.openEVProduct==='function'?window.openEVProduct():normalItem()):normalItem();
  }
- function addNav(){if(!isEV())return;const nav=document.querySelector('.tabs'),main=document.querySelector('.shell');if(!nav||!main||document.getElementById('evShowroomTab'))return;const b=document.createElement('button');b.className='tab';b.id='evShowroomTab';b.dataset.tab='evShowroom';b.textContent='EV Showroom';b.onclick=()=>showTab('evShowroom');nav.appendChild(b);const s=document.createElement('section');s.id='evShowroom';s.className='panel tab-panel';s.innerHTML='<div class="panel-head"><div><p class="eyebrow">EV TWO-WHEELER SHOWROOM</p><h2>Showroom Management</h2><p class="muted">Business-specific modules configured for your EV showroom.</p></div></div><div class="quick-grid">'+features.map((f,i)=>'<button type="button" class="ev-module-card" data-i="'+i+'"><b>'+f[0]+' '+f[1]+'</b><span>'+f[2]+'</span></button>').join('')+'</div><div id="evModuleDetails"></div>';main.appendChild(s);s.querySelectorAll('.ev-module-card').forEach(x=>x.onclick=()=>openDetails(+x.dataset.i))}
+ function syncNavVisibility(){
+  const ev=isEV();
+  const tab=document.getElementById('evShowroomTab');
+  const panel=document.getElementById('evShowroom');
+  if(tab)tab.style.display=ev?'':'none';
+  if(panel)panel.style.display=ev?'':'none';
+  if(!ev && document.querySelector('.tab.active')===tab){
+   const first=document.querySelector('.tabs .tab:not(#evShowroomTab)');
+   if(first)first.click();
+  }
+ }
+ function addNav(){
+  const nav=document.querySelector('.tabs'),main=document.querySelector('.shell');
+  if(!nav||!main)return;
+  if(!isEV()){syncNavVisibility();return;}
+  if(document.getElementById('evShowroomTab')){syncNavVisibility();return;}
+  const b=document.createElement('button');b.className='tab';b.id='evShowroomTab';b.dataset.tab='evShowroom';b.textContent='EV Showroom';b.onclick=()=>showTab('evShowroom');nav.appendChild(b);
+  const s=document.createElement('section');s.id='evShowroom';s.className='panel tab-panel';s.innerHTML='<div class="panel-head"><div><p class="eyebrow">EV TWO-WHEELER SHOWROOM</p><h2>Showroom Management</h2><p class="muted">Business-specific modules configured for your EV showroom.</p></div></div><div class="quick-grid">'+features.map((f,i)=>'<button type="button" class="ev-module-card" data-i="'+i+'"><b>'+f[0]+' '+f[1]+'</b><span>'+f[2]+'</span></button>').join('')+'</div><div id="evModuleDetails"></div>';main.appendChild(s);s.querySelectorAll('.ev-module-card').forEach(x=>x.onclick=()=>openDetails(+x.dataset.i));syncNavVisibility();
+ }
  function openDetails(i){const d=document.getElementById('evModuleDetails'),f=features[i];if(!d)return;d.innerHTML='<div class="panel" style="margin-top:16px"><div class="panel-head"><div><p class="eyebrow">MODULE</p><h3>'+f[0]+' '+f[1]+'</h3><p class="muted">'+f[2]+'</p></div></div></div>';d.scrollIntoView({behavior:'smooth',block:'nearest'})}
- function boot(){installBillingRouter();addNav()} window.addEventListener('load',boot);setTimeout(boot,1200);setTimeout(boot,2500);setTimeout(boot,4000);window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);document.addEventListener('change',e=>{if(e.target?.id==='businessCategory'||e.target?.id==='businessCategorySettings')setTimeout(installBillingRouter,0)});
+ function boot(){installBillingRouter();addNav();syncNavVisibility()} window.addEventListener('load',boot);setTimeout(boot,1200);setTimeout(boot,2500);setTimeout(boot,4000);window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);document.addEventListener('change',e=>{if(e.target?.id==='businessCategory'||e.target?.id==='businessCategorySettings')setTimeout(()=>{installBillingRouter();addNav();syncNavVisibility()},0)});
 })();

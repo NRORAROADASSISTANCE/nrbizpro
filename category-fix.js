@@ -1,6 +1,15 @@
 // Ensure the signup Business Category is always a real dropdown and load separate product entry points.
 (function(){
-  const categories=['General Business','Grocery / General Store','Footwear / Chappal Shop','Fertilizer / Agriculture','Garage / Service Center','Spare Parts','EV Two-Wheeler Showroom','Retail / Supermarket','Restaurant / Bakery','Hardware / Building Materials','Medical / Pharmacy','Electronics / Mobile','Clothing / Fashion','Furniture','Jewellery','Stationery / Book Store','Dairy / Milk Products','Salon / Beauty Parlour','Printing / Xerox / Online Services','Wholesale / Distributor','Professional Services','Construction / Building Materials','Other Business'];
+  const categories=['General Business','Grocery / General Store','Footwear / Chappal Shop','Fertilizer / Agriculture','Garage / Service Center','Spare Parts','EV Two-Wheeler Showroom','Retail / Supermarket','Restaurant / Bakery','Hardware / Building Materials','Medical / Pharmacy','Electronics / Mobile','Clothing / Fashion','Furniture','Jewellery','Stationery / Book Store','Dairy / Milk Products','Salon / Beauty Parlour','Printing / Xerox / Online Services','Wholesale / Distributor','Professional Services','Construction / Building Materials','Paint Shop','Plumbing Business','Paint Shop + Plumbing Business','Other Business'];
+  function loadScript(src,timeout=4000){return new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.body.appendChild(s);setTimeout(()=>resolve(false),timeout)})}
+  async function ensureCore(){
+    if(typeof window.renderAuth==='function')return true;
+    for(let i=0;i<2;i++){
+      const ok=await loadScript('app.js?v=20260903-rescue-'+i);
+      if(ok&&typeof window.renderAuth==='function')return true;
+    }
+    return typeof window.renderAuth==='function';
+  }
   function fix(){
     const input=document.getElementById('suCategory');
     if(!input || input.tagName==='SELECT')return;
@@ -8,13 +17,14 @@
     categories.forEach(function(value,index){const option=document.createElement('option');option.value=value;option.textContent=value;if(index===0)option.selected=true;select.appendChild(option)});
     input.replaceWith(select);
   }
-  function start(){
+  async function start(){
+    await ensureCore();
     fix();
     const target=document.getElementById('authContent');
     if(!target)return;
     new MutationObserver(fix).observe(target,{childList:true,subtree:true});
-    const a=document.createElement('script');a.src='product-choice.js';a.defer=true;document.body.appendChild(a);
-    const b=document.createElement('script');b.src='service-separation.js';b.defer=true;document.body.appendChild(b);
+    loadScript('product-choice.js');
+    loadScript('service-separation.js');
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

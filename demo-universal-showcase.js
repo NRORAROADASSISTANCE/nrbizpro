@@ -1,12 +1,21 @@
-// NR BizPro — Universal customer demo showcase
+// NR BizPro — Universal customer demo showcase (DEMO ONLY)
 (function(){
+  function isDemo(){
+    return window.nrBizProDemoMode===true && window.currentUser?.plan==='demo' && window.currentUser?.id==='nr-bizpro-demo';
+  }
   function uniqueDemoFeatures(){
     const api=window.NRBizProBusinessModules;
     if(!api?.profiles)return [];
     return [...new Set(Object.values(api.profiles).flat())];
   }
+  function removeFromRealAccount(){
+    const tab=document.getElementById('industryTab');
+    if(tab)tab.remove();
+    const panel=document.getElementById('industryModule');
+    if(panel)panel.remove();
+  }
   function renderUniversalDemo(){
-    if(!window.nrBizProDemoMode)return;
+    if(!isDemo()){removeFromRealAccount();return;}
     const api=window.NRBizProBusinessModules;
     if(!api)return;
     const features=uniqueDemoFeatures();
@@ -14,7 +23,7 @@
     if(panel){
       panel.innerHTML=`<div class="panel-head"><div><p class="eyebrow">CUSTOMER DEMO</p><h2>NR BizPro Universal Modules</h2><p class="muted">Explore billing and business-management features across all supported business types.</p></div><button class="secondary" type="button" id="featureTest">Feature Test</button></div><div class="quick-grid">${features.map((x,i)=>`<button type="button" class="industry-feature" data-demo-feature="${i}"><b>✓ ${String(x).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}</b><span>Open demo workspace</span></button>`).join('')}</div><div id="industryWorkspace"></div>`;
       panel.querySelectorAll('[data-demo-feature]').forEach(b=>b.onclick=()=>api.openFeature(features[+b.dataset.demoFeature]));
-      document.getElementById('featureTest').onclick=api.runTest;
+      const test=document.getElementById('featureTest');if(test)test.onclick=api.runTest;
     }
     const tab=document.getElementById('industryTab');
     if(tab){tab.textContent='All Business Modules';tab.style.display='';}
@@ -30,7 +39,7 @@
       wrapped.__universalDemo=true;
       window.startDemo=wrapped;
     }
-    if(window.nrBizProDemoMode)renderUniversalDemo();
+    renderUniversalDemo();
   }
   window.addEventListener('load',()=>setTimeout(hook,100));
   setInterval(hook,500);

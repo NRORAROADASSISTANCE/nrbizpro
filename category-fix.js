@@ -1,33 +1,10 @@
 // Stable Business Category dropdown — do not replace/re-render while the user is interacting with it.
 (function(){
   const categories=['General Business','Grocery / General Store','Footwear / Chappal Shop','Fertilizer / Agriculture','Garage / Service Center','Spare Parts','EV Two-Wheeler Showroom','Retail / Supermarket','Restaurant / Bakery','Hardware / Building Materials','Medical / Pharmacy','Electronics / Mobile','Clothing / Fashion','Furniture','Jewellery','Stationery / Book Store','Dairy / Milk Products','Salon / Beauty Parlour','Printing / Xerox / Online Services','Wholesale / Distributor','Professional Services','Construction / Building Materials','Paint Shop','Plumbing Business','Paint Shop + Plumbing Business','Other Business'];
-  function loadScript(src,timeout=4000){return new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.body.appendChild(s);setTimeout(()=>resolve(false),timeout)})}
-  async function ensureCore(){if(typeof window.renderAuth==='function')return true;for(let i=0;i<2;i++){const ok=await loadScript('app.js?v=20260905-stable-category-'+i);if(ok&&typeof window.renderAuth==='function')return true}return typeof window.renderAuth==='function'}
-  function buildDropdown(old){
-    const select=document.createElement('select');select.id='suCategory';select.name='businessCategory';select.required=true;select.setAttribute('aria-label','Business Category');
-    categories.forEach((value,index)=>{const option=document.createElement('option');option.value=value;option.textContent=value;select.appendChild(option)});
-    const wanted=old?.value||old?.getAttribute('data-value')||'';
-    if(wanted&&categories.includes(wanted))select.value=wanted;else select.selectedIndex=0;
-    return select;
-  }
-  function fix(){
-    const input=document.getElementById('suCategory');
-    if(!input)return;
-    if(input.tagName==='SELECT'){
-      // Repair only missing options; never replace an existing select, so focus/scroll cannot jump.
-      if(input.options.length!==categories.length){
-        const value=input.value;input.innerHTML='';categories.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;input.appendChild(o)});if(categories.includes(value))input.value=value;
-      }
-      return;
-    }
-    input.replaceWith(buildDropdown(input));
-  }
-  async function start(){
-    await ensureCore();fix();
-    const target=document.getElementById('authContent');if(!target)return;
-    // Observe only DOM additions; never touch the dropdown while it is already a SELECT.
-    new MutationObserver(()=>{requestAnimationFrame(fix)}).observe(target,{childList:true,subtree:true});
-    loadScript('product-choice.js');loadScript('service-separation.js');loadScript('clothing-module.js');loadScript('electronics-module.js');loadScript('furniture-module.js');loadScript('jewellery-module.js');loadScript('stationery-module.js');loadScript('dairy-module.js');loadScript('salon-module.js');loadScript('printing-module.js');loadScript('wholesale-module.js');loadScript('professional-services-module.js');loadScript('construction-module.js');loadScript('business-settings-lock.js?v=20260905-03');
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  function loadScript(src){return new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.onload=()=>resolve(true);s.onerror=()=>resolve(false);document.body.appendChild(s)})}
+  async function ensureCore(){if(typeof window.renderAuth==='function')return true;const ok=await loadScript('app.js?v=20260905-stable-category');return ok&&typeof window.renderAuth==='function'}
+  function buildDropdown(old){const select=document.createElement('select');select.id='suCategory';select.name='businessCategory';select.required=true;select.setAttribute('aria-label','Business Category');categories.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;select.appendChild(o)});const wanted=old?.value||'';if(categories.includes(wanted))select.value=wanted;return select}
+  function fix(){const input=document.getElementById('suCategory');if(!input)return;if(input.tagName==='SELECT'){if(input.options.length!==categories.length){const value=input.value;input.innerHTML='';categories.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;input.appendChild(o)});if(categories.includes(value))input.value=value}return}input.replaceWith(buildDropdown(input))}
+  async function start(){await ensureCore();fix();const target=document.getElementById('authContent');if(!target)return;new MutationObserver(()=>requestAnimationFrame(fix)).observe(target,{childList:true,subtree:true});['product-choice.js','service-separation.js','clothing-module.js','electronics-module.js','furniture-module.js','jewellery-module.js','stationery-module.js','dairy-module.js','salon-module.js','printing-module.js','wholesale-module.js','professional-services-module.js','construction-module.js','business-settings-lock.js?v=20260905-03'].forEach(loadScript)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

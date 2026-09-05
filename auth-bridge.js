@@ -34,6 +34,17 @@
     const openAuth=mode=>{landing.remove();document.getElementById('authScreen')?.classList.remove('hidden');window.renderAuth?.(mode)};
     document.getElementById('plLogin').onclick=()=>openAuth('login'); document.getElementById('plSignup').onclick=()=>openAuth('signup');
   }
-  function setupPublicLayer(){const app=document.getElementById('app');if(app&&!app.classList.contains('hidden'))return;buildPublicLanding()}
+  function setupPublicLayer(){
+    const app=document.getElementById('app');
+    if(app&&!app.classList.contains('hidden'))return;
+    const requested=new URLSearchParams(location.hash.replace(/^#/,'')).get('auth');
+    if(requested==='login'||requested==='signup'){
+      document.getElementById('publicLanding')?.remove();
+      document.getElementById('authScreen')?.classList.remove('hidden');
+      window.renderAuth?.(requested);
+      return;
+    }
+    buildPublicLanding();
+  }
   setupPublicLayer();
 })();

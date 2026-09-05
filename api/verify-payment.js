@@ -4,7 +4,7 @@ function send(res,code,body){res.setHeader('Content-Type','application/json');re
 export default async function handler(req,res){
  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});
  const secret=process.env.RAZORPAY_KEY_SECRET,keyId=process.env.RAZORPAY_KEY_ID;
- if(!secret||!keyId)return send(res,500,{error:'Razorpay keys are not configured on the server.'});
+ if(!secret||!keyId)return send(res,500,{verified:false,error:'Razorpay Test/Live keys are not configured on the server. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel Environment Variables.'});
  await initDb();
  try{
   const {razorpay_order_id,razorpay_payment_id,razorpay_signature}=req.body||{};
@@ -16,8 +16,8 @@ export default async function handler(req,res){
   const b=await sessionBusiness(req);
   if(!b)return send(res,401,{verified:false,error:'Login session expired. Please login and retry.'});
   if(!b.pending_plan)return send(res,400,{verified:false,error:'No pending membership payment was found.'});
-  const planFees={year1:3000,year2:4000,year3:5200,test10:10};
-  const years={year1:1,year2:2,year3:3,test10:0};
+  const planFees={year3:3500,lifetime:6000,test10:10};
+  const years={year3:3,lifetime:0,test10:0};
   const plan=b.pending_plan;
   if(!planFees[plan])return send(res,400,{verified:false,error:'Invalid pending membership plan.'});
   const expectedAmount=(Number(b.pending_amount)||0)*100;
@@ -37,8 +37,8 @@ export default async function handler(req,res){
    return send(res,200,{verified:true,testPayment:true,paymentId:razorpay_payment_id,orderId:razorpay_order_id,user:r.rows[0]});
   }
   const base=b.status==='active'&&b.subscription_ends&&new Date(b.subscription_ends)>new Date()?new Date(b.subscription_ends):new Date();
-  base.setDate(base.getDate()+365*years[plan]);
-  await sql`UPDATE businesses SET status='active',plan=${plan},subscription_ends=${base.toISOString()},pending_plan=null,pending_amount=0,last_payment_id=${razorpay_payment_id},updated_at=now() WHERE id=${b.id}`;
+  if(years[plan]>0)base.setDate(base.getDate()+365*years[plan]);
+  await sql`UPDATE businesses SET status='active',plan=${plan},subscription_ends=${years[plan]>0?base.toISOString():null},pending_plan=null,pending_amount=0,last_payment_id=${razorpay_payment_id},updated_at=now() WHERE id=${b.id}`;
   const r=await sql`SELECT id,business,owner,mobile,email,category,gst,address,status,plan,subscription_ends,pending_plan,pending_amount,last_payment_id FROM businesses WHERE id=${b.id}`;
   return send(res,200,{verified:true,paymentId:razorpay_payment_id,orderId:razorpay_order_id,user:r.rows[0]});
  }catch(e){console.error(e);return send(res,400,{verified:false,error:'Payment verification failed.'});}

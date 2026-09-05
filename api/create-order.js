@@ -3,11 +3,11 @@ function send(res, code, body) { res.setHeader('Content-Type','application/json'
 export default async function handler(req,res){
  if(req.method!=='POST') return send(res,405,{error:'Method not allowed'});
  const keyId=process.env.RAZORPAY_KEY_ID,keySecret=process.env.RAZORPAY_KEY_SECRET;
- if(!keyId||!keySecret)return send(res,500,{error:'Razorpay keys are not configured on the server.'});
+ if(!keyId||!keySecret)return send(res,500,{error:'Razorpay Test/Live keys are not configured on the server. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel Environment Variables.'});
  try{
   const {plan,businessName,email,mobile,registrationFee}=req.body||{};
-  const planAmounts={year1:300000,year2:400000,year3:520000,monthly:19900,yearly:199900,test10:1000};
-  const duration={year1:1,year2:2,year3:3,test10:0};
+  const planAmounts={year3:350000,lifetime:600000,test10:1000};
+  const duration={year3:3,lifetime:0,test10:0};
   const selected=planAmounts[plan];
   if(!selected)return send(res,400,{error:'Invalid membership plan.'});
   const isTest=plan==='test10';

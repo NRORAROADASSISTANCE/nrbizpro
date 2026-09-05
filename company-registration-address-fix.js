@@ -12,3 +12,5 @@
 })();
 // Load the hard EV product/bill fix after all existing modules.
 (function(){function load(){if(document.getElementById('nrEvProductBillHardFix'))return;const s=document.createElement('script');s.id='nrEvProductBillHardFix';s.src='ev-product-bill-hard-fix.js?v=20260905-1';document.body.appendChild(s)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,150));else setTimeout(load,150)})();
+// Load final auth/demo/payment stability layer after all existing patches.
+(function(){function load(){if(document.getElementById('nrFinalAuthPaymentFix'))return;const s=document.createElement('script');s.id='nrFinalAuthPaymentFix';s.src='final-auth-payment-fix.js?v=20260905-1';document.body.appendChild(s)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,300));else setTimeout(load,300)})();

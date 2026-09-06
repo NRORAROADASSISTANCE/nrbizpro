@@ -19,10 +19,13 @@
     const a=api(); if(!a?.profiles)return;
     const cats=categories();
     const panel=document.getElementById('industryModule');
-    if(panel){
+    // Do not replace panel.innerHTML after the first render. Rebuilding this DOM
+    // repeatedly steals focus from native selects and makes the page jump.
+    if(panel && panel.dataset.rendered!=='1'){
       panel.innerHTML=`<div class="panel-head"><div><p class="eyebrow">CUSTOMER DEMO</p><h2>NR BizPro — All Business Categories</h2><p class="muted">Explore the user interface and workflows available for every supported business category. Demo only — no real business data is created.</p></div><button class="secondary" type="button" id="featureTest">Feature Test</button></div><div class="quick-grid" id="demoCategoryGrid">${cats.map((c,i)=>`<button type="button" class="industry-feature" data-demo-category="${i}"><b>✓ ${String(c.label).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}</b><span>${c.features.length} modules • Open demo</span></button>`).join('')}</div><div id="industryWorkspace"></div>`;
       panel.querySelectorAll('[data-demo-category]').forEach(b=>b.onclick=()=>openCategory(cats[+b.dataset.demoCategory]));
       const test=document.getElementById('featureTest'); if(test)test.onclick=()=>alert(`Universal Demo Feature Test\n\nBusiness categories: ${cats.length}\nTotal category modules: ${cats.reduce((n,c)=>n+c.features.length,0)}\n\nSelect any category above to explore its modules.`);
+      panel.dataset.rendered='1';
     }
     const tab=document.getElementById('industryTab');
     if(tab){tab.textContent='All Business Categories';tab.style.display='';}
@@ -31,7 +34,7 @@
   function openCategory(category){
     const box=document.getElementById('industryWorkspace'); if(!box)return;
     box.innerHTML=`<div class="panel-head"><div><p class="eyebrow">DEMO CATEGORY</p><h2>${esc(category.label)}</h2><p class="muted">All ${category.features.length} modules for this business type.</p></div><button class="secondary" type="button" id="closeWorkspace">Back to Categories</button></div><div class="quick-grid">${category.features.map((x,i)=>`<button type="button" class="industry-feature" data-demo-feature="${i}"><b>✓ ${esc(x)}</b><span>Open demo workspace</span></button>`).join('')}</div><div id="demoFeatureWorkspace"></div>`;
-    document.getElementById('closeWorkspace').onclick=()=>renderUniversalDemo();
+    document.getElementById('closeWorkspace').onclick=()=>{const p=document.getElementById('industryModule');if(p)p.dataset.rendered='0';renderUniversalDemo()};
     box.querySelectorAll('[data-demo-feature]').forEach(b=>b.onclick=()=>openFeature(category.features[+b.dataset.demoFeature],category.label));
     box.scrollIntoView({behavior:'smooth',block:'start'});
   }
@@ -45,17 +48,21 @@
     const d=document.getElementById('dashboard'); if(!d)return;
     let box=document.getElementById('demoUniversalCategoryCards');
     if(!box){box=document.createElement('section');box.id='demoUniversalCategoryCards';box.className='panel tab-panel';d.parentNode?.insertBefore(box,d.nextSibling)}
+    // Keep the dashboard card DOM stable as well.
+    if(box.dataset.rendered==='1')return;
     box.innerHTML=`<div class="panel-head"><div><p class="eyebrow">DEMO SHOWCASE</p><h2>All Business Categories</h2><p class="muted">Choose any category to preview its complete user interface and business modules.</p></div></div><div class="quick-grid">${cats.map((c,i)=>`<button type="button" class="industry-feature" data-demo-dash-category="${i}"><b>✓ ${esc(c.label)}</b><span>${c.features.length} modules available</span></button>`).join('')}</div>`;
     box.querySelectorAll('[data-demo-dash-category]').forEach(b=>b.onclick=()=>{const c=cats[+b.dataset.demoDashCategory];window.showTab?.('industryModule');setTimeout(()=>openCategory(c),50)});
+    box.dataset.rendered='1';
   }
   function esc(v){return String(v??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}
   function hook(){
+    if(!isDemo())return;
     const original=window.startDemo;
     if(typeof original==='function'&&!original.__universalDemo){
       const wrapped=function(){
         original();
         window.nrBizProDemoMode=true;
-        setTimeout(()=>{api()?.sync?.();setTimeout(renderUniversalDemo,100)},150);
+        setTimeout(()=>{api()?.sync?.();renderUniversalDemo()},150);
       };
       wrapped.__universalDemo=true;
       window.startDemo=wrapped;
@@ -63,5 +70,6 @@
     renderUniversalDemo();
   }
   window.addEventListener('load',()=>setTimeout(hook,150));
-  setInterval(hook,700);
+  window.addEventListener('authReady',()=>setTimeout(hook,100));
+  window.addEventListener('loginSuccess',()=>setTimeout(hook,100));
 })();

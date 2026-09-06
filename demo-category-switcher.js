@@ -14,8 +14,18 @@
       const first=dashboard.firstElementChild; dashboard.insertBefore(box,first||null);
     }
     const current=window.currentUser?.category||window.state?.settings?.category||'EV Two-Wheeler Showroom';
+    const oldSel=document.getElementById('demoBusinessCategory');
+    // IMPORTANT: never rebuild the select on every timer tick. Replacing a focused
+    // native select causes Chrome to reopen/close it and scroll the page repeatedly.
+    if(oldSel && oldSel.value===current && box.dataset.ready==='1') return;
+    if(box.dataset.ready==='1' && oldSel){
+      oldSel.value=current;
+      return;
+    }
     box.innerHTML=`<div class="panel-head"><div><p class="eyebrow">DEMO BUSINESS SELECTOR</p><h2>Choose Business Category</h2><p class="muted">Switch categories to preview the correct Products, Billing and business modules. Demo only.</p></div><label style="min-width:280px">Business Category<select id="demoBusinessCategory">${CATEGORIES.map(([label])=>`<option value="${esc(label)}" ${label===current?'selected':''}>${esc(label)}</option>`).join('')}</select></label></div>`;
     const sel=document.getElementById('demoBusinessCategory');
+    if(!sel)return;
+    box.dataset.ready='1';
     sel.onchange=()=>switchCategory(sel.value);
   }
   function switchCategory(label){
@@ -28,14 +38,14 @@
     try{window.NRBizProBusinessModules?.sync?.()}catch(e){}
     try{window.renderItems?.()}catch(e){}
     try{window.updateStats?.()}catch(e){}
-    // Product modal is re-bound by product-module; force a fresh binding.
     try{if(window.openBusinessProductModal)window.openItemModal=window.openBusinessProductModal}catch(e){}
     const industry=document.getElementById('industryModule');
     if(industry && window.NRBizProBusinessModules?.render)window.NRBizProBusinessModules.render();
     const cards=document.getElementById('demoUniversalCategoryCards');
     if(cards){const buttons=cards.querySelectorAll('[data-demo-dash-category]');buttons.forEach(b=>b.classList.remove('active'));}
-    const sel=document.getElementById('businessCategory');if(sel)sel.value=label;
-    alert(`Demo category changed to: ${label}\n\nThe demo UI now uses this business category. You can test Add Product and its category-specific fields.`);
+    const settingsSel=document.getElementById('businessCategory');if(settingsSel)settingsSel.value=label;
+    const demoSel=document.getElementById('demoBusinessCategory');if(demoSel)demoSel.value=label;
+    // No alert: it steals focus and can make the page appear to jump after selection.
   }
   function restore(){
     if(!isDemo())return;
@@ -47,6 +57,8 @@
   window.addEventListener('load',()=>setTimeout(restore,300));
   window.addEventListener('authReady',()=>setTimeout(restore,100));
   window.addEventListener('loginSuccess',()=>setTimeout(restore,100));
-  setInterval(()=>{if(isDemo())addSwitcher()},1000);
+  // Keep the existing selector stable. This check only repairs the box if some
+  // other module removes it; it does not rewrite its DOM while it is focused.
+  setInterval(()=>{if(isDemo() && !document.getElementById('demoCategorySwitcher'))addSwitcher()},1000);
   function esc(v){return String(v??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}
 })();

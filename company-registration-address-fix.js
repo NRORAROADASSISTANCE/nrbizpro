@@ -1,4 +1,4 @@
-// NR BizPro — Company Registration Address Fix (DOM-safe)
+// NR BizPro — Company Registration Address Fix (stable, no page-jump)
 (function(){
   const ADDRESS_ID='suAddress';
   const ADDRESS_LABEL_ID='nrCompanyAddressLabel';
@@ -8,7 +8,9 @@
   function patchFetch(){if(window.fetch.__nrAddressPatch)return;const original=window.fetch;const wrapped=function(input,init){try{const url=typeof input==='string'?input:(input&&input.url)||'';if(url.includes('/api/auth')&&init&&String(init.method||'GET').toUpperCase()==='POST'&&typeof init.body==='string'){const body=JSON.parse(init.body);if(body?.action==='signup'){addAddressField();body.address=(document.getElementById(ADDRESS_ID)?.value||'').trim();init={...init,body:JSON.stringify(body)}}}}catch(err){console.error('NR BizPro address patch',err)}return original.call(this,input,init)};wrapped.__nrAddressPatch=true;window.fetch=wrapped}
   function patchSignup(){if(typeof window.signup!=='function'||window.signup.__nrAddressPatch)return;const old=window.signup;async function wrapped(e){addAddressField();const address=document.getElementById(ADDRESS_ID)?.value?.trim()||'';if(!address){e.preventDefault();alert('Please enter Business Address.');document.getElementById(ADDRESS_ID)?.focus();return false}return old.apply(this,arguments)}wrapped.__nrAddressPatch=true;window.signup=wrapped}
   function run(){addAddressField();patchSignup();patchFetch()}
-  const observer=new MutationObserver(run);function start(){const root=document.getElementById('authContent')||document.body;observer.observe(root,{childList:true,subtree:true});run()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+  // Do NOT use MutationObserver here. It repeatedly re-entered during category/select updates and caused the registration page to jump.
+  function start(){run();setTimeout(run,300)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 // Load the hard EV product/bill fix after all existing modules.
 (function(){function load(){if(document.getElementById('nrEvProductBillHardFix'))return;const s=document.createElement('script');s.id='nrEvProductBillHardFix';s.src='ev-product-bill-hard-fix.js?v=20260905-1';document.body.appendChild(s)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,150));else setTimeout(load,150)})();

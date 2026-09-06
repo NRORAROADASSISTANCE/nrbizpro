@@ -28,11 +28,46 @@
   ['General Business','general','Add Product / Service',[['Product / Service','text'],['Barcode','text'],['Type','select:Product|Raw Product|Service'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   ['Other Business','general','Add Product / Service',[['Product / Service','text'],['Barcode','text'],['Type','select:Product|Raw Product|Service'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]]
  ];
- function isDemo(){return window.nrBizProDemoMode===true&&window.currentUser?.plan==='demo'}
  function category(){return String(window.currentUser?.category||window.currentUser?.businessCategory||window.state?.settings?.category||document.getElementById('businessCategory')?.value||'General Business')}
- function config(){const c=category().toLowerCase();return MAP.find(x=>x[0].toLowerCase()===c)||MAP.find(x=>c.includes(x[0].toLowerCase()))||MAP[MAP.length-2]}
- function open(){const [label,key,title,fields]=config();const html='<div class="modal-grid">'+fields.map((f,i)=>{const parts=f[1].split(':');if(parts[0]==='select')return '<label class="field">'+f[0]+'<select id="ucm'+i+'">'+parts[1].split('|').map(x=>'<option>'+x+'</option>').join('')+'</select></label>';return '<label class="field">'+f[0]+'<input id="ucm'+i+'" type="'+f[1]+'" '+(f[1]==='number'?'min="0" step="0.01"':'')+'></label>'}).join('')+'</div><div class="modal-actions"><button class="secondary" type="button" onclick="closeModal()">Cancel</button><button class="primary" type="button" id="universalSaveProduct">Save Product</button></div>';openModal(title,html);document.getElementById('universalSaveProduct').onclick=()=>save(fields,key);document.getElementById('ucm0')?.focus()}
- function save(fields,key){const values=fields.map((_,i)=>document.getElementById('ucm'+i)?.value?.trim()||'');if(!values[0])return alert('Enter '+fields[0][0]);window.state=window.state||{};state.items=state.items||[];const idx=label=>fields.findIndex(f=>f[0].toLowerCase().includes(label));const b=idx('barcode')>=0?values[idx('barcode')]:idx('sku')>=0?values[idx('sku')]:'';if(b&&state.items.some(x=>x.barcode===b))return alert('Barcode / SKU already exists');const find=words=>{const i=fields.findIndex(f=>words.some(w=>f[0].toLowerCase().includes(w)));return i>=0?values[i]:''};const name=find(['product name','product / service','item name','medicine name','book / item','material name','service / product name','service name','model'])||values[0];const type=find(['product type','type'])||'Product';const item={id:crypto.randomUUID(),name,barcode:b,type,cost:Number(find(['cost price','purchase price','wholesale price','ex-showroom price']))||0,sell:Number(find(['selling price','on-road price','fee / selling price']))||0,gst:Number(find(['gst']))||0,stock:Number(find(['opening stock']))||0,businessCategory:key,details:Object.fromEntries(fields.map((f,i)=>[f[0],values[i]]))};state.items.push(item);state.moduleData=state.moduleData||{};state.moduleData['Product / Vehicle Records']=state.moduleData['Product / Vehicle Records']||[];state.moduleData['Product / Vehicle Records'].push(item.details);try{save()}catch(e){}closeModal();try{renderItems();updateStats()}catch(e){}}
- window.openUniversalProductModal=open;window.addEventListener('load',()=>{window.openItemModal=open});window.addEventListener('authReady',()=>{window.openItemModal=open});window.addEventListener('loginSuccess',()=>{window.openItemModal=open});
- setInterval(()=>{if(isDemo())window.openItemModal=open},1000);
+ function config(){const c=category().trim().toLowerCase();return MAP.find(x=>x[0].toLowerCase()===c)||MAP.find(x=>c.includes(x[0].toLowerCase()))||MAP[MAP.length-2]}
+ function open(){
+   const [label,key,title,fields]=config();
+   const html='<div class="modal-grid">'+fields.map((f,i)=>{const parts=f[1].split(':');if(parts[0]==='select')return '<label class="field">'+f[0]+'<select id="ucm'+i+'">'+parts[1].split('|').map(x=>'<option>'+x+'</option>').join('')+'</select></label>';return '<label class="field">'+f[0]+'<input id="ucm'+i+'" type="'+f[1]+'" '+(f[1]==='number'?'min="0" step="0.01"':'')+'></label>'}).join('')+'</div><div class="modal-actions"><button class="secondary" type="button" id="universalCancelProduct">Cancel</button><button class="primary" type="button" id="universalSaveProduct">Save Product</button></div>';
+   if(typeof openModal!=='function'){alert('NR BizPro: product window is not ready. Please refresh once.');return}
+   openModal(title,html);
+   const saveBtn=document.getElementById('universalSaveProduct');
+   const cancelBtn=document.getElementById('universalCancelProduct');
+   if(saveBtn)saveBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();save(fields,key)},{once:true});
+   if(cancelBtn)cancelBtn.addEventListener('click',function(e){e.preventDefault();closeModal()},{once:true});
+   document.getElementById('ucm0')?.focus();
+ }
+ function save(fields,key){
+   try{
+     const values=fields.map((_,i)=>document.getElementById('ucm'+i)?.value?.trim()||'');
+     if(!values[0]){alert('Enter '+fields[0][0]);return}
+     const st=window.state;
+     if(!st){alert('Business data is not ready. Please refresh once and try again.');return}
+     st.items=Array.isArray(st.items)?st.items:[];
+     const idx=label=>fields.findIndex(f=>f[0].toLowerCase().includes(label));
+     const b=idx('barcode')>=0?values[idx('barcode')]:idx('sku')>=0?values[idx('sku')]:'';
+     if(b&&st.items.some(x=>x.barcode===b)){alert('Barcode / SKU already exists');return}
+     const find=words=>{const i=fields.findIndex(f=>words.some(w=>f[0].toLowerCase().includes(w)));return i>=0?values[i]:''};
+     const name=find(['product name','product / service','item name','medicine name','book / item','material name','service / product name','service name','model'])||values[0];
+     const type=find(['product type','type'])||'Product';
+     const item={id:crypto.randomUUID(),name,barcode:b,type,cost:Number(find(['cost price','purchase price','wholesale price','ex-showroom price']))||0,sell:Number(find(['selling price','on-road price','fee / selling price']))||0,gst:Number(find(['gst']))||0,stock:Number(find(['opening stock']))||0,businessCategory:key,details:Object.fromEntries(fields.map((f,i)=>[f[0],values[i]]))};
+     st.items.push(item);
+     st.moduleData=st.moduleData||{};
+     st.moduleData['Product / Vehicle Records']=st.moduleData['Product / Vehicle Records']||[];
+     st.moduleData['Product / Vehicle Records'].push(item.details);
+     try{if(typeof save==='function')save()}catch(e){console.warn('NR BizPro save warning',e)}
+     closeModal();
+     try{if(typeof renderItems==='function')renderItems();if(typeof updateStats==='function')updateStats()}catch(e){console.warn('NR BizPro refresh warning',e)}
+   }catch(e){console.error('NR BizPro product save failed',e);alert('Product save failed. Please try again.')}
+ }
+ window.openUniversalProductModal=open;
+ function install(){window.openItemModal=open}
+ window.addEventListener('load',install);
+ window.addEventListener('authReady',install);
+ window.addEventListener('loginSuccess',install);
+ install();
 })();

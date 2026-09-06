@@ -37,11 +37,11 @@
    openModal(title,html);
    const saveBtn=document.getElementById('universalSaveProduct');
    const cancelBtn=document.getElementById('universalCancelProduct');
-   if(saveBtn)saveBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();save(fields,key)},{once:true});
+   if(saveBtn)saveBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();saveProduct(fields,key)},{once:true});
    if(cancelBtn)cancelBtn.addEventListener('click',function(e){e.preventDefault();closeModal()},{once:true});
    document.getElementById('ucm0')?.focus();
  }
- function save(fields,key){
+ function saveProduct(fields,key){
    try{
      const values=fields.map((_,i)=>document.getElementById('ucm'+i)?.value?.trim()||'');
      if(!values[0]){alert('Enter '+fields[0][0]);return}
@@ -59,10 +59,11 @@
      st.moduleData=st.moduleData||{};
      st.moduleData['Product / Vehicle Records']=st.moduleData['Product / Vehicle Records']||[];
      st.moduleData['Product / Vehicle Records'].push(item.details);
-     try{if(typeof save==='function')save()}catch(e){console.warn('NR BizPro save warning',e)}
+     // IMPORTANT: call the persistence function from app.js, not this product handler.
+     if(typeof save==='function')save();
      closeModal();
      try{if(typeof renderItems==='function')renderItems();if(typeof updateStats==='function')updateStats()}catch(e){console.warn('NR BizPro refresh warning',e)}
-   }catch(e){console.error('NR BizPro product save failed',e);alert('Product save failed. Please try again.')}
+   }catch(e){console.error('NR BizPro product save failed',e);alert('Product save failed: '+(e?.message||'Please try again.'))}
  }
  window.openUniversalProductModal=open;
  function install(){window.openItemModal=open}

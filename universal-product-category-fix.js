@@ -28,7 +28,13 @@
   ['General Business','general','Add Product / Service',[['Product / Service','text'],['Barcode','text'],['Type','select:Product|Raw Product|Service'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   ['Other Business','general','Add Product / Service',[['Product / Service','text'],['Barcode','text'],['Type','select:Product|Raw Product|Service'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]]
  ];
- function category(){return String(window.currentUser?.category||window.currentUser?.businessCategory||window.state?.settings?.category||document.getElementById('businessCategory')?.value||'General Business')}
+ function category(){
+   let c='';
+   try{if(typeof currentUser!=='undefined'&&currentUser)c=currentUser.category||currentUser.businessCategory||'';}catch(e){}
+   try{if(!c&&typeof state!=='undefined'&&state)c=state.settings?.category||state.settings?.businessCategory||'';}catch(e){}
+   if(!c)c=document.getElementById('businessCategory')?.value||'General Business';
+   return String(c);
+ }
  function config(){const c=category().trim().toLowerCase();return MAP.find(x=>x[0].toLowerCase()===c)||MAP.find(x=>c.includes(x[0].toLowerCase()))||MAP[MAP.length-2]}
  function open(){
    const [label,key,title,fields]=config();
@@ -45,7 +51,8 @@
    try{
      const values=fields.map((_,i)=>document.getElementById('ucm'+i)?.value?.trim()||'');
      if(!values[0]){alert('Enter '+fields[0][0]);return}
-     const st=window.state;
+     // app.js declares state/currentUser with global lexical bindings (let), not window properties.
+     const st=(typeof state!=='undefined'&&state)?state:window.state;
      if(!st){alert('Business data is not ready. Please refresh once and try again.');return}
      st.items=Array.isArray(st.items)?st.items:[];
      const idx=label=>fields.findIndex(f=>f[0].toLowerCase().includes(label));
@@ -54,13 +61,13 @@
      const find=words=>{const i=fields.findIndex(f=>words.some(w=>f[0].toLowerCase().includes(w)));return i>=0?values[i]:''};
      const name=find(['product name','product / service','item name','medicine name','book / item','material name','service / product name','service name','model'])||values[0];
      const type=find(['product type','type'])||'Product';
-     const item={id:crypto.randomUUID(),name,barcode:b,type,cost:Number(find(['cost price','purchase price','wholesale price','ex-showroom price']))||0,sell:Number(find(['selling price','on-road price','fee / selling price']))||0,gst:Number(find(['gst']))||0,stock:Number(find(['opening stock']))||0,businessCategory:key,details:Object.fromEntries(fields.map((f,i)=>[f[0],values[i]]))};
+     const item={id:(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():('item-'+Date.now()+'-'+Math.random().toString(36).slice(2)),name,barcode:b,type,cost:Number(find(['cost price','purchase price','wholesale price','ex-showroom price']))||0,sell:Number(find(['selling price','on-road price','fee / selling price']))||0,gst:Number(find(['gst']))||0,stock:Number(find(['opening stock']))||0,businessCategory:key,details:Object.fromEntries(fields.map((f,i)=>[f[0],values[i]]))};
      st.items.push(item);
      st.moduleData=st.moduleData||{};
      st.moduleData['Product / Vehicle Records']=st.moduleData['Product / Vehicle Records']||[];
      st.moduleData['Product / Vehicle Records'].push(item.details);
-     // IMPORTANT: call the persistence function from app.js, not this product handler.
      if(typeof save==='function')save();
+     else if(typeof currentUser!=='undefined'&&currentUser) localStorage.setItem('nr-bizpro-data-v2:'+currentUser.id,JSON.stringify(st));
      closeModal();
      try{if(typeof renderItems==='function')renderItems();if(typeof updateStats==='function')updateStats()}catch(e){console.warn('NR BizPro refresh warning',e)}
    }catch(e){console.error('NR BizPro product save failed',e);alert('Product save failed: '+(e?.message||'Please try again.'))}

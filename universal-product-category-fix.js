@@ -86,11 +86,16 @@
    const uid=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():('item-'+Date.now()+'-'+Math.random().toString(36).slice(2));
    const item={id:uid,name,barcode,type,cost:Number(read(['cost price','purchase price','wholesale price','ex-showroom price','cost / expense']))||0,sell:Number(read(['selling price','on-road price','fee / selling price']))||0,gst:Number(read(['gst']))||0,stock:Number(read(['opening stock']))||0,businessCategory:key,details:Object.fromEntries(fields.map((f,i)=>[f[0],values[i]]))};
    st.items.push(item);
-   st.moduleData=st.moduleData||{};
-   st.moduleData['Product / Vehicle Records']=st.moduleData['Product / Vehicle Records']||[];
+   st.moduleData=st.moduleData&&typeof st.moduleData==='object'?st.moduleData:{};
+   st.moduleData['Product / Vehicle Records']=Array.isArray(st.moduleData['Product / Vehicle Records'])?st.moduleData['Product / Vehicle Records']:[];
    st.moduleData['Product / Vehicle Records'].push(item.details);
-   if(typeof save==='function')save();
-   else {const u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser;if(!u?.id)throw Error('User session missing');localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));}
+   const u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser;
+   if(!u?.id)throw Error('User session missing');
+   // Save directly. Do not call the legacy save() function here because some
+   // older category modules expect a category object and throw when it is null.
+   localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));
+   window.state=st;
+   try{state=st}catch(e){}
    if(typeof closeModal==='function')closeModal();
    if(typeof renderItems==='function')renderItems();
    if(typeof updateStats==='function')updateStats();
@@ -104,7 +109,6 @@
  window.addEventListener('load',install);
  window.addEventListener('authReady',install);
  window.addEventListener('loginSuccess',install);
- // Delegated click handler: survives modal HTML replacement and prevents other modules from stealing the Save click.
  document.addEventListener('click',function(e){
   const t=e.target&&e.target.closest?e.target.closest('#universalSaveProduct'):null;
   if(t){e.preventDefault();e.stopImmediatePropagation();saveProduct()}

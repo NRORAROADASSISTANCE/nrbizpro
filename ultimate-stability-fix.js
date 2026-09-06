@@ -46,4 +46,5 @@ function install(){
 }
 document.addEventListener('click',function(e){const b=e.target?.closest?.('button');if(!b)return;const t=(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();if(t==='save product'||t==='save item'){const body=document.getElementById('modalBody');if(body&&body.querySelector('label.field')){e.preventDefault();e.stopImmediatePropagation();try{saveProduct()}catch(err){console.error(err);alert('Product save failed: '+(err?.message||'Please try again.'))}}}else if(t.includes('new bill')||t.includes('create bill')){e.preventDefault();e.stopImmediatePropagation();openBill()}},true);
 window.addEventListener('load',()=>{install();setTimeout(install,500);setTimeout(install,1500)});setInterval(()=>{if(!document.getElementById('modal')?.classList.contains('hidden'))return;install()},3000);
+var s=document.createElement('script');s.src='bill-search-final.js?v=20260906-1';document.body.appendChild(s);
 })();

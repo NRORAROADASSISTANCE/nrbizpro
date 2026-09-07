@@ -1,4 +1,4 @@
-/* NR BizPro Smart Print — connect Xerox cleanup to the actual preview pipeline. */
+/* NR BizPro Smart Print — Xerox cleanup + conservative edge confidence gate. */
 (function(){
   function install(){
     const old=window.prepareProcessedPages;

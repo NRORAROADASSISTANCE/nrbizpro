@@ -1,0 +1,9 @@
+/* NR BizPro Smart Print — partner controls, additive to printing. */
+(function(){
+ const $=id=>document.getElementById(id);
+ function db(){try{return JSON.parse(localStorage.getItem('nr-bizpro-smart-print-ledger-v1')||'{"wallets":{},"retailers":{},"transactions":[],"platformRevenue":0,"distributorRevenue":0}')}catch{return {wallets:{},retailers:{},transactions:[],platformRevenue:0,distributorRevenue:0}}}
+ function save(x){localStorage.setItem('nr-bizpro-smart-print-ledger-v1',JSON.stringify(x))}
+ function render(){const d=db();const box=document.getElementById('spPartnerPanel');if(!box)return;const dist=Object.entries(d.wallets).filter(([,w])=>w.role==='distributor');const retailers=Object.entries(d.retailers);box.innerHTML='<h2>🤝 Partner Network</h2><div class="form"><label>Distributor ID<input id="spDistId" placeholder="Distributor ID"></label><label>Retailer ID<input id="spRetId" placeholder="Retailer ID"></label></div><button class="primary" id="spMap">Add Retailer via Distributor — ₹600</button><p>₹500 Distributor share • ₹100 NRBizPro platform fee • Retailer receives 5,000 points.</p><hr><b>Distributors:</b> '+dist.length+' &nbsp; <b>Retailers mapped:</b> '+retailers.length+' &nbsp; <b>Platform revenue:</b> ₹'+(d.platformRevenue||0).toLocaleString()+' &nbsp; <b>Distributor earnings:</b> ₹'+(d.distributorRevenue||0).toLocaleString();$('spMap').onclick=function(){const di=$('spDistId').value.trim(),ri=$('spRetId').value.trim();try{smartPrintBusiness.registerRetailerViaDistributor(di,ri);render()}catch(e){alert(e.message)}}}
+ function mount(){if(document.getElementById('spPartnerPanel'))return;const p=document.createElement('section');p.id='spPartnerPanel';p.className='card';const host=document.querySelector('#workspace');(host||document.body).appendChild(p);render()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(mount,700));else setTimeout(mount,700);
+})();

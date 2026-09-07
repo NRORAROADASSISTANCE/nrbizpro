@@ -1,0 +1,8 @@
+/* Smart Print — explicit Before/After preview controls. Original source remains untouched. */
+(function(){
+  let originalPages=[];
+  function capture(){if(Array.isArray(window.processedPages)&&window.processedPages.length&&!originalPages.length)originalPages=window.processedPages.slice();}
+  function addControls(){const body=document.getElementById('previewBody');if(!body||body.querySelector('[data-safe-preview]'))return;const box=document.createElement('div');box.dataset.safePreview='1';box.className='pro-note';box.innerHTML='<b>Document cleanup preview</b><br><button type="button" data-before>Original</button> <button type="button" data-after>Clean Xerox</button><span data-state> Clean Xerox is shown by default.</span>';box.querySelector('[data-before]').onclick=()=>{if(originalPages.length)window.processedPages=originalPages.slice();const s=box.querySelector('[data-state]');if(s)s.textContent=' Original source preview — no edits applied.'};box.querySelector('[data-after]').onclick=()=>{if(window.__xeroxProcessedPages)window.processedPages=window.__xeroxProcessedPages.slice();const s=box.querySelector('[data-state]');if(s)s.textContent=' Clean Xerox preview.'};body.insertBefore(box,body.firstChild)}
+  const oldPrep=window.prepareProcessedPages;if(typeof oldPrep==='function'){window.prepareProcessedPages=async function(){originalPages=[];await oldPrep();capture();window.__xeroxProcessedPages=window.processedPages?.slice()||[];}};
+  const oldPrev=window.previewPrint;if(typeof oldPrev==='function'){window.previewPrint=async function(){await oldPrev();addControls();};}
+})();

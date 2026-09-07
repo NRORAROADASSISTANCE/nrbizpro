@@ -1,0 +1,12 @@
+/* NR BizPro Smart Print — additive business UI. */
+(function(){
+  function mount(){
+    if(document.getElementById('spBusinessCard'))return;
+    const root=document.createElement('section');root.id='spBusinessCard';root.className='card';root.innerHTML='<h2>💼 Smart Print Partner Wallet</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"><div><b>Role</b><div id="spRole">—</div></div><div><b>Points</b><div id="spPoints">0</div></div><div><b>Platform Revenue</b><div id="spRevenue">₹0</div></div></div><hr><div style="display:flex;gap:8px;flex-wrap:wrap"><button id="spDist">Register Distributor ₹2,000</button><button id="spRetail">Register Retailer ₹1,050</button><button id="spRecharge">Recharge ₹300</button></div><small>Business rules are shown separately from document processing. Production payment settlement must be server-verified.</small>';const host=document.querySelector('#workspace');if(host)host.prepend(root);else document.body.appendChild(root);
+    function refresh(){const d=JSON.parse(localStorage.getItem('nr-bizpro-smart-print-ledger-v1')||'{"wallets":{},"platformRevenue":0}');const ids=Object.keys(d.wallets);const w=ids.length?d.wallets[ids[0]]:null;document.getElementById('spRole').textContent=w?.role||'Not registered';document.getElementById('spPoints').textContent=(w?.points||0).toLocaleString();document.getElementById('spRevenue').textContent='₹'+(d.platformRevenue||0).toLocaleString()}
+    document.getElementById('spDist').onclick=()=>{const id='D'+Date.now();smartPrintBusiness.ensureWallet(id,'distributor').points+=15000;localStorage.setItem('nr-bizpro-smart-print-ledger-v1',JSON.stringify(JSON.parse(localStorage.getItem('nr-bizpro-smart-print-ledger-v1')||'{"wallets":{},"transactions":[],"platformRevenue":0}')));refresh()};
+    document.getElementById('spRetail').onclick=()=>{const id='R'+Date.now();smartPrintBusiness.ensureWallet(id,'retailer').points+=5000;refresh()};
+    document.getElementById('spRecharge').onclick=()=>{const ids=Object.keys(JSON.parse(localStorage.getItem('nr-bizpro-smart-print-ledger-v1')||'{"wallets":{}}').wallets);if(ids[0])smartPrintBusiness.recordRecharge(ids[0],300);refresh()};refresh();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(mount,500));else setTimeout(mount,500);
+})();

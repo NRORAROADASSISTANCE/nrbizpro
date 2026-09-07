@@ -34,7 +34,19 @@
     function wrapped(){old();setTimeout(ensureRawProduct,0);setTimeout(ensureRawProduct,100)}
     wrapped.__finalUiFix=true;window.openItemModal=wrapped;
   }
-  function run(){if(!appVisible())return;ensureCustomersTable();renderStockTable();patchModal();ensureRawProduct()}
+  function ensureSmartPrintEntry(){
+    if(!appVisible())return;
+    const top=document.querySelector('.top-actions');
+    if(!top||top.querySelector('[data-nr-smart-print]'))return;
+    const a=document.createElement('a');
+    a.href='smart-print.html';
+    a.className='secondary';
+    a.dataset.nrSmartPrint='1';
+    a.textContent='🖨️ Smart Print';
+    a.style.textDecoration='none';
+    top.insertBefore(a,top.firstChild);
+  }
+  function run(){if(!appVisible())return;ensureCustomersTable();renderStockTable();patchModal();ensureRawProduct();ensureSmartPrintEntry()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   window.addEventListener('load',()=>{setTimeout(run,300);setTimeout(run,1000)});
   setInterval(run,5000);

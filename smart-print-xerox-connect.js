@@ -1,6 +1,9 @@
-/* NR BizPro Smart Print — Xerox cleanup + conservative edge confidence gate. */
+/* NR BizPro Smart Print — Xerox cleanup connector. Document engine owns document processing. */
 (function(){
   function install(){
+    // The document engine performs edge detection, crop, perspective, shadow and xerox cleanup.
+    // Do not wrap it a second time; duplicate processing can wash out/copy previews.
+    if(window.__smartPrintDocumentEngineInstalled || window.__smartPrintDocumentEngineBooting)return;
     const old=window.prepareProcessedPages;
     if(typeof old!=='function'||old.__xeroxPreviewConnected)return;
     async function wrapped(){
@@ -16,11 +19,9 @@
         }catch(e){console.warn('Xerox cleanup skipped',e);next.push(src)}
       }
       window.processedPages=next;
-      const hint=document.getElementById('typeHint');
-      if(hint)hint.textContent=`✓ ${next.length} page${next.length>1?'s':''} • Xerox cleanup + shadow flattening applied • original unchanged.`;
     }
     wrapped.__xeroxPreviewConnected=true;
     window.prepareProcessedPages=wrapped;
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,200));else setTimeout(install,200);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,500));else setTimeout(install,500);
 })();

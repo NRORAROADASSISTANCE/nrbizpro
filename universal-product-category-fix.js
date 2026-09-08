@@ -1,30 +1,31 @@
 // NR BizPro — Universal Add Product fields + hardened Save Product
 (function(){
+ const UNIT_OPTIONS='select:Piece|Kg|Gram|Litre|ML|Bag|Box|Packet|Bottle|Quintal|Ton|Meter|Centimeter|Dozen|Set|Pair|Roll|Bundle|Sack|Tray|Other';
  const MAP={
-  'grocery':['Add Grocery Product',[['Product Name','text'],['Barcode','text'],['Unit','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
+  'grocery':['Add Grocery Product',[['Product Name','text'],['Barcode','text'],['Unit',UNIT_OPTIONS],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
   'footwear':['Add Footwear Product',[['Brand','text'],['Product Name','text'],['Size / Variant','text'],['Colour','text'],['Barcode','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'fertilizer':['Add Agriculture Product',[['Product Name','text'],['Brand','text'],['Batch / Lot No','text'],['Unit','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Expiry Date','date']]],
+  'fertilizer':['Add Agriculture Product',[['Product Name','text'],['Brand','text'],['Batch / Lot No','text'],['Unit',UNIT_OPTIONS],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Expiry Date','date']]],
   'garage':['Add Garage Item / Service',[['Item / Service','text'],['Vehicle Compatibility','text'],['Part Number','text'],['Barcode','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'spareparts':['Add Spare Part',[['Part Name','text'],['Part Number / SKU','text'],['Vehicle Compatibility','text'],['Brand','text'],['Barcode','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'evtwo':['Add EV / Two-Wheeler Product',[['Product Type','select:Vehicle|Raw Product|Helmet|Battery|Accessory|Spare Part|Service|Other'],['Brand','text'],['Model','text'],['Variant','text'],['Battery Type & Capacity','text'],['Motor Power','text'],['Speed','text'],['Range','text'],['Colour','text'],['Motor / Engine No','text'],['Chassis No','text'],['Battery No','text'],['Ex-showroom Price','number'],['On-road Price','number'],['Barcode / SKU','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Warranty','text']]],
-  'retail':['Add Retail Product',[['Product Name','text'],['Barcode','text'],['Unit','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
-  'restaurant':['Add Menu / Product',[['Item Name','text'],['Item Type','select:Menu Item|Raw Material|Bakery Item|Service'],['Unit','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'hardware':['Add Hardware Product',[['Item Name','text'],['SKU / Barcode','text'],['Unit','text'],['Brand','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'medical':['Add Medicine',[['Medicine Name','text'],['Batch No','text'],['Expiry Date','date'],['Barcode','text'],['Unit','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'retail':['Add Retail Product',[['Product Name','text'],['Barcode','text'],['Unit',UNIT_OPTIONS],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
+  'restaurant':['Add Menu / Product',[['Item Name','text'],['Item Type','select:Menu Item|Raw Material|Bakery Item|Service'],['Unit',UNIT_OPTIONS],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'hardware':['Add Hardware Product',[['Item Name','text'],['SKU / Barcode','text'],['Unit',UNIT_OPTIONS],['Brand','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'medical':['Add Medicine',[['Medicine Name','text'],['Batch No','text'],['Expiry Date','date'],['Barcode','text'],['Unit',UNIT_OPTIONS],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'electronics':['Add Electronics Product',[['Brand','text'],['Model','text'],['Serial Number','text'],['Barcode','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Warranty','text']]],
   'clothing':['Add Clothing Product',[['Brand','text'],['Product Name','text'],['Size / Variant','text'],['Colour','text'],['Barcode','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'furniture':['Add Furniture Product',[['Product Name','text'],['Material','text'],['Dimensions','text'],['Barcode / SKU','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'jewellery':['Add Jewellery Item',[['Item Name','text'],['Purity','text'],['Weight','text'],['Making Charges','number'],['Barcode / SKU','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'stationery':['Add Book / Stationery Item',[['Book / Item Name','text'],['Barcode','text'],['Author / Publisher','text'],['Unit','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'dairy':['Add Dairy Product',[['Product Name','text'],['Unit','text'],['Batch / Lot No','text'],['Expiry Date','date'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'stationery':['Add Book / Stationery Item',[['Book / Item Name','text'],['Barcode','text'],['Author / Publisher','text'],['Unit',UNIT_OPTIONS],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'dairy':['Add Dairy Product',[['Product Name','text'],['Unit',UNIT_OPTIONS],['Batch / Lot No','text'],['Expiry Date','date'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'salon':['Add Service / Product',[['Service / Product Name','text'],['Type','select:Service|Product|Package'],['Duration','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'printing':['Add Printing Service',[['Service Name','text'],['Unit','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number']]],
-  'wholesale':['Add Wholesale Product',[['Product Name','text'],['SKU / Barcode','text'],['Unit','text'],['Wholesale Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
+  'printing':['Add Printing Service',[['Service Name','text'],['Unit',UNIT_OPTIONS],['Cost Price','number'],['Selling Price','number'],['GST %','number']]],
+  'wholesale':['Add Wholesale Product',[['Product Name','text'],['SKU / Barcode','text'],['Unit',UNIT_OPTIONS],['Wholesale Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number'],['Reorder Level','number']]],
   'professional':['Add Professional Service',[['Service Name','text'],['Service Type','text'],['Cost / Expense','number'],['Fee / Selling Price','number'],['GST %','number']]],
-  'construction':['Add Construction Material',[['Material Name','text'],['Unit','text'],['Brand','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'construction':['Add Construction Material',[['Material Name','text'],['Unit',UNIT_OPTIONS],['Brand','text'],['Purchase Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'paint':['Add Paint Product',[['Brand','text'],['Product Name','text'],['Color / Shade','text'],['Pack Size','text'],['Barcode / SKU','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'plumbing':['Add Plumbing Product',[['Brand','text'],['Product Name','text'],['Pipe Type','text'],['Size','text'],['Length / Pack','text'],['Class / Pressure','text'],['Unit','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
-  'paintplumbing':['Add Paint / Plumbing Product',[['Product Type','select:Paint|Plumbing|Accessory|Other'],['Brand','text'],['Product Name','text'],['Shade / Pipe Type','text'],['Size / Pack','text'],['Unit','text'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'plumbing':['Add Plumbing Product',[['Brand','text'],['Product Name','text'],['Pipe Type','text'],['Size','text'],['Length / Pack','text'],['Class / Pressure','text'],['Unit',UNIT_OPTIONS],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
+  'paintplumbing':['Add Paint / Plumbing Product',[['Product Type','select:Paint|Plumbing|Accessory|Other'],['Brand','text'],['Product Name','text'],['Shade / Pipe Type','text'],['Size / Pack','text'],['Unit',UNIT_OPTIONS],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]],
   'general':['Add Product / Service',[['Product / Service','text'],['Barcode','text'],['Type','select:Product|Raw Product|Service'],['Cost Price','number'],['Selling Price','number'],['GST %','number'],['Opening Stock','number']]]
  };
  function categoryKey(){
@@ -91,8 +92,6 @@
    st.moduleData['Product / Vehicle Records'].push(item.details);
    const u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser;
    if(!u?.id)throw Error('User session missing');
-   // Save directly. Do not call the legacy save() function here because some
-   // older category modules expect a category object and throw when it is null.
    localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));
    window.state=st;
    try{state=st}catch(e){}

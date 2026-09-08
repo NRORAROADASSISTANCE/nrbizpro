@@ -1,0 +1,5 @@
+/* Final Smart Print commercial model UI. Display-only; printing pipeline untouched. */
+(function(){
+ function mount(){if(document.getElementById('spFinalPricing'))return;const host=document.querySelector('#workspace')||document.body;const el=document.createElement('section');el.id='spFinalPricing';el.className='card';el.innerHTML='<h2>💳 Smart Print — Final Plan</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px"><div><b>Registration</b><br>₹2,000<br><small>Valid for 3 Years</small></div><div><b>Renewal</b><br>₹1,000<br><small>Valid for 1 Year</small></div><div><b>Platform Fee</b><br>₹200<br><small>Per applicable transaction</small></div></div><p><b>Note:</b> Legacy points/recharge pricing is no longer part of the final commercial model.</p>';host.appendChild(el)}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(mount,1000));else setTimeout(mount,1000);
+})();

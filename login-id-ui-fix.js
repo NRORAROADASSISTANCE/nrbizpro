@@ -1,4 +1,4 @@
-// Login UI fix: the server already accepts Login ID, Email, or Mobile.
+// Business-holder login UI: Login ID + Mobile only.
 (function(){
   function patch(){
     const input=document.getElementById('loginId');
@@ -6,12 +6,12 @@
     const label=input.closest('label');
     if(label){
       const text=[...label.childNodes].find(n=>n.nodeType===3);
-      if(text)text.nodeValue='Login ID / Email / Mobile ';
-      else label.firstChild.textContent='Login ID / Email / Mobile ';
+      if(text)text.nodeValue='Login ID / Mobile ';
+      else label.firstChild.textContent='Login ID / Mobile ';
     }
-    input.placeholder='Enter Login ID, email or mobile';
+    input.placeholder='Enter Login ID or mobile number';
     input.autocomplete='username';
-    input.setAttribute('aria-label','Login ID, Email or Mobile');
+    input.setAttribute('aria-label','Login ID or Mobile');
   }
   const original=window.renderAuth;
   if(typeof original==='function'){

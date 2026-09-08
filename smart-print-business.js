@@ -1,17 +1,14 @@
-/* NR BizPro Smart Print Business Layer — additive only.
-   Existing print processing is untouched. Points are an internal usage unit;
-   financial ledger records rupee-equivalent platform revenue separately.
-*/
+/* NR BizPro Smart Print — final commercial model. Printing pipeline is untouched. */
 (function(){
-  const KEY='nr-bizpro-smart-print-business-v1';
-  const CONFIG={distributorRegistration:2000,retailerDirectRegistration:1050,retailerViaDistributorTotal:600,distributorRetailerFee:500,platformRetailerFee:100,rechargeMinimum:300,rechargePlatformFee:100,rechargePoints:3000,pointsPerPrint:10,printRevenuePer10Points:1,initialDistributorPoints:15000,initialRetailerPoints:5000};
-  function read(){try{return JSON.parse(localStorage.getItem(KEY)||'{"accounts":{},"ledger":[]}')}catch{return {accounts:{},ledger:[]}}}
-  function write(x){localStorage.setItem(KEY,JSON.stringify(x));}
-  function addLedger(x,e){x.ledger.push({...e,id:'TX'+Date.now()+Math.random().toString(36).slice(2,7),at:new Date().toISOString()});}
-  function createDistributor(id){const x=read();x.accounts[id]={role:'distributor',points:CONFIG.initialDistributorPoints,retailers:[],registeredFor:CONFIG.distributorRegistration};addLedger(x,{type:'REGISTRATION',role:'distributor',accountId:id,amount:CONFIG.distributorRegistration,platformRevenue:CONFIG.distributorRegistration});write(x);return x.accounts[id];}
-  function createRetailer(id,distributorId=null){const x=read();const via=!!distributorId; x.accounts[id]={role:'retailer',points:CONFIG.initialRetailerPoints,distributorId,registeredFor:via?CONFIG.retailerViaDistributorTotal:CONFIG.retailerDirectRegistration};if(via&&x.accounts[distributorId]){x.accounts[distributorId].retailers.push(id);addLedger(x,{type:'RETAILER_ONBOARD',role:'retailer',accountId:id,distributorId,amount:CONFIG.retailerViaDistributorTotal,distributorEarning:CONFIG.distributorRetailerFee,platformRevenue:CONFIG.platformRetailerFee});}else addLedger(x,{type:'REGISTRATION',role:'retailer',accountId:id,amount:CONFIG.retailerDirectRegistration,platformRevenue:CONFIG.retailerDirectRegistration});write(x);return x.accounts[id];}
-  function recharge(id,amount=CONFIG.rechargeMinimum){if(amount<CONFIG.rechargeMinimum)throw Error('Minimum recharge is ₹'+CONFIG.rechargeMinimum);const x=read(),a=x.accounts[id];if(!a)throw Error('Account not found');const points=Math.floor((amount-CONFIG.rechargePlatformFee)/CONFIG.rechargeMinimum*CONFIG.rechargePoints);a.points+=points;addLedger(x,{type:'RECHARGE',accountId:id,amount,platformFee:CONFIG.rechargePlatformFee,pointsCredited:points,platformRevenue:CONFIG.rechargePlatformFee});write(x);return {points,platformFee:CONFIG.rechargePlatformFee,balance:a.points};}
-  function chargePrint(id,quantity=1){const x=read(),a=x.accounts[id];if(!a)throw Error('Account not found');const points=quantity*CONFIG.pointsPerPrint;if(a.points<points)throw Error('Insufficient points. Please recharge.');a.points-=points;const revenue=quantity*CONFIG.printRevenuePer10Points;addLedger(x,{type:'PRINT',accountId:id,quantity,pointsDebited:points,platformRevenue:revenue});write(x);return {pointsDebited:points,platformRevenue:revenue,balance:a.points};}
-  function dashboard(){const x=read();return {config:CONFIG,accounts:x.accounts,ledger:x.ledger,platformRevenue:x.ledger.reduce((s,e)=>s+(e.platformRevenue||0),0)};}
-  window.nrSmartPrintBusiness={CONFIG,createDistributor,createRetailer,recharge,chargePrint,dashboard};
+ const KEY='nr-bizpro-smart-print-business-v2';
+ const CONFIG=Object.freeze({registration:2000,registrationYears:3,renewal:1000,renewalYears:1,transactionFee:200});
+ function read(){try{return JSON.parse(localStorage.getItem(KEY)||'{"accounts":{},"ledger":[]}')}catch{return {accounts:{},ledger:[]}}}
+ function write(x){localStorage.setItem(KEY,JSON.stringify(x));}
+ function addLedger(x,e){x.ledger.push({...e,id:'TX'+Date.now()+Math.random().toString(36).slice(2,7),at:new Date().toISOString()});}
+ function createAccount(id,role){if(!id)throw Error('Account ID required');const x=read();if(x.accounts[id])throw Error('Account already exists');const now=new Date(),exp=new Date(now);exp.setFullYear(exp.getFullYear()+3);x.accounts[id]={role,status:'active',issuedAt:now.toISOString(),expiresAt:exp.toISOString()};addLedger(x,{type:'REGISTRATION',accountId:id,role,amount:CONFIG.registration,validityYears:3,platformRevenue:CONFIG.registration});write(x);return x.accounts[id];}
+ function renew(id){const x=read(),a=x.accounts[id];if(!a)throw Error('Account not found');const base=new Date(Math.max(Date.now(),new Date(a.expiresAt||0).getTime())),exp=new Date(base);exp.setFullYear(exp.getFullYear()+1);a.status='active';a.expiresAt=exp.toISOString();addLedger(x,{type:'RENEWAL',accountId:id,amount:CONFIG.renewal,validityYears:1,platformRevenue:CONFIG.renewal});write(x);return a;}
+ function isActive(id){const x=read(),a=x.accounts[id];return !!a&&new Date(a.expiresAt)>new Date();}
+ function chargeTransaction(id,baseAmount){if(!isActive(id))throw Error('Smart Print license is expired');const amount=Number(baseAmount);if(!Number.isFinite(amount)||amount<0)throw Error('Invalid amount');const x=read();addLedger(x,{type:'TRANSACTION',accountId:id,baseAmount:amount,platformFee:CONFIG.transactionFee,total:amount+CONFIG.transactionFee,platformRevenue:CONFIG.transactionFee});write(x);return {baseAmount:amount,platformFee:CONFIG.transactionFee,total:amount+CONFIG.transactionFee};}
+ function dashboard(){const x=read();return {config:CONFIG,accounts:x.accounts,ledger:x.ledger,platformRevenue:x.ledger.reduce((s,e)=>s+(e.platformRevenue||0),0)};}
+ window.nrSmartPrintBusiness={CONFIG,createAccount,createDistributor:(id)=>createAccount(id,'distributor'),createRetailer:(id)=>createAccount(id,'retailer'),renew,isActive,chargeTransaction,dashboard};
 })();

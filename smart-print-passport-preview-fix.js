@@ -1,4 +1,4 @@
-/* NR BizPro Smart Print — Passport FINAL v37: reliable preview + real 4x6 sheet + same-page print. */
+/* NR BizPro Smart Print — Passport FINAL v38: reliable 4x6 preview + same-document print. */
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
@@ -26,8 +26,6 @@
     input.__passportBound=true;
     input.addEventListener('change',()=>{
       if(!isPassport())return;
-      /* Base Smart Print owns the upload pipeline. This binding only guarantees
-         that a dynamically rendered page still sends the selected file through it. */
       if(typeof window.loadPhoto==='function' && input.files?.length) window.loadPhoto({target:input});
     },true);
   }
@@ -37,7 +35,7 @@
     const input=$('fileInput'),f=input?.files?.[0];
     if(!f)throw new Error('Upload the passport photo first.');
     if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))throw new Error('Passport Photo mode needs a JPG/PNG photo.');
-    if(!window.smartPassportPremium?.sheet)throw new Error('Passport DSLR engine is not ready. Please refresh the page once.');
+    if(!window.smartPassportPremium?.sheet)throw new Error('Passport DSLR engine is not ready. Please refresh once.');
     const src=await loadImage(await read(f));
     return window.smartPassportPremium.sheet(src,8);
   }
@@ -50,34 +48,37 @@
     try{
       resultCanvas=await makeSheet();
       const u=resultCanvas.toDataURL('image/jpeg',.98);
-      body.innerHTML='<div class="ai-badge">✓ PASSPORT SHEET READY • 8 photos • exact 35×45 mm each • 4×6 inch • 300 DPI • Color • original photo preserved.</div><div class="preview-sheet passport-sheet-preview" style="width:100%;text-align:center"><p><b>4×6 PHOTO PAPER — 6×4 INCH LANDSCAPE — 8 PASSPORT PHOTOS</b></p><img src="'+u+'" alt="8 passport photos on 4x6 photo paper" style="display:block;width:100%;max-width:720px;height:auto;margin:0 auto;object-fit:contain"><p style="font-size:13px;margin:8px 0 0">Print at <b>100% / Actual Size</b>. Do not use Fit, Shrink or Scale-to-page.</p></div>';
+      body.innerHTML='<div class="ai-badge">✓ PASSPORT SHEET READY • 8 photos • exact 35×45 mm each • 4×6 inch • 300 DPI • Color • original photo preserved.</div><div class="preview-sheet passport-sheet-preview" style="width:100%;text-align:center"><p><b>4×6 PHOTO PAPER — 6×4 INCH LANDSCAPE — 8 PASSPORT PHOTOS</b></p><img src="'+u+'" alt="8 passport photos on 4x6 photo paper" style="display:block;width:100%;max-width:720px;height:auto;margin:0 auto;object-fit:contain"><p style="font-size:13px;margin:8px 0 0">Print setting: <b>4×6 / 6×4 landscape • 100% / Actual Size • Color • no Fit/Shrink</b></p></div>';
       const btn=document.querySelector('#preview .actions .primary');if(btn)btn.textContent='Confirm & Print';
     }catch(err){
       console.error('Passport preview:',err);resultCanvas=null;
       body.innerHTML='<div class="ai-badge">⚠️ '+String(err?.message||'Passport preview failed.')+' Original photo is unchanged.</div>';
     }
   }
-  function printPassportSamePage(){
+  function printPassportSameDocument(){
     if(!resultCanvas)return alert('Open Passport Photo Preview first.');
-    const old=document.getElementById('__nr_passport_print_frame');if(old)old.remove();
-    const frame=document.createElement('iframe');
-    frame.id='__nr_passport_print_frame';frame.setAttribute('aria-hidden','true');
-    frame.style.position='fixed';frame.style.left='-10000px';frame.style.top='0';frame.style.width='1px';frame.style.height='1px';frame.style.border='0';frame.style.opacity='0';
-    document.body.appendChild(frame);
-    const d=frame.contentDocument||frame.contentWindow.document;
-    const u=resultCanvas.toDataURL('image/png');
-    d.open();
-    d.write('<!doctype html><html><head><title>NR BizPro Passport 4x6</title><style>@page{size:6in 4in;margin:0!important}html,body{margin:0!important;padding:0!important;width:6in;height:4in;background:#fff;overflow:hidden}.sheet{width:6in;height:4in;margin:0;padding:0;overflow:hidden}.sheet img{display:block;width:6in;height:4in;margin:0;padding:0;border:0;object-fit:fill;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body><div class="sheet"><img src="'+u+'" onload="setTimeout(function(){window.focus();window.print()},350)"></div></body></html>');
-    d.close();
-    const cleanup=()=>setTimeout(()=>frame.remove(),1000);
-    try{frame.contentWindow.addEventListener('afterprint',cleanup,{once:true})}catch(e){}
-    setTimeout(()=>{if(document.getElementById('__nr_passport_print_frame'))frame.remove()},120000);
+    const old=document.getElementById('__nr_passport_print_root');
+    if(old)old.remove();
+    const root=document.createElement('div');
+    root.id='__nr_passport_print_root';
+    const img=document.createElement('img');
+    img.src=resultCanvas.toDataURL('image/png');
+    img.alt='NR BizPro Passport 4x6 sheet';
+    root.appendChild(img);
+    const style=document.createElement('style');
+    style.id='__nr_passport_print_style';
+    style.textContent='@media screen{#__nr_passport_print_root{position:fixed;left:-100000px;top:0;width:6in;height:4in;overflow:hidden}}@media print{@page{size:6in 4in;margin:0!important}html,body{margin:0!important;padding:0!important;width:6in!important;height:4in!important;background:#fff!important;overflow:hidden!important}body>*:not(#__nr_passport_print_root){display:none!important}#__nr_passport_print_root{display:block!important;position:static!important;width:6in!important;height:4in!important;margin:0!important;padding:0!important;overflow:hidden!important}#__nr_passport_print_root img{display:block!important;width:6in!important;height:4in!important;margin:0!important;padding:0!important;border:0!important;object-fit:fill!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}';
+    document.head.appendChild(style);
+    document.body.appendChild(root);
+    const cleanup=()=>{setTimeout(()=>{style.remove();root.remove()},500)};
+    window.addEventListener('afterprint',cleanup,{once:true});
+    requestAnimationFrame(()=>setTimeout(()=>window.print(),250));
   }
   const oldPreview=window.runScannerPreview;
   const oldConfirm=window.confirmScannerPrint;
   window.runScannerPreview=function(){return isPassport()?passportPreview():(oldPreview?oldPreview():undefined)};
-  window.confirmScannerPrint=function(){return isPassport()?printPassportSamePage():(oldConfirm?oldConfirm():undefined)};
-  window.__finalDirectPrint=function(){return isPassport()?printPassportSamePage():(oldConfirm?oldConfirm():undefined)};
+  window.confirmScannerPrint=function(){return isPassport()?printPassportSameDocument():(oldConfirm?oldConfirm():undefined)};
+  window.__finalDirectPrint=function(){return isPassport()?printPassportSameDocument():(oldConfirm?oldConfirm():undefined)};
   window.__passportFinalPreview=passportPreview;
   window.__smartPrintPreview=function(){return isPassport()?passportPreview():(oldPreview?oldPreview():undefined)};
 })();

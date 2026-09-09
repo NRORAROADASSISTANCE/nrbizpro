@@ -1,18 +1,27 @@
-/* Smart Print scanner override: prevent legacy preview handler from winning before OpenCV loads. */
+/* NR BizPro Smart Print — final v3 override.
+   Loaded last so the legacy scanner cannot replace the safer cleanup pipeline. */
 (function(){
-  function install(){
-    const input=document.getElementById('fileInput');
-    if(!input)return setTimeout(install,150);
-    input.addEventListener('change',function(){
-      // Give the final scanner module a moment to finish wiring, then force its handler.
-      setTimeout(function(){
-        if(typeof window.previewPrint==='function'){
-          const fn=window.previewPrint;
-          window.previewPrint=function(){return fn();};
-          window.printNow=window.previewPrint;
-        }
-      },500);
-    });
-  }
-  install();
+  const $=id=>document.getElementById(id); let resultCanvas=null;
+  const read=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
+  const img=s=>new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=s});
+  const toCanvas=i=>{const c=document.createElement('canvas');c.width=i.naturalWidth||i.width;c.height=i.naturalHeight||i.height;c.getContext('2d').drawImage(i,0,0);return c};
+  const resize=(c,max=3000)=>{if(Math.max(c.width,c.height)<=max)return c;const s=max/Math.max(c.width,c.height),o=document.createElement('canvas');o.width=Math.round(c.width*s);o.height=Math.round(c.height*s);o.getContext('2d').drawImage(c,0,0,o.width,o.height);return o};
+  async function waitCV(){const t=Date.now();while(Date.now()-t<7000){if(window.cv&&cv.Mat)return true;await new Promise(r=>setTimeout(r,100));}return false;}
+  function crop(c){try{if(!window.smartPrintEdgeEngine||!window.cv)return c;const q=window.smartPrintEdgeEngine.detect(c);if(!q||q.length!==4)return c;const m=window.smartPrintEdgeEngine.warp(c,q);if(!m)return c;const o=document.createElement('canvas');o.width=m.cols;o.height=m.rows;cv.imshow(o,m);m.delete();return o;}catch(e){console.warn('v3 crop skipped',e);return c;}}
+  function gamma(m,g){const lut=new cv.Mat(1,256,cv.CV_8U);for(let i=0;i<256;i++)lut.data[i]=Math.max(0,Math.min(255,Math.round(255*Math.pow(i/255,g))));const o=new cv.Mat();cv.LUT(m,lut,o);lut.delete();return o;}
+  function clean(src){if(!window.cv||!cv.Mat)return null;let input,gray,bg,norm,lift,den,clahe,soft,blur,sharp,rgba;try{
+    input=cv.imread(src);gray=new cv.Mat();cv.cvtColor(input,gray,cv.COLOR_RGBA2GRAY);
+    bg=new cv.Mat();cv.GaussianBlur(gray,bg,new cv.Size(0,0),70,70,cv.BORDER_REPLICATE);
+    norm=new cv.Mat();cv.divide(gray,bg,norm,235,cv.CV_8U);
+    lift=gamma(norm,.78);den=new cv.Mat();cv.bilateralFilter(lift,den,5,24,24,cv.BORDER_DEFAULT);
+    clahe=new cv.Mat();const ce=new cv.CLAHE(1.15,new cv.Size(12,12));ce.apply(den,clahe);ce.delete();
+    soft=new cv.Mat();cv.addWeighted(den,.78,clahe,.22,0,soft);
+    blur=new cv.Mat();cv.GaussianBlur(soft,blur,new cv.Size(0,0),.85,.85,cv.BORDER_REPLICATE);
+    sharp=new cv.Mat();cv.addWeighted(soft,1.16,blur,-.16,0,sharp);
+    const o=document.createElement('canvas');o.width=sharp.cols;o.height=sharp.rows;rgba=new cv.Mat();cv.cvtColor(sharp,rgba,cv.COLOR_GRAY2RGBA);cv.imshow(o,rgba);return o;
+  }catch(e){console.warn('v3 OpenCV cleanup fallback',e);return null}finally{[input,gray,bg,norm,lift,den,clahe,soft,blur,sharp,rgba].forEach(x=>{try{x&&x.delete()}catch{}})}}
+  function fallback(c){const src=resize(c),w=src.width,h=src.height,o=document.createElement('canvas');o.width=w;o.height=h;const ctx=o.getContext('2d',{willReadFrequently:true});ctx.drawImage(src,0,0);const im=ctx.getImageData(0,0,w,h),d=im.data;const sm=document.createElement('canvas');sm.width=Math.max(48,Math.min(180,Math.round(w/20)));sm.height=Math.max(48,Math.min(180,Math.round(h/20)));const sc=sm.getContext('2d');sc.drawImage(src,0,0,sm.width,sm.height);const sd=sc.getImageData(0,0,sm.width,sm.height).data,sw=sm.width,sh=sm.height,field=new Float32Array(sw*sh),avg=new Float32Array(sw*sh);for(let i=0,j=0;i<sd.length;i+=4,j++)field[j]=.2126*sd[i]+.7152*sd[i+1]+.0722*sd[i+2];const r=Math.max(3,Math.round(Math.min(sw,sh)/18));for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let sum=0,n=0;for(let yy=Math.max(0,y-r);yy<=Math.min(sh-1,y+r);yy++)for(let xx=Math.max(0,x-r);xx<=Math.min(sw-1,x+r);xx++){sum+=field[yy*sw+xx];n++;}avg[y*sw+x]=sum/n;}for(let y=0;y<h;y++)for(let x=0;x<w;x++){const fx=x*(sw-1)/Math.max(1,w-1),fy=y*(sh-1)/Math.max(1,h-1),x0=Math.floor(fx),y0=Math.floor(fy),x1=Math.min(sw-1,x0+1),y1=Math.min(sh-1,y0+1),tx=fx-x0,ty=fy-y0,a=avg[y0*sw+x0]*(1-tx)+avg[y0*sw+x1]*tx,b=avg[y1*sw+x0]*(1-tx)+avg[y1*sw+x1]*tx,bg=Math.max(65,a*(1-ty)+b*ty),k=(y*w+x)*4,g=.2126*d[k]+.7152*d[k+1]+.0722*d[k+2],cor=Math.max(0,Math.min(255,g*Math.pow(235/bg,.55))),v=255-(255-cor)*.78;d[k]=d[k+1]=d[k+2]=v;}ctx.putImageData(im,0,0);return o;}
+  async function run(){const f=$('fileInput')?.files?.[0];if(!f)return alert('Upload the document photo first.');if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))return alert('For Scanner Test, upload JPG or PNG.');const body=$('previewBody');$('preview').classList.remove('hidden');body.innerHTML='<div class="ai-badge">⏳ Smart Clean v3 — full-page protection + conservative crop + shadow reduction + print clarity…</div>';setTimeout(async()=>{try{await waitCV();const original=toCanvas(await img(await read(f))),processed=crop(original);resultCanvas=clean(processed)||fallback(processed);const wasCropped=processed.width!==original.width||processed.height!==original.height;body.innerHTML='<div class="ai-badge">✓ Smart Clean v3 ready — '+(wasCropped?'conservative page crop applied • ':'full page preserved • ')+'shadow/uneven-light reduction • gentle whitening • text/signature protection • no generative text replacement • original untouched.</div><div class="preview-sheet"><p><b>Clean Print • 1 page</b></p><img src="'+resultCanvas.toDataURL('image/jpeg',.98)+'" alt="Smart Clean v3 preview"></div>';}catch(e){console.error(e);body.innerHTML='<div class="ai-badge">⚠️ Cleanup failed safely. Original upload is untouched.</div>'; }},20);}
+  function confirm(){if(!resultCanvas)return alert('Run Scanner Preview first.');const w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const paper=$('paper')?.value||'A4',copies=Math.max(1,+$('copies').value||1),u=resultCanvas.toDataURL('image/jpeg',.98);w.document.write('<html><head><title>NR BizPro Smart Print</title><style>@page{size:'+paper+';margin:10mm}body{margin:0}.p{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>'+Array.from({length:copies},()=>'<div class="p"><img src="'+u+'"></div>').join('')+'<script>onload=()=>setTimeout(()=>print(),250)<\\/script></body></html>');w.document.close();}
+  window.runScannerPreview=run;window.confirmScannerPrint=confirm;
 })();

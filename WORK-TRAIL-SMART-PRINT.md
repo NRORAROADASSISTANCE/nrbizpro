@@ -27,6 +27,7 @@
 - Added checkout summary contract.
 - Added main-dashboard Smart Print entry point.
 - Restored sequential loading of existing billing scripts after dashboard integration changes.
+- Improved scanner-style document edge detection with contour closing, stronger candidate scoring, margin checks, and safer four-corner perspective selection.
 
 ## Next verification checklist
 - Main dashboard loads normally.
@@ -34,4 +35,5 @@
 - Billing/new bill/products/customers/history still work.
 - Existing UPI flow still loads.
 - Smart Print image cleanup and passport 8-up workflow still work.
+- Verify actual uploaded photo produces a tight document crop; if detection fails, add an interactive four-corner adjustment rather than returning an uncropped image.
 - Production payment webhook/signature verification is required before real-money launch.

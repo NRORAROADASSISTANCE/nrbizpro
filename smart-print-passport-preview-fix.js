@@ -1,4 +1,4 @@
-/* NR BizPro Smart Print — Passport FINAL v36: reliable preview + real 4x6 sheet + same-page print. */
+/* NR BizPro Smart Print — Passport FINAL v37: reliable preview + real 4x6 sheet + same-page print. */
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
@@ -20,6 +20,19 @@
     const non=e.target.closest?.('.types button:not([data-type="passport"])');
     if(non)passportSelected=false;
   },true);
+  function bindFileInput(){
+    const input=$('fileInput');
+    if(!input||input.__passportBound)return;
+    input.__passportBound=true;
+    input.addEventListener('change',()=>{
+      if(!isPassport())return;
+      /* Base Smart Print owns the upload pipeline. This binding only guarantees
+         that a dynamically rendered page still sends the selected file through it. */
+      if(typeof window.loadPhoto==='function' && input.files?.length) window.loadPhoto({target:input});
+    },true);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindFileInput);else bindFileInput();
+  new MutationObserver(bindFileInput).observe(document.documentElement,{childList:true,subtree:true});
   async function makeSheet(){
     const input=$('fileInput'),f=input?.files?.[0];
     if(!f)throw new Error('Upload the passport photo first.');

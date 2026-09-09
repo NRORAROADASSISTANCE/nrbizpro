@@ -1,4 +1,4 @@
-/* NR BizPro Smart Print — Passport FINAL v38: reliable 4x6 preview + same-document print. */
+/* NR BizPro Smart Print — Passport FINAL v39: reliable 4x6 preview + same-page print. */
 (function(){
   'use strict';
   const $=id=>document.getElementById(id);
@@ -57,8 +57,7 @@
   }
   function printPassportSameDocument(){
     if(!resultCanvas)return alert('Open Passport Photo Preview first.');
-    const old=document.getElementById('__nr_passport_print_root');
-    if(old)old.remove();
+    document.querySelectorAll('#__nr_passport_print_root,#__nr_passport_print_style').forEach(n=>n.remove());
     const root=document.createElement('div');
     root.id='__nr_passport_print_root';
     const img=document.createElement('img');
@@ -70,9 +69,11 @@
     style.textContent='@media screen{#__nr_passport_print_root{position:fixed;left:-100000px;top:0;width:6in;height:4in;overflow:hidden}}@media print{@page{size:6in 4in;margin:0!important}html,body{margin:0!important;padding:0!important;width:6in!important;height:4in!important;background:#fff!important;overflow:hidden!important}body>*:not(#__nr_passport_print_root){display:none!important}#__nr_passport_print_root{display:block!important;position:static!important;width:6in!important;height:4in!important;margin:0!important;padding:0!important;overflow:hidden!important}#__nr_passport_print_root img{display:block!important;width:6in!important;height:4in!important;margin:0!important;padding:0!important;border:0!important;object-fit:fill!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}';
     document.head.appendChild(style);
     document.body.appendChild(root);
-    const cleanup=()=>{setTimeout(()=>{style.remove();root.remove()},500)};
+    // The image is already a data URL, so printing can start immediately from the user click.
+    // No window.open(), no about:blank page, and no delayed setTimeout/requestAnimationFrame.
+    const cleanup=()=>{setTimeout(()=>{style.remove();root.remove()},300)};
     window.addEventListener('afterprint',cleanup,{once:true});
-    requestAnimationFrame(()=>setTimeout(()=>window.print(),250));
+    window.print();
   }
   const oldPreview=window.runScannerPreview;
   const oldConfirm=window.confirmScannerPrint;

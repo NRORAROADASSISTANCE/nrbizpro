@@ -8,7 +8,8 @@
   function getCustomerState(){try{const s=JSON.parse(localStorage.getItem(CUSTOMER_KEY)||'{"used":0}');return s&&typeof s==='object'?s:{used:0}}catch{return {used:0}}}
   function saveCustomerState(s){try{localStorage.setItem(CUSTOMER_KEY,JSON.stringify({used:Math.max(0,Math.min(CUSTOMER_LIMIT,Number(s.used)||0)),createdAt:s.createdAt||Date.now()}))}catch{}}
   function remaining(){return Math.max(0,CUSTOMER_LIMIT-getCustomerState().used)}
-  function showCustomerLimit(){if(!customerMode())return;const e=$('trialNote');if(e)e.textContent=`Pre-activation demo: ${remaining()} print${remaining()===1?'':'s'} remaining. After activation: unlimited printing for 3 years.`}
+  function showCustomerLimit(){if(!customerMode())return;const e=$('trialNote');if(e)e.textContent=`Pre-activation demo: ${remaining()} print${remaining()===1?'':'s'} remaining. After activation: unlimited printing for 3 years.`;const l=$('licenseText'),s=$('licenseSub');if(l)l.textContent='Customer Trial';if(s)s.textContent=`${remaining()} trial prints remaining`}
+  function normalizeLicenseTerm(){if(customerMode())return;const l=$('licenseText');if(l&&/5-Year/i.test(l.textContent))l.textContent=l.textContent.replace(/5-Year/gi,'3-Year');const g=document.querySelector('.gate');if(g)g.querySelectorAll('p').forEach(p=>{p.textContent=p.textContent.replace(/5 Years/gi,'3 Years')})}
   function enforceCustomer(){if(!customerMode())return true;const copies=Math.max(1,Number($('copies')?.value)||1),left=remaining();if(left<=0){alert('Pre-activation demo is finished. Activate Smart Print for unlimited printing for 3 years.');return false}if(copies>left){alert(`Only ${left} demo print${left===1?'':'s'} remain. Please reduce Copies.`);return false}return true}
   function consumeCustomer(){if(!customerMode())return;const s=getCustomerState(),copies=Math.max(1,Number($('copies')?.value)||1);s.used=Math.min(CUSTOMER_LIMIT,(Number(s.used)||0)+copies);saveCustomerState(s);showCustomerLimit()}
   window.enterPrint=function(){if(customerMode()){if(typeof window.showWorkspace==='function')return window.showWorkspace();$('gate')?.classList.add('hidden');$('workspace')?.classList.remove('hidden');showCustomerLimit();return}alert('Please login to your NR BizPro account first.')};
@@ -17,5 +18,6 @@
   window.confirmScannerPrint=function(){if(typeof window.confirmPrint!=='function'){alert('Print controller is loading. Please try once more.');return}const old=window.confirmPrint;window.confirmPrint=function(){const r=old.apply(this,arguments);if(customerMode())setTimeout(consumeCustomer,1200);return r};return window.confirmPrint()};
   window.closePreview=window.closePreview||function(){$('preview')?.classList.add('hidden')};
   window.openManualCrop=window.openManualCrop||function(){alert('Manual Crop: upload the document first, then use Scanner Preview.')};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showCustomerLimit);else showCustomerLimit();
+  function start(){showCustomerLimit();normalizeLicenseTerm()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();

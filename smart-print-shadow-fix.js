@@ -1,5 +1,5 @@
-/* NR BizPro Smart Print — targeted left camera-shadow correction
-   Keeps document geometry and colour. No external libraries. */
+/* NR BizPro Smart Print — targeted left camera-shadow correction v3
+   Stronger shadow lift, colour-safe, no external libraries. */
 (function(){
 'use strict';
 const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});
@@ -9,36 +9,41 @@ function fixShadow(src,mode){
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});
  x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(src,0,0);
  const im=x.getImageData(0,0,w,h),d=im.data;
- const tw=Math.max(40,Math.min(100,Math.round(w/40))),th=Math.max(50,Math.min(120,Math.round(h/40)));
+ const tw=Math.max(40,Math.min(120,Math.round(w/36))),th=Math.max(50,Math.min(140,Math.round(h/36)));
  const sm=document.createElement('canvas');sm.width=tw;sm.height=th;const sx=sm.getContext('2d',{willReadFrequently:true});sx.drawImage(c,0,0,tw,th);
  const sd=sx.getImageData(0,0,tw,th).data,col=new Float32Array(tw);
  for(let xx=0;xx<tw;xx++){
   let sum=0,n=0;
-  for(let yy=Math.floor(th*.08);yy<Math.floor(th*.92);yy++){
+  for(let yy=Math.floor(th*.06);yy<Math.floor(th*.94);yy++){
    const i=(yy*tw+xx)*4,L=.2126*sd[i]+.7152*sd[i+1]+.0722*sd[i+2];
-   if(L>55){sum+=L;n++}
+   if(L>45){sum+=L;n++}
   }
   col[xx]=n?sum/n:205;
  }
- // Use the brighter right side as the paper-light reference.
  let ref=0,rn=0;for(let i=Math.floor(tw*.72);i<tw;i++){ref+=col[i];rn++}ref=rn?ref/rn:210;
- ref=clamp(ref,190,225);
+ ref=clamp(ref,190,228);
  for(let y=0;y<h;y++)for(let xx=0;xx<w;xx++){
   const xn=xx/Math.max(1,w-1);
-  // Strong correction only on the left shadow; fades out by 55% width.
   const z=clamp(1-(xn/.55),0,1),zone=z*z*(3-2*z);
   const fx=xn*(tw-1),a=Math.floor(fx),bb=Math.min(tw-1,a+1),t=fx-a;
   const local=col[a]*(1-t)+col[bb]*t;
-  let deficit=clamp((ref-local)/Math.max(90,ref),0,.80);
-  // Extra lift for the broad dark falloff visible on the left edge.
-  let amount=deficit*(0.55+0.95*zone);
+  let deficit=clamp((ref-local)/Math.max(75,ref),0,.90);
+  let amount=deficit*(0.78+1.35*zone);
+  amount=Math.min(.98,amount);
   const i=(y*w+xx)*4,r=d[i],g=d[i+1],b=d[i+2],L=.2126*r+.7152*g+.0722*b;
-  // Preserve black text, seals, borders and handwriting.
-  let protect=L<35?.04:L<75?.04+.32*(L-35)/40:L<120?.36+.64*(L-75)/45:1;
-  amount*=protect;
-  const gain=1+Math.min(.95,amount);
-  let nr=clamp(r*gain),ng=clamp(g*gain),nb=clamp(b*gain);
-  if(mode==='Black & White'){const v=clamp(.2126*nr+.7152*ng+.0722*nb);nr=ng=nb=v}
+  let protect;
+  if(L<28) protect=.03;
+  else if(L<55) protect=.10+.18*(L-28)/27;
+  else if(L<85) protect=.28+.42*(L-55)/30;
+  else if(L<125) protect=.70+.30*(L-85)/40;
+  else protect=1;
+  const eg=1+amount*protect;
+  let nr=clamp(r*eg),ng=clamp(g*eg),nb=clamp(b*eg);
+  if(mode==='Black & White'){
+   let v=.2126*nr+.7152*ng+.0722*nb;
+   v=clamp((v-8)*1.10+8);
+   nr=ng=nb=v;
+  }
   d[i]=nr;d[i+1]=ng;d[i+2]=nb;
  }
  x.putImageData(im,0,0);return c;
@@ -54,7 +59,7 @@ window.previewPrint=async function(){
   const im=await load(src),mode=document.getElementById('mode')?.value||'Color';
   const page=fixShadow(im,mode).toDataURL('image/png');window.__shadowFixedPages=[page];
   const copies=Math.max(1,+document.getElementById('copies').value||1),body=document.getElementById('previewBody');
-  body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — left camera shadow cleared; original colour and document details preserved.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;
+  body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — left camera shadow reduced, original colour preserved and dark document details protected.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;
   document.getElementById('preview').classList.remove('hidden');
  }catch(e){console.error(e);return original.apply(this,arguments)}
 };

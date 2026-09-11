@@ -1,5 +1,6 @@
-/* NR BizPro Smart Print — left camera-shadow correction v4
-   Removes broad left-edge illumination falloff without changing document geometry. */
+/* NR BizPro Smart Print — left camera-shadow correction v5
+   Strong local illumination correction for phone-camera document shadows.
+   Keeps geometry unchanged and protects dark printed text. */
 (function(){
 'use strict';
 const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});
@@ -10,48 +11,35 @@ function fixShadow(src,mode){
  const c=document.createElement('canvas');c.width=w;c.height=h;
  const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(src,0,0);
  const im=x.getImageData(0,0,w,h),d=im.data;
- // Small illumination map: estimate the paper brightness at each position.
- const tw=Math.max(64,Math.min(150,Math.round(w/28))),th=Math.max(80,Math.min(180,Math.round(h/28)));
+ const tw=Math.max(72,Math.min(180,Math.round(w/24))),th=Math.max(96,Math.min(220,Math.round(h/24)));
  const sm=document.createElement('canvas');sm.width=tw;sm.height=th;
  const sx=sm.getContext('2d',{willReadFrequently:true});sx.drawImage(c,0,0,tw,th);
- const sd=sx.getImageData(0,0,tw,th).data;
- const lum=new Float32Array(tw*th);
+ const sd=sx.getImageData(0,0,tw,th).data,lum=new Float32Array(tw*th);
  for(let y=0;y<th;y++)for(let xx=0;xx<tw;xx++){const i=(y*tw+xx)*4;lum[y*tw+xx]=.2126*sd[i]+.7152*sd[i+1]+.0722*sd[i+2]}
- // For each row, use the clean right side as the illumination reference.
  const rowRef=new Float32Array(th);
  for(let y=0;y<th;y++){
-  const vals=[];for(let xx=Math.floor(tw*.70);xx<Math.floor(tw*.96);xx++){const v=lum[y*tw+xx];if(v>60)vals.push(v)}
-  vals.sort((a,b)=>a-b);rowRef[y]=vals.length?vals[Math.floor(vals.length*.55)]:205;
-  rowRef[y]=clamp(rowRef[y],180,230);
+  const vals=[];
+  for(let xx=Math.floor(tw*.72);xx<Math.floor(tw*.98);xx++){const v=lum[y*tw+xx];if(v>75)vals.push(v)}
+  vals.sort((a,b)=>a-b);rowRef[y]=vals.length?vals[Math.floor(vals.length*.60)]:205;rowRef[y]=clamp(rowRef[y],185,235);
  }
  for(let y=0;y<h;y++){
-  const fy=y*(th-1)/Math.max(1,h-1),y0=Math.floor(fy),y1=Math.min(th-1,y0+1),ty=fy-y0;
-  const rr=rowRef[y0]*(1-ty)+rowRef[y1]*ty;
+  const fy=y*(th-1)/Math.max(1,h-1),y0=Math.floor(fy),y1=Math.min(th-1,y0+1),ty=fy-y0,rr=rowRef[y0]*(1-ty)+rowRef[y1]*ty;
   for(let xx=0;xx<w;xx++){
-   const xn=xx/Math.max(1,w-1);
-   // Shadow correction is strongest at the left edge and fades out before the clean right side.
-   const edge=smooth(clamp(1-xn/.68,0,1));
+   const xn=xx/Math.max(1,w-1),edge=smooth(clamp(1-xn/.72,0,1));
    const fx=xn*(tw-1),x0=Math.floor(fx),x1=Math.min(tw-1,x0+1),tx=fx-x0;
    const local=(lum[y0*tw+x0]*(1-tx)+lum[y0*tw+x1]*tx)*(1-ty)+(lum[y1*tw+x0]*(1-tx)+lum[y1*tw+x1]*tx)*ty;
-   // Only correct a genuine broad illumination deficit; never darken the source.
-   const deficit=clamp((rr-local)/Math.max(70,rr),0,.88);
-   let amount=deficit*(.95+1.55*edge);
-   amount=Math.min(1.15,amount);
+   const deficit=clamp((rr-local)/Math.max(55,rr),0,.94);
+   let amount=Math.min(1.65,deficit*(1.05+1.85*edge));
    const i=(y*w+xx)*4,r=d[i],g=d[i+1],b=d[i+2],L=.2126*r+.7152*g+.0722*b;
-   // Mid-tone paper is lifted strongly; genuine ink remains protected.
    let protect;
-   if(L<30)protect=.025;
-   else if(L<55)protect=.10+.22*(L-30)/25;
-   else if(L<90)protect=.32+.53*(L-55)/35;
-   else if(L<135)protect=.85+.15*(L-90)/45;
+   if(L<28)protect=.015;
+   else if(L<48)protect=.12+.18*(L-28)/20;
+   else if(L<75)protect=.30+.45*(L-48)/27;
+   else if(L<120)protect=.75+.25*(L-75)/45;
    else protect=1;
    const eg=1+amount*protect;
    let nr=clamp(r*eg),ng=clamp(g*eg),nb=clamp(b*eg);
-   if(mode==='Black & White'){
-    let v=.2126*nr+.7152*ng+.0722*nb;
-    // Clean B/W without crushing text or turning the page muddy.
-    v=clamp((v-10)*1.12+10);nr=ng=nb=v;
-   }
+   if(mode==='Black & White'){let v=.2126*nr+.7152*ng+.0722*nb;v=clamp((v-8)*1.18+8);nr=ng=nb=v}
    d[i]=nr;d[i+1]=ng;d[i+2]=nb;
   }
  }
@@ -68,7 +56,7 @@ window.previewPrint=async function(){
   const im=await load(src),mode=document.getElementById('mode')?.value||'Color';
   const page=fixShadow(im,mode).toDataURL('image/png');window.__shadowFixedPages=[page];
   const copies=Math.max(1,+document.getElementById('copies').value||1),body=document.getElementById('previewBody');
-  body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — left camera shadow cleared; original colour preserved; document details protected.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;
+  body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — left camera shadow strongly corrected; original colour preserved; dark document details protected.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;
   document.getElementById('preview').classList.remove('hidden');
  }catch(e){console.error(e);return original.apply(this,arguments)}
 };

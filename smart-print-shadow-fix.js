@@ -1,5 +1,5 @@
-/* NR BizPro Smart Print — Xerox shadow correction v18
-   Edge-aware central camera-shadow cleanup; preserves text, signatures, photos and document detail. */
+/* NR BizPro Smart Print — Xerox shadow correction v19
+   Stronger targeted central/left camera-shadow cleanup; preserves text, signatures, photos and document detail. */
 (function(){
 'use strict';
 const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});
@@ -41,27 +41,27 @@ function fixShadow(src,mode){
    const local=field[y0*tw+x0]*(1-tx)*(1-ty)+field[y0*tw+x1]*tx*(1-ty)+field[y1*tw+x0]*(1-tx)*ty+field[y1*tw+x1]*tx*ty;
    const xn=xx/Math.max(1,w-1),profile=colSmooth[Math.max(0,Math.min(tw-1,Math.round(xn*(tw-1))))];
    const leftMask=smooth(clamp((.95-xn)/.95,0,1));
-   const centralMask=smooth(clamp((.78-Math.abs(xn-.47))/.32,0,1));
-   const verticalShadow=smooth(clamp((colRef-profile)/52,0,1));
-   const deficit=clamp((colRef-local)/132,0,1);
+   const centralMask=smooth(clamp((.80-Math.abs(xn-.47))/.34,0,1));
+   const verticalShadow=smooth(clamp((colRef-profile)/38,0,1));
+   const deficit=clamp((colRef-local)/112,0,1);
    const i=(y*w+xx)*4,r=d[i],g=d[i+1],b=d[i+2],L=.2126*r+.7152*g+.0722*b;
-   /* Protect sharp document content while allowing broad smooth shadow areas to lift. */
+   /* Protect sharp document content while lifting broad smooth camera-shadow regions. */
    const l1=.2126*d[Math.max(0,i-4)]+.7152*d[Math.max(0,i-3)]+.0722*d[Math.max(0,i-2)];
    const l2=.2126*d[Math.min(d.length-4,i+4)]+.7152*d[Math.min(d.length-3,i+5)]+.0722*d[Math.min(d.length-2,i+6)];
-   const edge=clamp(1-Math.abs(l1-l2)/70,.30,1);
-   let protect;if(L<30)protect=.06;else if(L<55)protect=.20+.45*(L-30)/25;else if(L<95)protect=.68+.32*(L-55)/40;else protect=1;
-   const strength=clamp((deficit*leftMask*.70 + verticalShadow*(.16+centralMask*.36))*(.80+centralMask*.12)*edge,0,.50)*protect;
+   const edge=clamp(1-Math.abs(l1-l2)/70,.25,1);
+   let protect;if(L<30)protect=.05;else if(L<55)protect=.18+.42*(L-30)/25;else if(L<95)protect=.64+.36*(L-55)/40;else protect=1;
+   const strength=clamp((deficit*leftMask*.78 + verticalShadow*(.20+centralMask*.48))*(.82+centralMask*.14)*edge,0,.62)*protect;
    let nr=r+(255-r)*strength,ng=g+(255-g)*strength,nb=b+(255-b)*strength;
-   const gain=1+Math.min(.16,deficit*.16)*leftMask*protect*edge;nr=clamp(nr*gain);ng=clamp(ng*gain);nb=clamp(nb*gain);
+   const gain=1+Math.min(.18,deficit*.18)*leftMask*protect*edge;nr=clamp(nr*gain);ng=clamp(ng*gain);nb=clamp(nb*gain);
    if(mode==='Black & White'){let v=.2126*nr+.7152*ng+.0722*nb;v=clamp(255*Math.pow(Math.max(0,v)/255,.90));nr=ng=nb=v}
    d[i]=nr;d[i+1]=ng;d[i+2]=nb;
   }
  }
  x.putImageData(im,0,0);return c;
 }
-function install(){const original=window.previewPrint;if(typeof original!=='function')return false;if(original.__nrShadowV18)return true;
+function install(){const original=window.previewPrint;if(typeof original!=='function')return false;if(original.__nrShadowV19)return true;
  const wrapped=async function(){const input=document.getElementById('fileInput'),f=input&&input.files&&input.files[0];if(!f)return original.apply(this,arguments);if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))return original.apply(this,arguments);
   try{if(window.canPrint&&!window.canPrint())return;const src=await new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=bad;r.readAsDataURL(f)});const im=await load(src),mode=document.getElementById('mode')?.value||'Color';const page=fixShadow(im,mode).toDataURL('image/png');window.__shadowFixedPages=[page];const copies=Math.max(1,+document.getElementById('copies').value||1),body=document.getElementById('previewBody');body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — camera shadow reduced with detail protection and original colour preserved.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;document.getElementById('preview').classList.remove('hidden')}catch(e){console.error(e);return original.apply(this,arguments)}};
- wrapped.__nrShadowV18=true;window.previewPrint=wrapped;const baseConfirm=window.confirmPrint;if(typeof baseConfirm==='function'&&!baseConfirm.__nrShadowV18){const confirmWrapped=function(){const pages=window.__shadowFixedPages;if(!pages||!pages.length)return baseConfirm.apply(this,arguments);const copies=Math.max(1,+document.getElementById('copies').value||1),paper=document.getElementById('paper').value,w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const all=[];for(let i=0;i<copies;i++)all.push(...pages);w.document.write(`<html><head><title>NR BizPro Smart Print</title><style>@page{size:${paper};margin:10mm}body{font-family:Arial;margin:0}.page{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>${all.map(p=>`<div class="page"><img src="${p}"></div>`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),250);window.onafterprint=()=>window.close();<\/script></body></html>`);w.document.close();setTimeout(()=>{try{const key='nr-bizpro-smart-print-customer-test-v1',d=JSON.parse(localStorage.getItem(key)||'{}');if(location.search.includes('customerTest=1')){d.test=d.test||{licensed:false,expires:null,trialCopies:0};d.test.trialCopies=(d.test.trialCopies||0)+copies;localStorage.setItem(key,JSON.stringify(d))}}catch(e){}document.getElementById('preview').classList.add('hidden');window.__shadowFixedPages=[]},1200)};confirmWrapped.__nrShadowV18=true;window.confirmPrint=confirmWrapped}return true}
+ wrapped.__nrShadowV19=true;window.previewPrint=wrapped;const baseConfirm=window.confirmPrint;if(typeof baseConfirm==='function'&&!baseConfirm.__nrShadowV19){const confirmWrapped=function(){const pages=window.__shadowFixedPages;if(!pages||!pages.length)return baseConfirm.apply(this,arguments);const copies=Math.max(1,+document.getElementById('copies').value||1),paper=document.getElementById('paper').value,w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const all=[];for(let i=0;i<copies;i++)all.push(...pages);w.document.write(`<html><head><title>NR BizPro Smart Print</title><style>@page{size:${paper};margin:10mm}body{font-family:Arial;margin:0}.page{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>${all.map(p=>`<div class="page"><img src="${p}"></div>`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),250);window.onafterprint=()=>window.close();<\/script></body></html>`);w.document.close();setTimeout(()=>{try{const key='nr-bizpro-smart-print-customer-test-v1',d=JSON.parse(localStorage.getItem(key)||'{}');if(location.search.includes('customerTest=1')){d.test=d.test||{licensed:false,expires:null,trialCopies:0};d.test.trialCopies=(d.test.trialCopies||0)+copies;localStorage.setItem(key,JSON.stringify(d))}}catch(e){}document.getElementById('preview').classList.add('hidden');window.__shadowFixedPages=[]},1200)};confirmWrapped.__nrShadowV19=true;window.confirmPrint=confirmWrapped}return true}
 if(!install()){let tries=0;const timer=setInterval(()=>{if(install()||++tries>40)clearInterval(timer)},50)}
 })();

@@ -8,12 +8,13 @@
     if(!isDemo()){removeFromRealAccount();return}
     const a=api();if(!a?.profiles)return
     const cats=categories();const panel=document.getElementById('industryModule');
+    if(panel){panel.style.display='';panel.classList.remove('hidden')}
+    const tab=document.getElementById('industryTab');if(tab){tab.textContent='All Business Categories';tab.style.display='';tab.classList.remove('hidden')}
     if(panel&&panel.dataset.rendered!=='1'){
       panel.innerHTML=`<div class="panel-head"><div><p class="eyebrow">CUSTOMER DEMO</p><h2>NR BizPro — All Business Categories</h2><p class="muted">Explore the user interface and workflows available for every supported business category. Demo only — no real business data is created.</p></div><button class="secondary" type="button" id="featureTest">Feature Test</button></div><div class="quick-grid" id="demoCategoryGrid">${cats.map((c,i)=>`<button type="button" class="industry-feature" data-demo-category="${i}"><b>✓ ${esc(c.label)}</b><span>${c.features.length} modules • Open demo</span></button>`).join('')}</div><div id="industryWorkspace"></div>`;
       panel.querySelectorAll('[data-demo-category]').forEach(b=>b.onclick=()=>openCategory(cats[+b.dataset.demoCategory]));
       document.getElementById('featureTest')?.addEventListener('click',()=>alert(`Universal Demo Feature Test\n\nBusiness categories: ${cats.length}\nTotal category modules: ${cats.reduce((n,c)=>n+c.features.length,0)}\n\nSelect any category above to explore its modules.`));panel.dataset.rendered='1'
     }
-    const tab=document.getElementById('industryTab');if(tab){tab.textContent='All Business Categories';tab.style.display=''}
     renderDemoDashboardCards(cats)
   }
   function openCategory(category){const box=document.getElementById('industryWorkspace');if(!box)return;box.innerHTML=`<div class="panel-head"><div><p class="eyebrow">DEMO CATEGORY</p><h2>${esc(category.label)}</h2><p class="muted">All ${category.features.length} modules for this business type.</p></div><button class="secondary" type="button" id="closeWorkspace">Back to Categories</button></div><div class="quick-grid">${category.features.map((x,i)=>`<button type="button" class="industry-feature" data-demo-feature="${i}"><b>✓ ${esc(x)}</b><span>Open demo workspace</span></button>`).join('')}</div><div id="demoFeatureWorkspace"></div>`;document.getElementById('closeWorkspace').onclick=()=>{const p=document.getElementById('industryModule');if(p)p.dataset.rendered='0';renderUniversalDemo()};box.querySelectorAll('[data-demo-feature]').forEach(b=>b.onclick=()=>openFeature(category.features[+b.dataset.demoFeature],category.label));box.scrollIntoView({behavior:'smooth',block:'start'})}

@@ -1,14 +1,28 @@
-// NR BizPro — Mandatory public Try Demo entry
+// NR BizPro — Mandatory public Try Demo entry + safe billing demo data
 (function(){
   const DEMO_USER={id:'nr-bizpro-demo',business:'NR BizPro Demo Showroom',owner:'Demo Owner',mobile:'9000000000',email:'demo@nrbizpro.in',category:'General Business',gst:'',password:'',status:'active',plan:'demo',subscriptionEnds:'2099-12-31T23:59:59.000Z'};
-  function demoState(){return {items:[],bills:[],customers:[],settings:{name:'NR BizPro Demo Showroom',category:'General Business',businessCategory:'General Business',mobile:'9000000000',gst:'',address:'Demo Business Address, Telangana'}}}
+  function demoState(){
+    return {
+      items:[
+        {id:'demo-item-1',name:'Demo Product A',barcode:'890000000001',type:'Product',cost:80,margin:25,marginType:'percent',sell:100,gst:5,stock:25,businessCategory:'General Business'},
+        {id:'demo-item-2',name:'Demo Product B',barcode:'890000000002',type:'Product',cost:150,margin:20,marginType:'percent',sell:180,gst:12,stock:15,businessCategory:'General Business'},
+        {id:'demo-item-3',name:'Demo Service',barcode:'',type:'Service',cost:0,margin:0,marginType:'fixed',sell:250,gst:18,stock:0,businessCategory:'General Business'}
+      ],
+      bills:[],
+      customers:[],
+      settings:{name:'NR BizPro Demo Showroom',category:'General Business',businessCategory:'General Business',mobile:'9000000000',gst:'',address:'Demo Business Address, Telangana'}
+    }
+  }
   function startDemo(){
     window.currentUser={...DEMO_USER}; window.state=demoState(); window.nrBizProDemoMode=true;
     try{localStorage.setItem('nr-bizpro-demo-category','General Business')}catch(e){}
     localStorage.removeItem('nr-bizpro-session-v1');
     document.getElementById('publicLanding')?.remove(); document.getElementById('authScreen')?.classList.add('hidden');
     if(typeof window.showApp==='function')window.showApp();
-    setTimeout(()=>{try{window.NRBizProDemoCategory?.restore?.()}catch(e){} try{window.NRBizProBusinessModules?.sync?.();window.renderItems?.();window.updateStats?.();window.renderUniversalDemo?.()}catch(e){}},150);
+    setTimeout(()=>{
+      try{window.NRBizProDemoCategory?.restore?.()}catch(e){}
+      try{window.NRBizProBusinessModules?.sync?.();window.renderItems?.();window.updateStats?.();window.renderUniversalDemo?.()}catch(e){}
+    },150);
   }
   function addTryDemo(){
     const landing=document.getElementById('publicLanding'); if(!landing)return false;
@@ -22,8 +36,6 @@
     const timer=setInterval(()=>{attempts++;if(addTryDemo()||attempts>100)clearInterval(timer)},100);
     addTryDemo();
   }
-  // This script is loaded dynamically after index.html's load event, so do not
-  // rely on window.load or DOMContentLoaded firing again.
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,50),{once:true});
   }else{

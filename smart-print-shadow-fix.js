@@ -1,5 +1,5 @@
-/* NR BizPro Smart Print — Xerox shadow correction v17
-   Corrected shadow-field sampling and targeted central camera-shadow cleanup. */
+/* NR BizPro Smart Print — Xerox shadow correction v18
+   Edge-aware central camera-shadow cleanup; preserves text, signatures, photos and document detail. */
 (function(){
 'use strict';
 const load=src=>new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});
@@ -18,24 +18,16 @@ function fixShadow(src,mode){
  function blur(a,rad){
   const out=new Float32Array(a.length),tmp=new Float32Array(a.length),rr=Math.max(1,Math.round(rad));
   for(let y=0;y<th;y++){
-   let sum=0;
-   for(let k=-rr;k<=rr;k++){const q=Math.max(0,Math.min(tw-1,k));sum+=a[y*tw+q]}
-   for(let xx=0;xx<tw;xx++){
-    if(xx){const add=Math.min(tw-1,xx+rr),sub=Math.max(0,xx-rr-1);sum+=a[y*tw+add]-a[y*tw+sub]}
-    tmp[y*tw+xx]=sum/(rr*2+1)
-   }
+   let sum=0;for(let k=-rr;k<=rr;k++){const q=Math.max(0,Math.min(tw-1,k));sum+=a[y*tw+q]}
+   for(let xx=0;xx<tw;xx++){if(xx){const add=Math.min(tw-1,xx+rr),sub=Math.max(0,xx-rr-1);sum+=a[y*tw+add]-a[y*tw+sub]}tmp[y*tw+xx]=sum/(rr*2+1)}
   }
   for(let xx=0;xx<tw;xx++){
-   let sum=0;
-   for(let k=-rr;k<=rr;k++){const q=Math.max(0,Math.min(th-1,k));sum+=tmp[q*tw+xx]}
-   for(let y=0;y<th;y++){
-    if(y){const add=Math.min(th-1,y+rr),sub=Math.max(0,y-rr-1);sum+=tmp[add*tw+xx]-tmp[sub*tw+xx]}
-    out[y*tw+xx]=sum/(rr*2+1)
-   }
+   let sum=0;for(let k=-rr;k<=rr;k++){const q=Math.max(0,Math.min(th-1,k));sum+=tmp[q*tw+xx]}
+   for(let y=0;y<th;y++){if(y){const add=Math.min(th-1,y+rr),sub=Math.max(0,y-rr-1);sum+=tmp[add*tw+xx]-tmp[sub*tw+xx]}out[y*tw+xx]=sum/(rr*2+1)}
   }
   return out;
  }
- const field=blur(lum,Math.max(5,Math.round(tw*.065)));
+ const field=blur(lum,Math.max(5,Math.round(tw*.07)));
  const col=new Float32Array(tw),tmp=[];
  for(let xx=0;xx<tw;xx++){tmp.length=0;for(let y=0;y<th;y++){const v=lum[y*tw+xx];if(v>70)tmp.push(v)}col[xx]=pct(tmp,.82)}
  const colSmooth=new Float32Array(tw),rad=Math.max(4,Math.round(tw*.025));
@@ -48,24 +40,28 @@ function fixShadow(src,mode){
    const fx=xx*(tw-1)/Math.max(1,w-1),x0=Math.floor(fx),x1=Math.min(tw-1,x0+1),tx=fx-x0;
    const local=field[y0*tw+x0]*(1-tx)*(1-ty)+field[y0*tw+x1]*tx*(1-ty)+field[y1*tw+x0]*(1-tx)*ty+field[y1*tw+x1]*tx*ty;
    const xn=xx/Math.max(1,w-1),profile=colSmooth[Math.max(0,Math.min(tw-1,Math.round(xn*(tw-1))))];
-   const leftMask=smooth(clamp((.94-xn)/.94,0,1));
-   const centralMask=smooth(clamp((.76-Math.abs(xn-.46))/.30,0,1));
-   const verticalShadow=smooth(clamp((colRef-profile)/55,0,1));
-   const deficit=clamp((colRef-local)/135,0,1);
+   const leftMask=smooth(clamp((.95-xn)/.95,0,1));
+   const centralMask=smooth(clamp((.78-Math.abs(xn-.47))/.32,0,1));
+   const verticalShadow=smooth(clamp((colRef-profile)/52,0,1));
+   const deficit=clamp((colRef-local)/132,0,1);
    const i=(y*w+xx)*4,r=d[i],g=d[i+1],b=d[i+2],L=.2126*r+.7152*g+.0722*b;
-   let protect;if(L<30)protect=.08;else if(L<55)protect=.22+.48*(L-30)/25;else if(L<95)protect=.70+.30*(L-55)/40;else protect=1;
-   const strength=clamp((deficit*leftMask*.72 + verticalShadow*(.18+centralMask*.34))*(.82+centralMask*.10),0,.54)*protect;
+   /* Protect sharp document content while allowing broad smooth shadow areas to lift. */
+   const l1=.2126*d[Math.max(0,i-4)]+.7152*d[Math.max(0,i-3)]+.0722*d[Math.max(0,i-2)];
+   const l2=.2126*d[Math.min(d.length-4,i+4)]+.7152*d[Math.min(d.length-3,i+5)]+.0722*d[Math.min(d.length-2,i+6)];
+   const edge=clamp(1-Math.abs(l1-l2)/70,.30,1);
+   let protect;if(L<30)protect=.06;else if(L<55)protect=.20+.45*(L-30)/25;else if(L<95)protect=.68+.32*(L-55)/40;else protect=1;
+   const strength=clamp((deficit*leftMask*.70 + verticalShadow*(.16+centralMask*.36))*(.80+centralMask*.12)*edge,0,.50)*protect;
    let nr=r+(255-r)*strength,ng=g+(255-g)*strength,nb=b+(255-b)*strength;
-   const gain=1+Math.min(.18,deficit*.18)*leftMask*protect;nr=clamp(nr*gain);ng=clamp(ng*gain);nb=clamp(nb*gain);
+   const gain=1+Math.min(.16,deficit*.16)*leftMask*protect*edge;nr=clamp(nr*gain);ng=clamp(ng*gain);nb=clamp(nb*gain);
    if(mode==='Black & White'){let v=.2126*nr+.7152*ng+.0722*nb;v=clamp(255*Math.pow(Math.max(0,v)/255,.90));nr=ng=nb=v}
    d[i]=nr;d[i+1]=ng;d[i+2]=nb;
   }
  }
  x.putImageData(im,0,0);return c;
 }
-function install(){const original=window.previewPrint;if(typeof original!=='function')return false;if(original.__nrShadowV17)return true;
+function install(){const original=window.previewPrint;if(typeof original!=='function')return false;if(original.__nrShadowV18)return true;
  const wrapped=async function(){const input=document.getElementById('fileInput'),f=input&&input.files&&input.files[0];if(!f)return original.apply(this,arguments);if(f.type==='application/pdf'||/\.pdf$/i.test(f.name))return original.apply(this,arguments);
-  try{if(window.canPrint&&!window.canPrint())return;const src=await new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=bad;r.readAsDataURL(f)});const im=await load(src),mode=document.getElementById('mode')?.value||'Color';const page=fixShadow(im,mode).toDataURL('image/png');window.__shadowFixedPages=[page];const copies=Math.max(1,+document.getElementById('copies').value||1),body=document.getElementById('previewBody');body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — camera shadow gently reduced, original colour preserved and document details protected.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;document.getElementById('preview').classList.remove('hidden')}catch(e){console.error(e);return original.apply(this,arguments)}};
- wrapped.__nrShadowV17=true;window.previewPrint=wrapped;const baseConfirm=window.confirmPrint;if(typeof baseConfirm==='function'&&!baseConfirm.__nrShadowV17){const confirmWrapped=function(){const pages=window.__shadowFixedPages;if(!pages||!pages.length)return baseConfirm.apply(this,arguments);const copies=Math.max(1,+document.getElementById('copies').value||1),paper=document.getElementById('paper').value,w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const all=[];for(let i=0;i<copies;i++)all.push(...pages);w.document.write(`<html><head><title>NR BizPro Smart Print</title><style>@page{size:${paper};margin:10mm}body{font-family:Arial;margin:0}.page{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>${all.map(p=>`<div class="page"><img src="${p}"></div>`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),250);window.onafterprint=()=>window.close();<\/script></body></html>`);w.document.close();setTimeout(()=>{try{const key='nr-bizpro-smart-print-customer-test-v1',d=JSON.parse(localStorage.getItem(key)||'{}');if(location.search.includes('customerTest=1')){d.test=d.test||{licensed:false,expires:null,trialCopies:0};d.test.trialCopies=(d.test.trialCopies||0)+copies;localStorage.setItem(key,JSON.stringify(d))}}catch(e){}document.getElementById('preview').classList.add('hidden');window.__shadowFixedPages=[]},1200)};confirmWrapped.__nrShadowV17=true;window.confirmPrint=confirmWrapped}return true}
+  try{if(window.canPrint&&!window.canPrint())return;const src=await new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=bad;r.readAsDataURL(f)});const im=await load(src),mode=document.getElementById('mode')?.value||'Color';const page=fixShadow(im,mode).toDataURL('image/png');window.__shadowFixedPages=[page];const copies=Math.max(1,+document.getElementById('copies').value||1),body=document.getElementById('previewBody');body.innerHTML=`<div class="ai-badge">✓ Xerox Clean — camera shadow reduced with detail protection and original colour preserved.</div><div class="preview-sheet"><p><b>Document • Page 1 • ${copies} copy/copies</b></p><img src="${page}" alt="Print preview page 1"></div>`;document.getElementById('preview').classList.remove('hidden')}catch(e){console.error(e);return original.apply(this,arguments)}};
+ wrapped.__nrShadowV18=true;window.previewPrint=wrapped;const baseConfirm=window.confirmPrint;if(typeof baseConfirm==='function'&&!baseConfirm.__nrShadowV18){const confirmWrapped=function(){const pages=window.__shadowFixedPages;if(!pages||!pages.length)return baseConfirm.apply(this,arguments);const copies=Math.max(1,+document.getElementById('copies').value||1),paper=document.getElementById('paper').value,w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const all=[];for(let i=0;i<copies;i++)all.push(...pages);w.document.write(`<html><head><title>NR BizPro Smart Print</title><style>@page{size:${paper};margin:10mm}body{font-family:Arial;margin:0}.page{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>${all.map(p=>`<div class="page"><img src="${p}"></div>`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),250);window.onafterprint=()=>window.close();<\/script></body></html>`);w.document.close();setTimeout(()=>{try{const key='nr-bizpro-smart-print-customer-test-v1',d=JSON.parse(localStorage.getItem(key)||'{}');if(location.search.includes('customerTest=1')){d.test=d.test||{licensed:false,expires:null,trialCopies:0};d.test.trialCopies=(d.test.trialCopies||0)+copies;localStorage.setItem(key,JSON.stringify(d))}}catch(e){}document.getElementById('preview').classList.add('hidden');window.__shadowFixedPages=[]},1200)};confirmWrapped.__nrShadowV18=true;window.confirmPrint=confirmWrapped}return true}
 if(!install()){let tries=0;const timer=setInterval(()=>{if(install()||++tries>40)clearInterval(timer)},50)}
 })();

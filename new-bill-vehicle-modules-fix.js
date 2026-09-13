@@ -1,0 +1,81 @@
+// NR BizPro — New Bill + complete Two Wheeler / Four Wheeler / EV vehicle details
+(function(){
+  'use strict';
+  const VEHICLE_RE=/two wheeler|four wheeler|ev showroom|two wheeler service|four wheeler service|ev service|electric vehicle/i;
+  const TWO_RE=/two wheeler/i;
+  const FOUR_RE=/four wheeler/i;
+  const EV_RE=/ev showroom|ev service|electric vehicle/i;
+  const escP=v=>typeof window.esc==='function'?window.esc(v):String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
+  const moneyP=v=>typeof window.money==='function'?window.money(v):('₹'+(Number(v)||0).toFixed(2));
+  const modules=()=>Array.isArray(window.state?.settings?.modules)&&window.state.settings.modules.length?window.state.settings.modules:[window.state?.settings?.category||window.currentUser?.category||'General Business'];
+  const vehicleModule=m=>VEHICLE_RE.test(String(m||''));
+  const selectedVehicleModule=()=>document.getElementById('mBusinessModule')?.value||'';
+
+  function vehicleFields(){
+    return `<div id="vehicleDetailsBox" class="wide" style="display:none;border:1px solid #d8dee8;border-radius:10px;padding:12px;margin-top:8px"><h3 style="margin:0 0 10px">Vehicle Details</h3><div class="modal-grid">
+      <label class="field">Vehicle Type<select id="mVehicleType"><option>Two Wheeler</option><option>Four Wheeler</option><option>Electric Vehicle</option></select></label>
+      <label class="field">Brand / Manufacturer<input id="mBrand" placeholder="Honda / Hero / Tata / Mahindra"></label>
+      <label class="field">Model<input id="mModel" placeholder="Model name"></label>
+      <label class="field">Variant / Trim<input id="mVariant" placeholder="Variant"></label>
+      <label class="field">Model Year<input id="mModelYear" type="number" min="1900" max="2100" placeholder="2026"></label>
+      <label class="field">Colour<input id="mVehicleColor" placeholder="White / Black"></label>
+      <label class="field">Engine Number<input id="mEngineNo" placeholder="Engine number"></label>
+      <label class="field">Chassis Number<input id="mChassisNo" placeholder="Chassis number"></label>
+      <label class="field">VIN / Frame Number<input id="mVin" placeholder="VIN / Frame no."></label>
+      <label class="field">Registration Number<input id="mRegNo" placeholder="TS / TG 00 AA 0000"></label>
+      <label class="field">Fuel Type<select id="mFuelType"><option>Petrol</option><option>Diesel</option><option>CNG</option><option>Hybrid</option><option>Electric</option><option>Other</option></select></label>
+      <label class="field">Transmission<select id="mTransmission"><option>Manual</option><option>Automatic</option><option>AMT</option><option>CVT</option><option>DCT</option><option>Other</option></select></label>
+      <label class="field">Odometer / KM<input id="mOdometer" type="number" min="0" placeholder="0"></label>
+      <label class="field">Warranty<input id="mWarranty" placeholder="2 Years / 40,000 KM"></label>
+      <label class="field">Insurance / Policy No.<input id="mInsurance" placeholder="Policy number"></label>
+      <label class="field">HSN Code<input id="mVehicleHsn" placeholder="HSN"></label>
+      <label class="field wide">Remarks<textarea id="mVehicleRemarks" rows="2" placeholder="Vehicle notes / accessories / special details"></textarea></label>
+      <div id="evExtra" class="wide" style="display:none"><div class="modal-grid"><label class="field">Motor Number<input id="mMotorNo" placeholder="Motor number"></label><label class="field">Battery Number<input id="mBatteryNo" placeholder="Battery serial number"></label><label class="field">Battery Capacity<input id="mBatteryCapacity" placeholder="e.g. 3.2 kWh"></label><label class="field">Range<input id="mRange" placeholder="e.g. 150 km"></label><label class="field">Charger Details<input id="mCharger" placeholder="Charger / charging type"></label><label class="field">Battery Warranty<input id="mBatteryWarranty" placeholder="e.g. 3 Years"></label></div></div>
+    </div></div>`;
+  }
+
+  function toggleVehicleFields(){
+    const mod=selectedVehicleModule(),box=document.getElementById('vehicleDetailsBox'),ev=document.getElementById('evExtra');
+    if(!box)return;
+    box.style.display=vehicleModule(mod)?'block':'none';
+    if(ev)ev.style.display=EV_RE.test(mod)?'block':'none';
+    if(TWO_RE.test(mod)&&document.getElementById('mVehicleType'))document.getElementById('mVehicleType').value='Two Wheeler';
+    if(FOUR_RE.test(mod)&&document.getElementById('mVehicleType'))document.getElementById('mVehicleType').value='Four Wheeler';
+    if(EV_RE.test(mod)&&document.getElementById('mVehicleType'))document.getElementById('mVehicleType').value='Electric Vehicle';
+  }
+
+  function vehicleData(){
+    const ids=['mVehicleType','mBrand','mModel','mVariant','mModelYear','mVehicleColor','mEngineNo','mChassisNo','mVin','mRegNo','mFuelType','mTransmission','mOdometer','mWarranty','mInsurance','mVehicleHsn','mVehicleRemarks','mMotorNo','mBatteryNo','mBatteryCapacity','mRange','mCharger','mBatteryWarranty'];
+    const o={};ids.forEach(id=>{const e=document.getElementById(id);if(e)o[id.replace(/^m/,'').replace(/^[A-Z]/,c=>c.toLowerCase())]=e.value.trim()});return o;
+  }
+
+  function openProduct(){
+    const opts=modules().map(m=>`<option value="${escP(m)}">${escP(m)}</option>`).join('');
+    window.openModal('Add Product / Service',`<div class="modal-grid"><label class="field wide">Business Module<select id="mBusinessModule" onchange="window.NRVehicleFixToggle()">${opts}</select></label><label class="field">Product / Service<input id="mName" required placeholder="Product / Vehicle Model"></label><label class="field">Barcode<input id="mBarcode" placeholder="Scan barcode here"></label><label class="field">Type<select id="mType"><option>Product</option><option>Service</option><option>Vehicle</option></select></label><label class="field">Cost Price<input id="mCost" type="number" min="0" value="0"></label><label class="field">Margin Type<select id="mMarginType"><option value="percent">Percentage</option><option value="fixed">Fixed Amount</option></select></label><label class="field">Margin<input id="mMargin" type="number" min="0" value="0"></label><label class="field">GST %<input id="mGst" type="number" min="0" value="0"></label><label class="field">Opening Stock<input id="mStock" type="number" min="0" value="0"></label><label class="field wide">Selling Price<input id="mSell" type="number" min="0" value="0"></label>${vehicleFields()}</div><div class="modal-actions"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" onclick="window.NRVehicleSaveProduct()">Save Product</button></div>`);
+    ['mCost','mMargin','mMarginType'].forEach(id=>document.getElementById(id)?.addEventListener('input',()=>{const c=+document.getElementById('mCost').value||0,m=+document.getElementById('mMargin').value||0,t=document.getElementById('mMarginType').value;document.getElementById('mSell').value=(c+(t==='percent'?c*m/100:m)).toFixed(2)}));
+    const mm=document.getElementById('mBusinessModule');if(mm)mm.addEventListener('change',toggleVehicleFields);toggleVehicleFields();document.getElementById('mBarcode')?.focus();
+  }
+
+  function saveProduct(){
+    const name=document.getElementById('mName')?.value.trim();if(!name)return alert('Enter product / vehicle name');
+    const barcode=document.getElementById('mBarcode')?.value.trim()||'';if(barcode&&state.items.some(i=>i.barcode===barcode))return alert('Barcode already exists');
+    const module=document.getElementById('mBusinessModule')?.value||'General Business';
+    const item={id:crypto.randomUUID(),name,barcode,type:document.getElementById('mType')?.value||'Product',cost:+document.getElementById('mCost')?.value||0,margin:+document.getElementById('mMargin')?.value||0,marginType:document.getElementById('mMarginType')?.value||'percent',sell:+document.getElementById('mSell')?.value||0,gst:+document.getElementById('mGst')?.value||0,stock:+document.getElementById('mStock')?.value||0,businessModule:module,businessCategory:module};
+    if(vehicleModule(module))item.vehicleDetails=vehicleData();
+    state.items.push(item);if(typeof save==='function')save();closeModal();if(typeof renderItems==='function')renderItems();if(typeof updateStats==='function')updateStats();
+  }
+
+  function openBill(){
+    window.billCart=[];
+    window.openModal('Create New Bill',`<div class="modal-grid"><label class="field">Customer Name<input id="nbCustomer" placeholder="Walk-in Customer"></label><label class="field">Customer Mobile<input id="nbMobile" placeholder="Mobile number"></label><label class="field wide">Customer Address<textarea id="nbAddress" rows="2" placeholder="Address"></textarea></label><label class="field">Customer GSTIN<input id="nbGstin" placeholder="Optional GSTIN"></label><label class="field wide">🔎 Search Product / 📷 Barcode Scan<input id="nbSearch" autofocus placeholder="Type product name or scan barcode"></label></div><div id="nbSuggestions" class="suggestions"></div><div id="nbLines" class="bill-lines"></div><div class="modal-grid"><label class="field">Markup ₹<input id="nbMarkup" type="number" min="0" value="0"></label><label class="field">Discount ₹<input id="nbDiscount" type="number" min="0" value="0"></label></div><div class="bill-total">Subtotal: <span id="nbSubtotal">₹0</span> &nbsp; GST: <span id="nbGst">₹0</span> &nbsp; <b>Grand Total: <span id="nbTotal">₹0</span></b></div><div class="modal-actions"><button class="secondary" onclick="closeModal()">Cancel</button><button class="primary" onclick="window.NRVehicleSaveBill()">Generate Bill</button></div>`);
+    const s=document.getElementById('nbSearch');s?.addEventListener('input',searchBill);s?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const q=s.value.trim().toLowerCase(),i=(state.items||[]).find(x=>(x.barcode||'').toLowerCase()===q);if(i){addBillItem(i.id);s.value='';searchBill()}}});
+    ['nbMarkup','nbDiscount'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderBill));s?.focus();renderBill();
+  }
+  function searchBill(){const q=(document.getElementById('nbSearch')?.value||'').trim().toLowerCase(),box=document.getElementById('nbSuggestions');if(!box)return;if(!q){box.innerHTML='';return}const list=(state.items||[]).filter(i=>(i.name||'').toLowerCase().includes(q)||(i.barcode||'').toLowerCase()===q).slice(0,10);box.innerHTML=list.map(i=>`<button class="suggestion" onclick="window.NRVehicleAddBillItem('${i.id}')"><b>${escP(i.name)}</b><span>${escP(i.businessModule||i.businessCategory||'General')} • ${moneyP(i.sell)} • Stock ${i.stock}</span></button>`).join('')||'<div class="empty">No product found</div>'}
+  function addBillItem(id){const i=state.items.find(x=>x.id===id);if(!i)return;if(i.stock<=0&&i.type!=='Service')return alert('Out of stock');const line=window.billCart.find(x=>x.id===id);if(line){if(line.qty<i.stock)line.qty++;}else window.billCart.push({id,qty:1});renderBill();document.getElementById('nbSearch')?.focus()}
+  function renderBill(){const box=document.getElementById('nbLines');if(!box)return;if(!window.billCart.length){box.innerHTML='<div class="empty">Add products or scan a barcode.</div>'}else{box.innerHTML=window.billCart.map(l=>{const i=state.items.find(x=>x.id===l.id),amt=(+i.sell||0)*l.qty;return `<div class="bill-line"><span><b>${escP(i.name)}</b><small>${escP(i.businessModule||'')}</small></span><span><button onclick="window.NRVehicleQty('${i.id}',-1)">−</button> ${l.qty} <button onclick="window.NRVehicleQty('${i.id}',1)">+</button></span><b>${moneyP(amt)}</b><button onclick="window.NRVehicleRemove('${i.id}')">×</button></div>`}).join('')}
+    let sub=0,gst=0;window.billCart.forEach(l=>{const i=state.items.find(x=>x.id===l.id),amt=(+i.sell||0)*l.qty;sub+=amt;gst+=amt*(+i.gst||0)/100});const markup=+document.getElementById('nbMarkup')?.value||0,disc=+document.getElementById('nbDiscount')?.value||0,total=Math.max(0,sub+markup-disc+gst);document.getElementById('nbSubtotal').textContent=moneyP(sub);document.getElementById('nbGst').textContent=moneyP(gst);document.getElementById('nbTotal').textContent=moneyP(total);
+  }
+  function saveBill(){if(!window.billCart.length)return alert('Add at least one product');let sub=0,gst=0;const items=window.billCart.map(l=>{const i=state.items.find(x=>x.id===l.id),amt=(+i.sell||0)*l.qty;sub+=amt;gst+=amt*(+i.gst||0)/100;if(i.type!=='Service')i.stock=Math.max(0,(+i.stock||0)-l.qty);return {id:i.id,name:i.name,type:i.type,qty:l.qty,price:+i.sell||0,gst:+i.gst||0,amount:amt,businessModule:i.businessModule||i.businessCategory||'' ,vehicleDetails:i.vehicleDetails||null}});const markup=+document.getElementById('nbMarkup')?.value||0,discount=+document.getElementById('nbDiscount')?.value||0,total=Math.max(0,sub+markup-discount+gst);const n=(state.bills||[]).length+1;const bill={id:crypto.randomUUID(),invoice:'INV-'+String(n).padStart(4,'0'),date:new Date().toISOString(),customer:document.getElementById('nbCustomer')?.value.trim()||'Walk-in Customer',mobile:document.getElementById('nbMobile')?.value.trim()||'',customerAddress:document.getElementById('nbAddress')?.value.trim()||'',customerGstin:document.getElementById('nbGstin')?.value.trim()||'',items,subtotal:sub,markup,discount,gstAmount:gst,total};state.bills=state.bills||[];state.bills.push(bill);save();closeModal();if(typeof renderBills==='function')renderBills();if(typeof updateStats==='function')updateStats();alert('Bill generated successfully: '+bill.invoice)}
+  window.NRVehicleFixToggle=toggleVehicleFields;window.NRVehicleSaveProduct=saveProduct;window.NRVehicleAddBillItem=addBillItem;window.NRVehicleQty=(id,d)=>{const l=window.billCart.find(x=>x.id===id);if(!l)return;const i=state.items.find(x=>x.id===id);l.qty=Math.max(1,Math.min((+i.stock||999999),l.qty+d));renderBill()};window.NRVehicleRemove=id=>{window.billCart=window.billCart.filter(x=>x.id!==id);renderBill()};window.NRVehicleSaveBill=saveBill;window.launchNewBill=openBill;window.openBillModal=openBill;window.openItemModal=openProduct;
+})();

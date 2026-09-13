@@ -1,0 +1,130 @@
+/* NR BizPro Smart Print — automatic Xerox-style document scan
+   Non-invasive Smart Print layer: detects the document boundary, perspective-corrects it,
+   then applies conservative cleanup. Originals are never modified. */
+(function(){
+'use strict';
+let cvPromise=null;
+const $=id=>document.getElementById(id);
+const clamp=(v,a=0,b=255)=>Math.max(a,Math.min(b,v));
+function loadCV(){
+  if(window.cv&&window.cv.Mat)return Promise.resolve(window.cv);
+  if(cvPromise)return cvPromise;
+  cvPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://docs.opencv.org/4.x/opencv.js';
+    s.async=true;
+    s.onload=()=>{
+      const ready=()=>window.cv&&window.cv.Mat?resolve(window.cv):setTimeout(ready,40);
+      ready();
+    };
+    s.onerror=()=>reject(new Error('OpenCV load failed'));
+    document.head.appendChild(s);
+  });
+  return cvPromise;
+}
+function dataUrl(src){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=bad;r.readAsDataURL(src)})}
+function image(src){return new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=bad;i.src=src})}
+function canvasFrom(im){const c=document.createElement('canvas');c.width=im.naturalWidth||im.width;c.height=im.naturalHeight||im.height;c.getContext('2d').drawImage(im,0,0);return c}
+function orderPoints(p){
+  const sum=p.map(x=>x.x+x.y),diff=p.map(x=>x.x-x.y);
+  return [p[sum.indexOf(Math.min(...sum))],p[diff.indexOf(Math.max(...diff))],p[sum.indexOf(Math.max(...sum))],p[diff.indexOf(Math.min(...diff))]];
+}
+function quadFor(src,cv){
+  const max=1400,scale=Math.min(1,max/src.width,max/src.height);
+  const d=document.createElement('canvas');d.width=Math.max(1,Math.round(src.width*scale));d.height=Math.max(1,Math.round(src.height*scale));d.getContext('2d').drawImage(src,0,0,d.width,d.height);
+  let mat=null,gray=null,blur=null,edge=null,contours=null,hierarchy=null;
+  try{
+    mat=cv.imread(d);gray=new cv.Mat();blur=new cv.Mat();edge=new cv.Mat();contours=new cv.MatVector();hierarchy=new cv.Mat();
+    cv.cvtColor(mat,gray,cv.COLOR_RGBA2GRAY);cv.GaussianBlur(gray,blur,new cv.Size(5,5),0);cv.Canny(blur,edge,55,170);
+    cv.findContours(edge,contours,hierarchy,cv.RETR_LIST,cv.CHAIN_APPROX_SIMPLE);
+    let best=null,bestArea=0;
+    for(let i=0;i<contours.size();i++){
+      const c=contours.get(i),area=Math.abs(cv.contourArea(c));
+      if(area<d.width*d.height*.22||area>d.width*d.height*.985) {c.delete();continue}
+      const peri=cv.arcLength(c,true),approx=new cv.Mat();cv.approxPolyDP(c,approx,.025*peri,true);
+      if(approx.rows===4&&cv.isContourConvex(approx)&&area>bestArea){
+        const pts=[];for(let j=0;j<4;j++)pts.push({x:approx.intAt(j,0),y:approx.intAt(j,1)});
+        best=pts;bestArea=area;
+      }
+      approx.delete();c.delete();
+    }
+    if(!best)return null;
+    return orderPoints(best).map(p=>({x:p.x/scale,y:p.y/scale}));
+  }finally{mat?.delete();gray?.delete();blur?.delete();edge?.delete();contours?.delete();hierarchy?.delete()}
+}
+function warp(src,pts,cv){
+  if(!pts||pts.length!==4)return src;
+  const tl=pts[0],tr=pts[1],br=pts[2],bl=pts[3];
+  const w=Math.max(Math.hypot(tr.x-tl.x,tr.y-tl.y),Math.hypot(br.x-bl.x,br.y-bl.y));
+  const h=Math.max(Math.hypot(bl.x-tl.x,bl.y-tl.y),Math.hypot(br.x-tr.x,br.y-tr.y));
+  const outW=Math.min(3200,Math.max(700,Math.round(w))),outH=Math.min(4500,Math.max(500,Math.round(h)));
+  const srcM=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,br.x,br.y,bl.x,bl.y]);
+  const dstM=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,outW-1,0,outW-1,outH-1,0,outH-1]);
+  const M=cv.getPerspectiveTransform(srcM,dstM),sm=cv.imread(src),dm=new cv.Mat();
+  cv.warpPerspective(sm,dm,M,new cv.Size(outW,outH),cv.INTER_CUBIC,cv.BORDER_REPLICATE,new cv.Scalar());
+  const out=document.createElement('canvas');out.width=outW;out.height=outH;cv.imshow(out,dm);
+  srcM.delete();dstM.delete();M.delete();sm.delete();dm.delete();return out;
+}
+function gentleClean(src,mode){
+  const c=document.createElement('canvas');
+  const maxW=3000,maxH=4200,scale=Math.min(1,maxW/src.width,maxH/src.height);
+  c.width=Math.max(1,Math.round(src.width*scale));c.height=Math.max(1,Math.round(src.height*scale));
+  const x=c.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(src,0,0,c.width,c.height);
+  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
+  const sw=Math.max(32,Math.min(180,Math.round(c.width/28))),sh=Math.max(40,Math.min(220,Math.round(c.height/28)));
+  const sm=document.createElement('canvas');sm.width=sw;sm.height=sh;const sx=sm.getContext('2d',{willReadFrequently:true});sx.drawImage(c,0,0,sw,sh);const s=sx.getImageData(0,0,sw,sh).data;
+  for(let y=0;y<c.height;y++){
+    const fy=y*(sh-1)/Math.max(1,c.height-1),y0=Math.floor(fy),y1=Math.min(sh-1,y0+1),ty=fy-y0;
+    for(let xx=0;xx<c.width;xx++){
+      const fx=xx*(sw-1)/Math.max(1,c.width-1),x0=Math.floor(fx),x1=Math.min(sw-1,x0+1),tx=fx-x0;
+      const lum=(q)=>{const k=q*4;return .2126*s[k]+.7152*s[k+1]+.0722*s[k+2]};
+      const a=lum(y0*sw+x0)*(1-tx)+lum(y0*sw+x1)*tx,b=lum(y1*sw+x0)*(1-tx)+lum(y1*sw+x1)*tx,local=a*(1-ty)+b*ty;
+      const i=(y*c.width+xx)*4,r=d[i],g=d[i+1],bl=d[i+2],L=.2126*r+.7152*g+.0722*bl;
+      const deficit=clamp((215-local)/120,0,1),protect=L<42?.08:L<90?.35+.65*(L-42)/48:1;
+      const strength=deficit*.38*protect;let nr=r+(255-r)*strength,ng=g+(255-g)*strength,nb=bl+(255-bl)*strength;
+      if(mode==='Black & White'){let v=.2126*nr+.7152*ng+.0722*nb;v=clamp((v-8)*1.08);nr=ng=nb=v}
+      d[i]=nr;d[i+1]=ng;d[i+2]=nb;
+    }
+  }
+  x.putImageData(im,0,0);return c;
+}
+async function scanFile(file){
+  const src=await dataUrl(file),im=await image(src),base=canvasFrom(im);
+  if(typeIsPassport())return {page:base,scanned:false};
+  try{const cv=await loadCV(),pts=quadFor(base,cv);if(pts){const warped=warp(base,pts,cv);return {page:warped,scanned:true}}}catch(e){console.warn('Smart Xerox auto-scan fallback',e)}
+  return {page:base,scanned:false};
+}
+function typeIsPassport(){return document.querySelector('.types button.active')?.dataset.type==='passport'}
+function okToPrint(){return typeof window.canPrint==='function'&&window.canPrint()}
+function pageUrl(c){return c.toDataURL('image/png')}
+function install(){
+  const basePreview=window.previewPrint,basePrint=window.printNow;
+  if(typeof basePreview!=='function'||basePreview.__nrXeroxScan)return false;
+  const preview=async function(){
+    if(!document.getElementById('fileInput')?.files?.length)return basePreview.apply(this,arguments);
+    if(!okToPrint())return;
+    const f=document.getElementById('fileInput').files[0];
+    if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)||typeIsPassport())return basePreview.apply(this,arguments);
+    try{
+      const r=await scanFile(f),mode=document.getElementById('mode')?.value||'Color',clean=gentleClean(r.page,mode),url=pageUrl(clean);
+      window.__xeroxScanPages=[url];window.__xeroxScanCopies=Math.max(1,+document.getElementById('copies').value||1);
+      const q=document.getElementById('quality');if(q){q.textContent=r.scanned?'✓ Document edges detected • perspective corrected • Xerox cleanup applied.':'✓ Xerox cleanup applied • automatic edge detection was not confident, so the original framing was preserved.';q.classList.remove('hidden')}
+      document.getElementById('previewBody').innerHTML=`<div class="ai-badge">✓ Smart Xerox Scan — document boundary cleaned, perspective corrected where detected, shadows reduced and original details protected.</div><div class="preview-sheet"><p><b>Document • Xerox-ready preview • ${window.__xeroxScanCopies} copy/copies</b></p><img src="${url}" alt="Smart Xerox preview"></div>`;
+      document.getElementById('preview').classList.remove('hidden');
+    }catch(e){console.error(e);return basePreview.apply(this,arguments)}
+  };
+  preview.__nrXeroxScan=true;window.previewPrint=preview;
+  if(typeof basePrint==='function'&&!basePrint.__nrXeroxScan){const p=async function(){return window.previewPrint()};p.__nrXeroxScan=true;window.printNow=p}
+  const baseConfirm=window.confirmPrint;
+  if(typeof baseConfirm==='function'&&!baseConfirm.__nrXeroxScan){
+    const confirm= function(){
+      const pages=window.__xeroxScanPages;if(!pages?.length)return baseConfirm.apply(this,arguments);
+      const copies=Math.max(1,+document.getElementById('copies').value||1),paper=document.getElementById('paper').value,w=window.open('','_blank');if(!w)return alert('Allow pop-ups to print.');const all=[];for(let i=0;i<copies;i++)all.push(...pages);
+      w.document.write(`<html><head><title>NR BizPro Smart Print</title><style>@page{size:${paper};margin:10mm}body{font-family:Arial;margin:0}.page{page-break-after:always;display:flex;justify-content:center;align-items:center;min-height:calc(297mm - 20mm)}img{max-width:100%;max-height:277mm;object-fit:contain}</style></head><body>${all.map(p=>`<div class="page"><img src="${p}"></div>`).join('')}<script>window.onload=()=>setTimeout(()=>window.print(),250);window.onafterprint=()=>window.close();<\/script></body></html>`);w.document.close();
+      setTimeout(()=>{try{const customer=location.search.includes('customerTest=1'),key='nr-bizpro-smart-print-customer-test-v1',data=JSON.parse(localStorage.getItem(key)||'{}');if(customer){data.test=data.test||{licensed:false,expires:null,trialCopies:0};data.test.trialCopies=(data.test.trialCopies||0)+copies;localStorage.setItem(key,JSON.stringify(data))}else if(window.data&&typeof window.data==='object'&&typeof window.save==='function'&&window.data.trialCopies!==undefined){window.data.trialCopies=(window.data.trialCopies||0)+copies;window.save()} }catch(e){}document.getElementById('preview').classList.add('hidden');window.__xeroxScanPages=[]},1200);
+    };confirm.__nrXeroxScan=true;window.confirmPrint=confirm;
+  }
+  return true;
+}
+if(!install()){let tries=0;const t=setInterval(()=>{if(install()||++tries>60)clearInterval(t)},50)}
+})();

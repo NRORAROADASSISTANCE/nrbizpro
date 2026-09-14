@@ -1,0 +1,12 @@
+/* NR BizPro final membership display: 6 Years ₹6,000 / Lifetime ₹15,000. */
+(function(){
+'use strict';
+const REG=3500;
+const plans={year3:{label:'6 Years',fee:6000,years:'6 years'},lifetime:{label:'Lifetime',fee:15000,years:'Lifetime access'}};
+const money=n=>'₹'+Number(n).toLocaleString('en-IN');
+function selectedPlan(){try{const u=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]')[0]||{};return plans[u.pendingPlan]||null}catch{return null}}
+function patchPlans(){document.querySelectorAll('.nr-portal .plan').forEach(b=>{const key=(b.getAttribute('onclick')||'').match(/startSubscription\('([^']+)'\)/)?.[1],p=plans[key];if(!p)return;const x=b.querySelectorAll('b,strong,span,em');if(x[0])x[0].textContent=p.label;if(x[1])x[1].textContent=money(p.fee);if(x[2])x[2].textContent='Membership fee • '+p.years;if(x[3])x[3].textContent='Total payable: '+money(REG+p.fee)})}
+function patchPayment(){const p=selectedPlan();if(!p)return;const root=document.querySelector('.nr-portal .portal-form');if(!root)return;const title=root.querySelector('p');if(title)title.textContent=p.label+' Membership';const rows=root.querySelectorAll('.summary>div');if(rows[0]){const b=rows[0].querySelector('b');if(b)b.textContent=money(REG)}if(rows[1]){const b=rows[1].querySelector('b');if(b)b.textContent=money(p.fee)}if(rows[2]){const b=rows[2].querySelector('b');if(b)b.textContent=money(REG+p.fee)}const fix=()=>{const box=document.getElementById('upiBox');if(!box)return false;const text=box.querySelector('b');if(text)text.textContent='Pay '+money(REG+p.fee)+' via UPI';const a=[...box.querySelectorAll('a[href^="upi://"]')][0];if(a){try{const u=new URL(a.href);u.searchParams.set('am',String(REG+p.fee));u.searchParams.set('tn','NR BizPro '+p.label+' Membership');a.href=u.toString()}catch{}}return true};fix();let n=0;const t=setInterval(()=>{if(fix()||++n>40)clearInterval(t)},100)}
+function install(){if(typeof window.renderAuth!=='function'||window.renderAuth.__finalPlan)return;const original=window.renderAuth;const wrapped=function(mode,message){const r=original.apply(this,arguments);setTimeout(()=>{if(mode==='plans')patchPlans();if(mode==='payment')patchPayment()},0);setTimeout(()=>{if(mode==='plans')patchPlans();if(mode==='payment')patchPayment()},350);return r};wrapped.__finalPlan=true;window.renderAuth=wrapped}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();setTimeout(install,300);setTimeout(install,1000);setTimeout(install,2500);
+})();

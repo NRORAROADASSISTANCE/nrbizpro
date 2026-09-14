@@ -1,7 +1,7 @@
 import {sql,initDb,sessionBusiness} from './db.js';
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.status(c).json(b)}
 function id(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}
-const PLAN_FEES={year3:3500,lifetime:6000};
+const PLAN_FEES={year3:6000,lifetime:15000};
 const TEST_PLAN='test10';
 export default async function handler(req,res){await initDb();try{
   if(req.method==='GET'&&req.query.action==='config'){

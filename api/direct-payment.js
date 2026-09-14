@@ -1,7 +1,7 @@
 import {sql,initDb,sessionBusiness} from './db.js';
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.status(c).json(b)}
 function id(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}
-const PLAN_FEES={year3:6000,lifetime:15000};
+const PLAN_FEES={year3:3500,year6:6000,lifetime:15000};
 const TEST_PLAN='test10';
 export default async function handler(req,res){await initDb();try{
   if(req.method==='GET'&&req.query.action==='config'){
@@ -19,7 +19,7 @@ export default async function handler(req,res){await initDb();try{
     const amount=isTest?10:3500+PLAN_FEES[plan],paymentId=id();
     await sql`INSERT INTO direct_payments(id,business_id,plan,amount,utr,status) VALUES(${paymentId},${b.id},${plan},${amount},${utr},'pending')`;
     await sql`UPDATE businesses SET pending_plan=${plan},pending_amount=${amount},updated_at=now() WHERE id=${b.id}`;
-    return send(res,200,{ok:true,paymentId,status:'pending',amount,test:isTest});
+    return send(res,200,{ok:true,paymentId,status:'pending',amount,test:isTest,registrationFee:isTest?0:3500,planFee:isTest?10:PLAN_FEES[plan]});
   }
   if(req.method==='GET'&&req.query.action==='status'){const r=await sql`SELECT id,plan,amount,utr,status,admin_note,created_at,reviewed_at FROM direct_payments WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 10`;return send(res,200,{payments:r.rows})}
   return send(res,404,{error:'Unknown action'});

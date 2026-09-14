@@ -1,41 +1,46 @@
 (function(){
   'use strict';
   function installGST(){
-    const form=document.querySelector('#authContent form');
-    if(!form||form.dataset.nrGstInstalled==='1')return;
-    const gstInput=document.getElementById('suGst');
-    if(!gstInput)return;
-    const gstLabel=gstInput.closest('label');
-    if(!gstLabel)return;
-    form.dataset.nrGstInstalled='1';
+    const input=document.getElementById('suGst');
+    if(!input || input.dataset.nrGstReady==='1') return false;
+    const form=input.closest('form');
+    if(!form) return false;
+    let gstLabel=input.closest('label');
+    if(!gstLabel) return false;
+
     const choice=document.createElement('label');
-    choice.innerHTML='GST Registration <select id="suGstRegistered"><option value="NO">NO</option><option value="YES">YES</option></select>';
+    choice.className='nr-gst-registration-choice';
+    choice.innerHTML='<span>GST Registration</span><select id="suGstRegistered" aria-label="GST Registration"><option value="NO">NO</option><option value="YES">YES</option></select>';
     gstLabel.parentNode.insertBefore(choice,gstLabel);
-    const span=gstLabel.querySelector('span');
-    if(span)span.textContent='(required when GST is YES)';
+
+    gstLabel.dataset.nrGstOriginal='1';
     gstLabel.style.display='none';
-    gstInput.disabled=true;
-    gstInput.required=false;
-    gstInput.placeholder='Enter GSTIN';
-    const toggle=()=>{
-      const yes=document.getElementById('suGstRegistered')?.value==='YES';
+    input.disabled=true;
+    input.required=false;
+    input.placeholder='Enter GSTIN';
+
+    const select=choice.querySelector('#suGstRegistered');
+    function toggle(){
+      const yes=select.value==='YES';
       gstLabel.style.display=yes?'block':'none';
-      gstInput.disabled=!yes;
-      gstInput.required=yes;
-      if(!yes)gstInput.value='';
-    };
-    document.getElementById('suGstRegistered').addEventListener('change',toggle);
+      input.disabled=!yes;
+      input.required=yes;
+      if(!yes) input.value='';
+      input.setAttribute('aria-hidden',yes?'false':'true');
+    }
+    select.addEventListener('change',toggle);
+    input.dataset.nrGstReady='1';
     toggle();
+    return true;
   }
-  function hook(){
-    const original=window.renderAuth;
-    if(typeof original!=='function'||original.__nrGSTHook)return;
-    const wrapped=function(){const r=original.apply(this,arguments);if(arguments[0]==='signup')setTimeout(installGST,0);return r};
-    wrapped.__nrGSTHook=true;
-    window.renderAuth=wrapped;
-    if(document.getElementById('suGst'))installGST();
+
+  function watch(){
+    installGST();
+    const root=document.getElementById('authContent')||document.body;
+    if(root.dataset.nrGstObserver==='1') return;
+    root.dataset.nrGstObserver='1';
+    new MutationObserver(function(){installGST()}).observe(root,{childList:true,subtree:true});
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
-  setTimeout(hook,300);
-  setTimeout(hook,1200);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',watch); else watch();
+  [100,500,1000,2000,4000].forEach(function(ms){setTimeout(installGST,ms)});
 })();

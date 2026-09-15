@@ -6,7 +6,9 @@
   let syncing=false;
   let lastUserId='';
   let queue=Promise.resolve();
+  let saveTimer=null;
   const key=id=>'nr-bizpro-cloud-initialized:'+id;
+  const DATA_PREFIX='nr-bizpro-data-v2:';
   const hasLocalData=s=>!!(s&&(s.items?.length||s.bills?.length||s.customers?.length));
 
   async function getCloud(){
@@ -29,7 +31,19 @@
     queue=queue.then(()=>putCloud(snapshot)).catch(e=>console.warn('NR BizPro cloud save:',e));
   }
 
-  // app.js uses its lexical save() function, so expose an explicit hook for it.
+  // app.js has a lexical save() function, so patch the actual localStorage write used by it.
+  const nativeSetItem=Storage.prototype.setItem;
+  if(!Storage.prototype.__nrBizProCloudPatched){
+    Storage.prototype.setItem=function(k,v){
+      nativeSetItem.call(this,k,v);
+      if(this===window.localStorage && String(k).startsWith(DATA_PREFIX) && !syncing){
+        clearTimeout(saveTimer);
+        saveTimer=setTimeout(queueSave,150);
+      }
+    };
+    Object.defineProperty(Storage.prototype,'__nrBizProCloudPatched',{value:true,configurable:false});
+  }
+
   window.NRBizProCloudQueueSave=queueSave;
 
   window.save=function(){

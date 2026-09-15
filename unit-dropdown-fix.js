@@ -21,16 +21,29 @@ function install(){
     saveUnits();closeModal();window.renderItems();updateStats();
   };
   window.searchBillProducts=function(){
-    addUnitToExisting();const q=(document.getElementById('bSearch')?.value||'').trim().toLowerCase(),box=document.getElementById('billSuggestions');if(!box)return;if(!q){box.innerHTML='';return}
-    const found=(window.state?.items||[]).filter(i=>String(i.name||'').toLowerCase().includes(q)||String(i.barcode||'').toLowerCase()===q).slice(0,8);
-    box.innerHTML=found.map(i=>`<button type="button" class="suggestion" onclick="addToCart('${i.id}')"><b>${esc(i.name)}</b><span>${esc(i.barcode||'No barcode')} • ${money(i.sell)} • ${esc(getUnit(i))} • Stock ${i.stock||0}</span></button>`).join('')||'<div class="empty">No product found</div>';
+    addUnitToExisting();const input=document.getElementById('bSearch')||document.getElementById('nbSearch'),box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions');if(!input||!box)return;const q=(input.value||'').trim().toLowerCase();if(!q){box.innerHTML='';return}
+    const items=(window.state?.items||[]);const found=items.filter(i=>String(i.name||'').toLowerCase().includes(q)||String(i.barcode||'').toLowerCase()===q).slice(0,10);
+    box.innerHTML=found.map(i=>`<button type="button" class="suggestion" data-unit-id="${esc(i.id)}"><b>${esc(i.name)}</b><span>${esc(i.barcode||'No barcode')} • ${money(i.sell)} • ${esc(getUnit(i))} • Stock ${i.stock||0}</span></button>`).join('')||'<div class="empty">No product found</div>';
+    box.querySelectorAll('[data-unit-id]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.unitId;if(typeof addToCart==='function')addToCart(id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(id));if(line)line.qty++;else window.billCart.push({id,qty:1});if(typeof window.NRVehicleFixRenderBill==='function')window.NRVehicleFixRenderBill();}input.value='';box.innerHTML='';input.focus()});
   };
   window.renderCart=function(){
     const box=document.getElementById('billLines'),totalEl=document.getElementById('bTotal');if(!box)return;const cart=window.billCart||[];if(!cart.length){box.innerHTML='<div class="empty">Scan a barcode or search for a product.</div>';if(totalEl)totalEl.textContent=money(0);return}
     let total=0;box.innerHTML=cart.map(l=>{const i=(window.state?.items||[]).find(x=>x.id===l.id);if(!i)return '';const amt=(+i.sell||0)*(+l.qty||0);total+=amt;return `<div class="bill-line"><span><b>${esc(i.name)}</b><small>${esc(getUnit(i))} • ${esc(i.barcode||'')}</small></span><span><button type="button" onclick="changeQty('${i.id}',-1)">−</button> ${l.qty} <button type="button" onclick="changeQty('${i.id}',1)">+</button></span><b>${money(amt)}</b><button type="button" onclick="removeCart('${i.id}')">×</button></div>`}).join('');if(totalEl)totalEl.textContent=money(total);
   };
+  bindBillSearch();
+}
+function bindBillSearch(){
+  const input=document.getElementById('bSearch')||document.getElementById('nbSearch');if(!input||input.dataset.unitSearchBound==='1')return;
+  input.dataset.unitSearchBound='1';
+  input.addEventListener('input',()=>window.searchBillProducts());
+  input.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=input.value.trim().toLowerCase(),items=window.state?.items||[],i=items.find(x=>String(x.barcode||'').toLowerCase()===q);if(i){if(typeof addToCart==='function')addToCart(i.id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(i.id);input.value='';const box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions');if(box)box.innerHTML=''}});
+}
+const originalOpenBillModal=window.openBillModal;
+if(typeof originalOpenBillModal==='function'){
+  window.openBillModal=function(){const r=originalOpenBillModal.apply(this,arguments);setTimeout(bindBillSearch,0);setTimeout(bindBillSearch,150);return r};
 }
 addUnitToExisting();
 setTimeout(install,3500);
 setTimeout(install,6000);
+setTimeout(bindBillSearch,7000);
 })();

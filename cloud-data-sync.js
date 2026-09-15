@@ -10,14 +10,14 @@
   const hasLocalData=s=>!!(s&&(s.items?.length||s.bills?.length||s.customers?.length));
 
   async function getCloud(){
-    const r=await fetch('/api/data',{method:'GET',credentials:'include',cache:'no-store'});
+    const r=await fetch('/api/auth?action=data',{method:'GET',credentials:'include',cache:'no-store'});
     if(!r.ok) throw new Error('cloud_get_'+r.status);
     return r.json();
   }
 
   async function putCloud(s){
-    const payload={items:Array.isArray(s?.items)?s.items:[],bills:Array.isArray(s?.bills)?s.bills:[],customers:Array.isArray(s?.customers)?s.customers:[],settings:s?.settings||{}};
-    const r=await fetch('/api/data',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(payload)});
+    const payload={action:'data',items:Array.isArray(s?.items)?s.items:[],bills:Array.isArray(s?.bills)?s.bills:[],customers:Array.isArray(s?.customers)?s.customers:[],settings:s?.settings||{}};
+    const r=await fetch('/api/auth?action=data',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify(payload)});
     if(!r.ok) throw new Error('cloud_put_'+r.status);
     return r.json();
   }

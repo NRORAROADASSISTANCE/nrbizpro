@@ -4,6 +4,22 @@ const unitOptionsHtml=()=>UNIT_OPTIONS.map(u=>`<option value="${u}">${u}</option
 const getUnit=i=>String(i?.unit||'pcs');
 function saveUnits(){try{if(typeof save==='function')save()}catch(e){}}
 function addUnitToExisting(){if(!window.state?.items)return;let changed=false;window.state.items.forEach(i=>{if(!i.unit){i.unit='pcs';changed=true}});if(changed)saveUnits()}
+function getBillInput(){return document.getElementById('bSearch')||document.getElementById('nbSearch')||document.getElementById('bSearchFinal')}
+function getBillBox(){return document.getElementById('billSuggestions')||document.getElementById('nbSuggestions')||document.getElementById('billSuggestionsFinal')}
+function addBillItemDirect(id){
+  const item=(window.state?.items||[]).find(x=>String(x.id)===String(id));
+  if(!item)return;
+  if(!Array.isArray(window.billCart))window.billCart=[];
+  const line=window.billCart.find(x=>String(x.id)===String(item.id));
+  if(line)line.qty=Number(line.qty||0)+1;else window.billCart.push({id:item.id,qty:1});
+  const input=getBillInput(),box=getBillBox();
+  if(input)input.value='';
+  if(box)box.innerHTML='';
+  if(typeof window.renderCart==='function')window.renderCart();
+  else if(typeof window.NRVehicleFixRenderBill==='function')window.NRVehicleFixRenderBill();
+  if(input)input.focus();
+}
+window.NRBizProAddBillItem=addBillItemDirect;
 function install(){
   if(typeof openModal!=='function')return;
   window.openItemModal=function(){
@@ -21,27 +37,31 @@ function install(){
     saveUnits();closeModal();window.renderItems();updateStats();
   };
   window.searchBillProducts=function(){
-    addUnitToExisting();const input=document.getElementById('bSearch')||document.getElementById('nbSearch')||document.getElementById('bSearchFinal'),box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions')||document.getElementById('billSuggestionsFinal');if(!input||!box)return;const q=(input.value||'').trim().toLowerCase();if(!q){box.innerHTML='';return}
+    addUnitToExisting();const input=getBillInput(),box=getBillBox();if(!input||!box)return;const q=(input.value||'').trim().toLowerCase();if(!q){box.innerHTML='';return}
     const items=(window.state?.items||[]);const found=items.filter(i=>String(i.name||'').toLowerCase().includes(q)||String(i.barcode||'').toLowerCase()===q).slice(0,10);
     box.innerHTML=found.map(i=>`<button type="button" class="suggestion" data-unit-id="${esc(i.id)}"><b>${esc(i.name)}</b><span>${esc(i.barcode||'No barcode')} • ${money(i.sell)} • ${esc(getUnit(i))} • Stock ${i.stock||0}</span></button>`).join('')||'<div class="empty">No product found</div>';
-    box.querySelectorAll('[data-unit-id]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.unitId;if(typeof addToCart==='function')addToCart(id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(id));if(line)line.qty++;else window.billCart.push({id,qty:1});if(typeof window.NRVehicleFixRenderBill==='function')window.NRVehicleFixRenderBill();else if(typeof window.renderCart==='function')window.renderCart()}input.value='';box.innerHTML='';input.focus()});
+    box.querySelectorAll('[data-unit-id]').forEach(btn=>{
+      const select=()=>window.NRBizProAddBillItem(btn.dataset.unitId);
+      btn.onclick=e=>{e.preventDefault();e.stopPropagation();select()};
+      btn.onpointerdown=e=>{e.preventDefault();e.stopPropagation();select()};
+    });
   };
   window.renderCart=function(){
     const box=document.getElementById('billLines'),totalEl=document.getElementById('bTotal');if(!box)return;const cart=window.billCart||[];if(!cart.length){box.innerHTML='<div class="empty">Scan a barcode or search for a product.</div>';if(totalEl)totalEl.textContent=money(0);return}
-    let total=0;box.innerHTML=cart.map(l=>{const i=(window.state?.items||[]).find(x=>x.id===l.id);if(!i)return '';const amt=(+i.sell||0)*(+l.qty||0);total+=amt;return `<div class="bill-line"><span><b>${esc(i.name)}</b><small>${esc(getUnit(i))} • ${esc(i.barcode||'')}</small></span><span><button type="button" onclick="changeQty('${i.id}',-1)">−</button> ${l.qty} <button type="button" onclick="changeQty('${i.id}',1)">+</button></span><b>${money(amt)}</b><button type="button" onclick="removeCart('${i.id}')">×</button></div>`}).join('');if(totalEl)totalEl.textContent=money(total);
+    let total=0;box.innerHTML=cart.map(l=>{const i=(window.state?.items||[]).find(x=>String(x.id)===String(l.id));if(!i)return '';const amt=(+i.sell||0)*(+l.qty||0);total+=amt;return `<div class="bill-line"><span><b>${esc(i.name)}</b><small>${esc(getUnit(i))} • ${esc(i.barcode||'')}</small></span><span><button type="button" onclick="changeQty('${i.id}',-1)">−</button> ${l.qty} <button type="button" onclick="changeQty('${i.id}',1)">+</button></span><b>${money(amt)}</b><button type="button" onclick="removeCart('${i.id}')">×</button></div>`}).join('');if(totalEl)totalEl.textContent=money(total);
   };
   bindBillSearch();
 }
 function bindBillSearch(){
-  const input=document.getElementById('bSearch')||document.getElementById('nbSearch')||document.getElementById('bSearchFinal');
+  const input=getBillInput();
   if(!input||input.dataset.unitSearchBound==='1')return;
   input.dataset.unitSearchBound='1';
   input.addEventListener('input',()=>window.searchBillProducts());
-  input.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=input.value.trim().toLowerCase(),items=window.state?.items||[],i=items.find(x=>String(x.barcode||'').toLowerCase()===q);if(i){if(typeof addToCart==='function')addToCart(i.id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(i.id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(i.id));if(line)line.qty++;else window.billCart.push({id:i.id,qty:1});if(typeof window.renderCart==='function')window.renderCart()}input.value='';const box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions')||document.getElementById('billSuggestionsFinal');if(box)box.innerHTML=''}});
+  input.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=input.value.trim().toLowerCase(),items=window.state?.items||[],i=items.find(x=>String(x.barcode||'').toLowerCase()===q);if(i){window.NRBizProAddBillItem(i.id)}});
 }
 const originalOpenBillModal=window.openBillModal;
 if(typeof originalOpenBillModal==='function'){
-  window.openBillModal=function(){const r=originalOpenBillModal.apply(this,arguments);setTimeout(bindBillSearch,0);setTimeout(bindBillSearch,150);return r};
+  window.openBillModal=function(){const r=originalOpenBillModal.apply(this,arguments);setTimeout(bindBillSearch,0);setTimeout(bindBillSearch,150);setTimeout(()=>window.searchBillProducts(),0);return r};
 }
 addUnitToExisting();
 setTimeout(install,3500);

@@ -29,6 +29,9 @@
     queue=queue.then(()=>putCloud(snapshot)).catch(e=>console.warn('NR BizPro cloud save:',e));
   }
 
+  // app.js uses its lexical save() function, so expose an explicit hook for it.
+  window.NRBizProCloudQueueSave=queueSave;
+
   window.save=function(){
     if(typeof originalSave==='function') originalSave();
     if(!syncing) queueSave();
@@ -73,7 +76,7 @@
     }
   }
 
-  window.NRBizProCloudSync={sync:syncCurrentUser,put:()=>putCloud(window.state)};
+  window.NRBizProCloudSync={sync:syncCurrentUser,put:()=>putCloud(window.state),schedule:queueSave};
   setInterval(syncCurrentUser,1000);
   window.addEventListener('load',()=>setTimeout(syncCurrentUser,300));
 })();

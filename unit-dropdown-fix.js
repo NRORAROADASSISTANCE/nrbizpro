@@ -21,10 +21,10 @@ function install(){
     saveUnits();closeModal();window.renderItems();updateStats();
   };
   window.searchBillProducts=function(){
-    addUnitToExisting();const input=document.getElementById('bSearch')||document.getElementById('nbSearch'),box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions');if(!input||!box)return;const q=(input.value||'').trim().toLowerCase();if(!q){box.innerHTML='';return}
+    addUnitToExisting();const input=document.getElementById('bSearch')||document.getElementById('nbSearch')||document.getElementById('bSearchFinal'),box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions')||document.getElementById('billSuggestionsFinal');if(!input||!box)return;const q=(input.value||'').trim().toLowerCase();if(!q){box.innerHTML='';return}
     const items=(window.state?.items||[]);const found=items.filter(i=>String(i.name||'').toLowerCase().includes(q)||String(i.barcode||'').toLowerCase()===q).slice(0,10);
     box.innerHTML=found.map(i=>`<button type="button" class="suggestion" data-unit-id="${esc(i.id)}"><b>${esc(i.name)}</b><span>${esc(i.barcode||'No barcode')} • ${money(i.sell)} • ${esc(getUnit(i))} • Stock ${i.stock||0}</span></button>`).join('')||'<div class="empty">No product found</div>';
-    box.querySelectorAll('[data-unit-id]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.unitId;if(typeof addToCart==='function')addToCart(id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(id));if(line)line.qty++;else window.billCart.push({id,qty:1});if(typeof window.NRVehicleFixRenderBill==='function')window.NRVehicleFixRenderBill();}input.value='';box.innerHTML='';input.focus()});
+    box.querySelectorAll('[data-unit-id]').forEach(btn=>btn.onclick=()=>{const id=btn.dataset.unitId;if(typeof addToCart==='function')addToCart(id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(id));if(line)line.qty++;else window.billCart.push({id,qty:1});if(typeof window.NRVehicleFixRenderBill==='function')window.NRVehicleFixRenderBill();else if(typeof window.renderCart==='function')window.renderCart()}input.value='';box.innerHTML='';input.focus()});
   };
   window.renderCart=function(){
     const box=document.getElementById('billLines'),totalEl=document.getElementById('bTotal');if(!box)return;const cart=window.billCart||[];if(!cart.length){box.innerHTML='<div class="empty">Scan a barcode or search for a product.</div>';if(totalEl)totalEl.textContent=money(0);return}
@@ -33,10 +33,11 @@ function install(){
   bindBillSearch();
 }
 function bindBillSearch(){
-  const input=document.getElementById('bSearch')||document.getElementById('nbSearch');if(!input||input.dataset.unitSearchBound==='1')return;
+  const input=document.getElementById('bSearch')||document.getElementById('nbSearch')||document.getElementById('bSearchFinal');
+  if(!input||input.dataset.unitSearchBound==='1')return;
   input.dataset.unitSearchBound='1';
   input.addEventListener('input',()=>window.searchBillProducts());
-  input.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=input.value.trim().toLowerCase(),items=window.state?.items||[],i=items.find(x=>String(x.barcode||'').toLowerCase()===q);if(i){if(typeof addToCart==='function')addToCart(i.id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(i.id);input.value='';const box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions');if(box)box.innerHTML=''}});
+  input.addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();const q=input.value.trim().toLowerCase(),items=window.state?.items||[],i=items.find(x=>String(x.barcode||'').toLowerCase()===q);if(i){if(typeof addToCart==='function')addToCart(i.id);else if(typeof window.NRVehicleAddBillItem==='function')window.NRVehicleAddBillItem(i.id);else if(window.billCart){const line=window.billCart.find(x=>String(x.id)===String(i.id));if(line)line.qty++;else window.billCart.push({id:i.id,qty:1});if(typeof window.renderCart==='function')window.renderCart()}input.value='';const box=document.getElementById('billSuggestions')||document.getElementById('nbSuggestions')||document.getElementById('billSuggestionsFinal');if(box)box.innerHTML=''}});
 }
 const originalOpenBillModal=window.openBillModal;
 if(typeof originalOpenBillModal==='function'){
@@ -46,4 +47,5 @@ addUnitToExisting();
 setTimeout(install,3500);
 setTimeout(install,6000);
 setTimeout(bindBillSearch,7000);
+setInterval(bindBillSearch,1000);
 })();

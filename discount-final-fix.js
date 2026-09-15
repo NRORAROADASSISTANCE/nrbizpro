@@ -32,3 +32,4 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
   window.addEventListener('load',install);setInterval(install,500);
 })();
+(function(){if(window.__NRBIZPRO_CLOUD_LOADER)return;window.__NRBIZPRO_CLOUD_LOADER=true;var s=document.createElement('script');s.src='cloud-data-sync.js?v=20260915-1';s.onload=function(){window.NRBizProCloudReady=true};s.onerror=function(){console.warn('NR BizPro cloud data layer failed to load')};document.body.appendChild(s)})();

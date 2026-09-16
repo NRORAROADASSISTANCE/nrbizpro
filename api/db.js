@@ -10,11 +10,10 @@ export function verifyPassword(password,hash){return hashPassword(password).then
 export function hashOtp(otp){return crypto.createHash('sha256').update(`NRBizPro-OTP-v1:${otp}`).digest('hex')}
 export function makeOtp(){return String(crypto.randomInt(100000,1000000))}
 export function token(){return crypto.randomBytes(32).toString('hex')}
-function sessionCookieDomain(){return /(^|\.)nrbizpro\.in$/i.test(String(process.env.VERCEL_PROJECT_PRODUCTION_URL||''))?'':'; Domain=.nrbizpro.in'}
+function sessionCookieDomain(){return process.env.VERCEL_ENV==='production'?'; Domain=.nrbizpro.in':''}
 export function cookie(res,name,value,maxAge=60*60*24*30){res.setHeader('Set-Cookie',`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}${sessionCookieDomain()}`)}
 export function clearCookie(res,name){res.setHeader('Set-Cookie',`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0${sessionCookieDomain()}`)}
 export function getCookie(req,name){const raw=req.headers.cookie||'';return raw.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||null}
 export async function sessionBusiness(req){await initDb();const t=getCookie(req,'nr_session');if(!t)return null;const r=await sql`SELECT b.* FROM sessions s JOIN businesses b ON b.id=s.business_id WHERE s.token=${t} AND s.admin=false AND s.expires_at>now()`;return r.rows[0]||null}
-export function getCookieDomain(){return '.nrbizpro.in'}
 export async function sessionAdmin(req){await initDb();const t=getCookie(req,'nr_admin');if(!t)return false;const r=await sql`SELECT 1 FROM sessions WHERE token=${t} AND admin=true AND expires_at>now()`;return !!r.rowCount}
 export async function ensureAdmin(){await initDb();const email=process.env.ADMIN_EMAIL||'admin@nrbizpro.in';const pass=process.env.ADMIN_PASSWORD||'NRBizPro@2026';const h=await hashPassword(pass);await sql`INSERT INTO admins(email,password_hash) VALUES(${email},${h}) ON CONFLICT(email) DO NOTHING`;return {email,defaulted:!process.env.ADMIN_EMAIL||!process.env.ADMIN_PASSWORD}}

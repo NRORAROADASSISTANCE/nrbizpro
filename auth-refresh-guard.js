@@ -1,10 +1,12 @@
-// NR BizPro — refresh auth guard. Keep the active workspace visible during refresh.
+// NR BizPro — refresh auth guard. Restore the last active workspace immediately, then verify server session.
 (function(){'use strict';
   const SESSION_KEY='nr-bizpro-session-v1';
+  let restoring=false;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  function showLocal(){
+  function localRestore(){
     try{
       const id=localStorage.getItem(SESSION_KEY);
+      if(!id)return false;
       const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
       const u=users.find(x=>String(x.id)===String(id));
       if(!u||String(u.status||'').toLowerCase()!=='active')return false;
@@ -24,6 +26,10 @@
         if(r.ok&&d.user){
           window.currentUser=d.user;
           try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
+          try{
+            const key='nr-bizpro-users-v1',users=JSON.parse(localStorage.getItem(key)||'[]'),i=users.findIndex(x=>String(x.id)===String(d.user.id));
+            if(i>=0){users[i]={...users[i],...d.user};localStorage.setItem(key,JSON.stringify(users));}
+          }catch{}
           if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);
           document.getElementById('publicLanding')?.remove();
           document.getElementById('authScreen')?.classList.add('hidden');
@@ -31,17 +37,21 @@
           return true;
         }
       }catch(e){}
-      if(attempt<5)await sleep(700+attempt*600);
+      if(attempt<5)await sleep(700+attempt*500);
     }
+    // Do not log the user out just because /me had a transient failure.
     return false;
   }
   window.checkSession=async function(){
-    // Do not flash the user back to Login during a browser refresh.
-    // Restore the last active workspace immediately, then validate the server session.
-    const hadLocal=showLocal();
+    if(restoring)return true;
+    restoring=true;
+    const restored=localRestore();
+    if(restored){
+      verifyServer().finally(()=>{restoring=false});
+      return true;
+    }
     const ok=await verifyServer();
-    if(ok)return true;
-    // Keep the locally restored workspace visible if the server is temporarily unavailable.
-    return hadLocal;
+    restoring=false;
+    return ok;
   };
 })();

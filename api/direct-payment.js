@@ -1,26 +1,11 @@
-import {sql,initDb,sessionBusiness} from './db.js';
-function send(res,c,b){res.setHeader('Content-Type','application/json');res.status(c).json(b)}
+import {sql,initDb,sessionBusiness,sessionAdmin} from './db.js';
+function send(res,c,b){res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.status(c).json(b)}
 function id(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}
-const PLAN_FEES={year3:3500,year6:6000,lifetime:15000};
-const TEST_PLAN='test10';
+const PLAN_FEES={year3:3500,year6:6000,lifetime:15000}; const TEST_PLAN='test10';
 export default async function handler(req,res){await initDb();try{
-  if(req.method==='GET'&&req.query.action==='config'){
-    const r=await sql`SELECT key,value FROM platform_settings WHERE key IN ('upi_id','upi_name')`;const settings=Object.fromEntries(r.rows.map(x=>[x.key,x.value]));
-    const upi=String(settings.upi_id||process.env.NRBIZPRO_UPI_ID||'').trim();const name=String(settings.upi_name||process.env.NRBIZPRO_UPI_NAME||'NR BizPro').trim();
-    return send(res,200,{upiId:upi,upiName:name,configured:!!upi});
-  }
-  const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please complete registration first.'});
-  if(req.method==='POST'&&req.body?.action==='submit'){
-    const plan=String(req.body?.plan||''),utr=String(req.body?.utr||'').trim().replace(/\s+/g,'');
-    const isTest=plan===TEST_PLAN;
-    if(!isTest&&!Object.prototype.hasOwnProperty.call(PLAN_FEES,plan))return send(res,400,{error:'Select a valid membership plan.'});
-    if(!/^[A-Za-z0-9-]{8,40}$/.test(utr))return send(res,400,{error:'Enter a valid UTR / transaction reference (8-40 characters).'});
-    const existing=await sql`SELECT id FROM direct_payments WHERE utr=${utr} LIMIT 1`;if(existing.rowCount)return send(res,409,{error:'This UTR has already been submitted.'});
-    const amount=isTest?10:3500+PLAN_FEES[plan],paymentId=id();
-    await sql`INSERT INTO direct_payments(id,business_id,plan,amount,utr,status) VALUES(${paymentId},${b.id},${plan},${amount},${utr},'pending')`;
-    await sql`UPDATE businesses SET pending_plan=${plan},pending_amount=${amount},updated_at=now() WHERE id=${b.id}`;
-    return send(res,200,{ok:true,paymentId,status:'pending',amount,test:isTest,registrationFee:isTest?0:3500,planFee:isTest?10:PLAN_FEES[plan]});
-  }
-  if(req.method==='GET'&&req.query.action==='status'){const r=await sql`SELECT id,plan,amount,utr,status,admin_note,created_at,reviewed_at FROM direct_payments WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 10`;return send(res,200,{payments:r.rows})}
-  return send(res,404,{error:'Unknown action'});
-}catch(e){console.error(e);return send(res,500,{error:'Direct payment server error.'})}}
+if(req.method==='GET'&&req.query.action==='config'){const r=await sql`SELECT key,value FROM platform_settings WHERE key IN ('upi_id','upi_name')`;const settings=Object.fromEntries(r.rows.map(x=>[x.key,x.value]));const upi=String(settings.upi_id||process.env.NRBIZPRO_UPI_ID||'').trim();const name=String(settings.upi_name||process.env.NRBIZPRO_UPI_NAME||'NR BizPro').trim();return send(res,200,{upiId:upi,upiName:name,configured:!!upi})}
+if(req.method==='POST'&&req.body?.action==='admin-profile'){if(!(await sessionAdmin(req)))return send(res,401,{error:'Admin login required'});const businessId=String(req.body?.businessId||'').trim();if(!businessId)return send(res,400,{error:'Business ID is required.'});const r=await sql`SELECT * FROM businesses WHERE id=${businessId} LIMIT 1`;const b=r.rows[0];if(!b)return send(res,404,{error:'Business not found.'});const s=req.body?.settings||{};const business=String(s.name??b.business).trim(),owner=String(s.owner??b.owner).trim(),mobile=String(s.mobile??b.mobile).trim(),email=String(s.email??b.email).trim().toLowerCase(),category=String(s.category??b.category).trim(),gst=String(s.gst??b.gst??'').trim(),address=String(s.address??b.address??'').trim();if(!business||!owner||!mobile||!email||!category||!address)return send(res,400,{error:'Business, owner, mobile, email, category and address are required.'});const duplicate=await sql`SELECT id FROM businesses WHERE id<>${businessId} AND (lower(email)=lower(${email}) OR mobile=${mobile} OR lower(business)=lower(${business})) LIMIT 1`;if(duplicate.rowCount)return send(res,409,{error:'Another business already uses this Business Name, email or mobile.'});await sql`UPDATE businesses SET business=${business},owner=${owner},mobile=${mobile},email=${email},category=${category},gst=${gst},address=${address},updated_at=now() WHERE id=${businessId}`;await sql`INSERT INTO business_data(business_id,settings) VALUES(${businessId},${JSON.stringify({name:business,owner,mobile,email,category,gst,address,adminUpdatedAt:new Date().toISOString()})}::jsonb) ON CONFLICT(business_id) DO UPDATE SET settings=business_data.settings || EXCLUDED.settings,updated_at=now()`;const out=await sql`SELECT id,user_id,business,owner,mobile,email,category,gst,address,status,plan,subscription_ends,created_at FROM businesses WHERE id=${businessId}`;return send(res,200,{ok:true,business:out.rows[0]})}
+const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please complete registration first.'});
+if(req.method==='POST'&&req.body?.action==='submit'){const plan=String(req.body?.plan||''),utr=String(req.body?.utr||'').trim().replace(/\s+/g,''),isTest=plan===TEST_PLAN;if(!isTest&&!Object.prototype.hasOwnProperty.call(PLAN_FEES,plan))return send(res,400,{error:'Select a valid membership plan.'});if(!/^[A-Za-z0-9-]{8,40}$/.test(utr))return send(res,400,{error:'Enter a valid UTR / transaction reference (8-40 characters).'});const existing=await sql`SELECT id FROM direct_payments WHERE utr=${utr} LIMIT 1`;if(existing.rowCount)return send(res,409,{error:'This UTR has already been submitted.'});const amount=isTest?10:3500+PLAN_FEES[plan],paymentId=id();await sql`INSERT INTO direct_payments(id,business_id,plan,amount,utr,status) VALUES(${paymentId},${b.id},${plan},${amount},${utr},'pending')`;await sql`UPDATE businesses SET pending_plan=${plan},pending_amount=${amount},updated_at=now() WHERE id=${b.id}`;return send(res,200,{ok:true,paymentId,status:'pending',amount,test:isTest,registrationFee:isTest?0:3500,planFee:isTest?10:PLAN_FEES[plan]})}
+if(req.method==='GET'&&req.query.action==='status'){const r=await sql`SELECT id,plan,amount,utr,status,admin_note,created_at,reviewed_at FROM direct_payments WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 10`;return send(res,200,{payments:r.rows})}return send(res,404,{error:'Unknown action'});
+}catch(e){console.error(e);return send(res,500,{error:e?.message||'Direct payment server error.'})}}

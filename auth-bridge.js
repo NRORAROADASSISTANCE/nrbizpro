@@ -73,9 +73,6 @@
     const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);
     try{const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Cache-Control':'no-cache'}});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}originalShowApp();return}}catch(e){clearTimeout(timer)}
     if(myGeneration===authGeneration){
-      // If /me is briefly unavailable during a refresh/deployment, keep the
-      // last known active business visible instead of throwing the user back
-      // to the login screen. The server cookie remains the authoritative login.
       try{
         const localId=localStorage.getItem(SESSION_KEY);
         if(localId){
@@ -116,6 +113,6 @@
     buildPublicLanding();
   }
   setupPublicLayer();
-  // Restore the server-backed session on every full browser refresh.
-  setTimeout(()=>window.checkSession?.(),0);
+  // Give the dedicated refresh guard time to install before the first session check.
+  setTimeout(()=>window.checkSession?.(),5000);
 })();

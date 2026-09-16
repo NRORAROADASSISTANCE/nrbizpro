@@ -10,9 +10,19 @@ export function verifyPassword(password,hash){return hashPassword(password).then
 export function hashOtp(otp){return crypto.createHash('sha256').update(`NRBizPro-OTP-v1:${otp}`).digest('hex')}
 export function makeOtp(){return String(crypto.randomInt(100000,1000000))}
 export function token(){return crypto.randomBytes(32).toString('hex')}
-function sessionCookieDomain(){return process.env.VERCEL_ENV==='production'?'; Domain=.nrbizpro.in':''}
-export function cookie(res,name,value,maxAge=60*60*24*30){res.setHeader('Set-Cookie',`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}${sessionCookieDomain()}`)}
-export function clearCookie(res,name){res.setHeader('Set-Cookie',`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0${sessionCookieDomain()}`)}
+export function cookie(res,name,value,maxAge=60*60*24*30){
+  const base=`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+  if(process.env.VERCEL_ENV==='production'){
+    // Use a host-only cookie for the active app host. Also remove the old
+    // parent-domain cookie so two nr_session cookies cannot conflict on refresh.
+    res.setHeader('Set-Cookie',[base,`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Domain=.nrbizpro.in`]);
+  }else res.setHeader('Set-Cookie',base);
+}
+export function clearCookie(res,name){
+  const base=`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+  if(process.env.VERCEL_ENV==='production')res.setHeader('Set-Cookie',[base,`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Domain=.nrbizpro.in`]);
+  else res.setHeader('Set-Cookie',base);
+}
 export function getCookie(req,name){const raw=req.headers.cookie||'';return raw.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||null}
 export async function sessionBusiness(req){await initDb();const t=getCookie(req,'nr_session');if(!t)return null;const r=await sql`SELECT b.* FROM sessions s JOIN businesses b ON b.id=s.business_id WHERE s.token=${t} AND s.admin=false AND s.expires_at>now()`;return r.rows[0]||null}
 export async function sessionAdmin(req){await initDb();const t=getCookie(req,'nr_admin');if(!t)return false;const r=await sql`SELECT 1 FROM sessions WHERE token=${t} AND admin=true AND expires_at>now()`;return !!r.rowCount}

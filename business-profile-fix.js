@@ -1,72 +1,28 @@
-// NR BizPro — reliable Business Profile panel for live accounts
+// NR BizPro — Business Profile: locked after approval; photo only can be changed by business owner
 (function(){
   'use strict';
   const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-  const money=v=>typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);
-  function localState(){
-    if(!window.state) window.state={items:[],bills:[],customers:[],settings:{}};
-    window.state.settings=window.state.settings||{};
-    return window.state;
-  }
-  async function refreshUser(){
-    try{
-      const r=await fetch('/api/auth?action=me',{credentials:'include',cache:'no-store'});
-      if(!r.ok)return window.currentUser||{};
-      const d=await r.json();
-      if(d.user) window.currentUser=d.user;
-      return window.currentUser||{};
-    }catch{return window.currentUser||{}}
-  }
-  async function render(){
-    const p=document.getElementById('settings');
-    if(!p)return;
-    const u=await refreshUser();
-    const s=localState();
-    s.settings={...(s.settings||{}),name:u.business||s.settings.name||'',owner:u.owner||s.settings.owner||'',mobile:u.mobile||s.settings.mobile||'',email:u.email||s.settings.email||'',category:u.category||s.settings.category||'',gst:u.gst||s.settings.gst||'',address:u.address||s.settings.address||''};
-    p.innerHTML=`<div class="panel-head"><div><p class="eyebrow">MY BUSINESS</p><h2>Business Profile</h2><p class="muted">Your registered business details, owner profile and subscription information.</p></div></div>
+  function localState(){if(!window.state)window.state={items:[],bills:[],customers:[],settings:{}};window.state.settings=window.state.settings||{};return window.state}
+  async function refreshUser(){try{const r=await fetch('/api/auth?action=me',{credentials:'include',cache:'no-store'});if(!r.ok)return window.currentUser||{};const d=await r.json();if(d.user)window.currentUser=d.user;return window.currentUser||{}}catch{return window.currentUser||{}}}
+  function isApproved(u){return String(u.status||'').toLowerCase()==='active'}
+  function photoAvatar(u,s){const ph=s.settings?.profilePhoto||'';return ph?`<img src="${esc(ph)}" alt="Profile Photo" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid #e8eef8">`:`<div style="width:72px;height:72px;border-radius:50%;background:#1264f5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800">${esc((u.owner||'B').trim().charAt(0).toUpperCase())}</div>`}
+  async function render(){const p=document.getElementById('settings');if(!p)return;const u=await refreshUser(),s=localState();s.settings={...(s.settings||{}),name:u.business||s.settings.name||'',owner:u.owner||s.settings.owner||'',mobile:u.mobile||s.settings.mobile||'',email:u.email||s.settings.email||'',category:u.category||s.settings.category||'',gst:u.gst||s.settings.gst||'',address:u.address||s.settings.address||''};const locked=isApproved(u);const ro=locked?' readonly':'';
+    p.innerHTML=`<div class="panel-head"><div><p class="eyebrow">MY BUSINESS</p><h2>Business Profile</h2><p class="muted">${locked?'Your registered details are locked after Admin approval.':'Complete your business profile before approval.'}</p></div></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:16px">
         <div style="border:1px solid #dfe5ef;border-radius:14px;padding:20px;background:#fff"><h3 style="margin-top:0">Business Details</h3><div class="modal-grid">
-          <label class="field">Business Name<input id="bpName" value="${esc(s.settings.name)}"></label>
-          <label class="field">Business Category<input id="bpCategory" value="${esc(s.settings.category)}"></label>
-          <label class="field">Mobile Number<input id="bpMobile" value="${esc(s.settings.mobile)}"></label>
-          <label class="field">Business Email<input id="bpEmail" type="email" value="${esc(s.settings.email)}"></label>
-          <label class="field">GSTIN<input id="bpGst" value="${esc(s.settings.gst)}"></label>
-          <label class="field wide">Business Address<textarea id="bpAddress" rows="4">${esc(s.settings.address)}</textarea></label>
+          <label class="field">Business Name<input id="bpName" value="${esc(s.settings.name)}"${ro}></label><label class="field">Business Category<input id="bpCategory" value="${esc(s.settings.category)}"${ro}></label><label class="field">Mobile Number<input id="bpMobile" value="${esc(s.settings.mobile)}"${ro}></label><label class="field">Business Email<input id="bpEmail" type="email" value="${esc(s.settings.email)}"${ro}></label><label class="field">GSTIN<input id="bpGst" value="${esc(s.settings.gst)}"${ro}></label><label class="field wide">Business Address<textarea id="bpAddress" rows="4"${ro}>${esc(s.settings.address)}</textarea></label>
         </div></div>
-        <div style="border:1px solid #dfe5ef;border-radius:14px;padding:20px;background:#fff"><h3 style="margin-top:0">Owner Profile</h3>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div style="width:58px;height:58px;border-radius:50%;background:#1264f5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800">${esc((u.owner||'O').trim().charAt(0).toUpperCase())}</div><div><b style="font-size:18px">${esc(u.owner||'Business Owner')}</b><div class="muted">Owner / Administrator</div></div></div>
-          <div class="modal-grid"><label class="field">Owner Name<input id="bpOwner" value="${esc(u.owner||s.settings.owner||'')}"></label><label class="field">Login ID<input value="${esc(u.userId||u.user_id||'')}" disabled></label><label class="field">Owner Mobile<input value="${esc(u.mobile||'')}" disabled></label><label class="field">Owner Email<input value="${esc(u.email||'')}" disabled></label></div>
-          <div style="margin-top:18px;padding:14px;border-radius:10px;background:#f5f8ff"><b>Membership</b><div style="margin-top:7px">Plan: <b>${esc(u.plan||'Not activated')}</b><br>Expiry: ${u.subscriptionEnds?esc(new Date(u.subscriptionEnds).toLocaleDateString('en-IN')):'—'}<br>Status: <b>${esc(u.status||'—')}</b></div></div>
-        </div>
-      </div><div style="margin-top:16px"><button class="primary" id="bpSave">Save Business Profile</button><span id="bpStatus" class="muted" style="margin-left:12px"></span></div>`;
-    document.getElementById('bpSave').onclick=save;
+        <div style="border:1px solid #dfe5ef;border-radius:14px;padding:20px;background:#fff"><h3 style="margin-top:0">Owner Profile</h3><div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">${photoAvatar(u,s)}<div><b style="font-size:18px">${esc(u.owner||'Business Owner')}</b><div class="muted">Owner / Administrator</div></div></div>
+          <div class="modal-grid"><label class="field">Owner Name<input id="bpOwner" value="${esc(u.owner||s.settings.owner||'')}"${ro}></label><label class="field">Login ID<input value="${esc(u.userId||u.user_id||'')}" disabled></label><label class="field">Owner Mobile<input value="${esc(u.mobile||'')}" disabled></label><label class="field">Owner Email<input value="${esc(u.email||'')}" disabled></label></div>
+          <div style="margin-top:18px;padding:14px;border-radius:10px;background:#f5f8ff"><b>Profile Photo</b><div class="muted" style="margin:5px 0 10px">Only the profile photo can be changed by the business owner.</div><input id="nrBizPhoto" type="file" accept="image/jpeg,image/png,image/webp"><div id="nrBizPhotoStatus" class="muted" style="margin-top:8px"></div></div>
+          <div style="margin-top:14px;padding:12px;border-radius:10px;background:#fafafa"><b>Membership</b><div style="margin-top:6px">Plan: <b>${esc(u.plan||'Not activated')}</b><br>Expiry: ${u.subscriptionEnds?esc(new Date(u.subscriptionEnds).toLocaleDateString('en-IN')):'—'}<br>Status: <b>${esc(u.status||'—')}</b></div></div>
+        </div></div>
+      ${locked?'<div style="margin-top:16px;padding:13px 15px;border:1px solid #dfe5ef;border-radius:10px;background:#fafcff"><b>🔒 Profile Locked</b><div class="muted" style="margin-top:4px">Business Name, Owner Name, Mobile, Email, Category, GSTIN and Address are view-only. Any correction or modification must be done by Admin.</div></div>':'<div style="margin-top:16px"><button class="primary" id="bpSave">Save Business Profile</button><span id="bpStatus" class="muted" style="margin-left:12px"></span></div>'}`;
+    const f=document.getElementById('nrBizPhoto');if(f)f.onchange=uploadPhoto;if(!locked)document.getElementById('bpSave').onclick=save;
   }
-  async function save(){
-    const s=localState(),u=window.currentUser||{};
-    const q=id=>document.getElementById(id);
-    const payload={name:q('bpName').value.trim(),owner:q('bpOwner').value.trim(),mobile:q('bpMobile').value.trim(),email:q('bpEmail').value.trim().toLowerCase(),category:q('bpCategory').value.trim()||'General Business',gst:q('bpGst').value.trim(),address:q('bpAddress').value.trim()};
-    if(!payload.name||!payload.owner)return alert('Business Name and Owner Name are required.');
-    const btn=q('bpSave'),status=q('bpStatus');btn.disabled=true;btn.textContent='Saving...';
-    try{
-      const r=await fetch('/api/auth?action=business-settings',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'business-settings',settings:payload})});
-      const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Could not save Business Profile.');
-      Object.assign(u,{business:payload.name,owner:payload.owner,mobile:payload.mobile,email:payload.email,category:payload.category,gst:payload.gst,address:payload.address});
-      Object.assign(s.settings,payload);
-      try{const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');localStorage.setItem('nr-bizpro-users-v1',JSON.stringify(users.map(x=>x.id===u.id?{...x,...u}:x)));}catch{}
-      if(typeof window.save==='function')window.save();
-      status.textContent='Business Profile saved successfully.';
-      render();
-    }catch(e){status.textContent=e.message;}
-    finally{btn.disabled=false;btn.textContent='Save Business Profile';}
-  }
-  function bind(){
-    document.querySelectorAll('.tab[data-tab="settings"]').forEach(b=>{
-      b.textContent='Business Profile';
-      b.onclick=function(e){e.preventDefault();document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');const p=document.getElementById('settings');p.classList.add('active');render();};
-    });
-    const p=document.getElementById('settings');if(p&&p.classList.contains('active'))render();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,100));else setTimeout(bind,100);
-  window.addEventListener('load',()=>setTimeout(bind,300));
-  setInterval(()=>{if(document.getElementById('settings')?.classList.contains('active')){const p=document.getElementById('bpName');if(!p)render();}},1500);
+  async function save(){const s=localState(),u=window.currentUser||{},q=id=>document.getElementById(id);const payload={name:q('bpName').value.trim(),owner:q('bpOwner').value.trim(),mobile:q('bpMobile').value.trim(),email:q('bpEmail').value.trim().toLowerCase(),category:q('bpCategory').value.trim()||'General Business',gst:q('bpGst').value.trim(),address:q('bpAddress').value.trim()};if(!payload.name||!payload.owner)return alert('Business Name and Owner Name are required.');const btn=q('bpSave'),status=q('bpStatus');btn.disabled=true;try{const r=await fetch('/api/auth?action=business-settings',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'business-settings',settings:payload})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Could not save Business Profile.');Object.assign(u,{business:payload.name,owner:payload.owner,mobile:payload.mobile,email:payload.email,category:payload.category,gst:payload.gst,address:payload.address});Object.assign(s.settings,payload);if(typeof window.save==='function')window.save();status.textContent='Business Profile saved successfully.';render()}catch(e){status.textContent=e.message}finally{btn.disabled=false}}
+  async function uploadPhoto(){const f=document.getElementById('nrBizPhoto'),status=document.getElementById('nrBizPhotoStatus'),file=f?.files?.[0];if(!file)return;if(!/^image\/(jpeg|png|webp)$/.test(file.type))return alert('Please select a JPG, PNG or WebP image.');if(file.size>5*1024*1024)return alert('Please select an image below 5 MB.');status.textContent='Preparing photo...';try{const data=await resize(file),r=await fetch('/api/business-profile-photo',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},cache:'no-store',body:JSON.stringify({photo:data})}),j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'Photo upload failed.');const s=localState();s.settings.profilePhoto=j.profilePhoto;if(typeof window.save==='function')window.save();status.textContent='Profile photo updated successfully.';render()}catch(e){status.textContent=e.message||'Photo upload failed.'}}
+  function resize(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=512;let w=im.width,h=im.height;if(w>max||h>max){if(w>=h){h=Math.round(h*max/w);w=max}else{w=Math.round(w*max/h);h=max}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);resolve(c.toDataURL('image/jpeg',.82))};im.onerror=reject;im.src=r.result};r.onerror=reject;r.readAsDataURL(file)})}
+  function bind(){document.querySelectorAll('.tab[data-tab="settings"]').forEach(b=>{b.textContent='Business Profile';b.onclick=function(e){e.preventDefault();document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');const p=document.getElementById('settings');p.classList.add('active');render()}});const p=document.getElementById('settings');if(p&&p.classList.contains('active'))render()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(bind,100));else setTimeout(bind,100);window.addEventListener('load',()=>setTimeout(bind,300));window.addEventListener('loginSuccess',()=>setTimeout(bind,200));setInterval(()=>{if(document.getElementById('settings')?.classList.contains('active')){const h=document.querySelector('#settings h2');if(!h||h.textContent!=='Business Profile')render()}},1500);
 })();

@@ -69,7 +69,24 @@
   window.checkSession=async function(){
     const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2500);
     try{const r=await fetch('/api/auth?action=me',{credentials:'include',signal:controller.signal});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);originalShowApp();return}}catch(e){clearTimeout(timer)}
-    if(myGeneration===authGeneration){clearDemoState();localStorage.removeItem('nr-bizpro-session-v1');forceLogin()}
+    if(myGeneration===authGeneration){
+      // Do not destroy the server-backed login or its local marker merely because
+      // the /me request is briefly unavailable during a refresh/deployment.
+      const localId=localStorage.getItem(SESSION_KEY);
+      if(localId){
+        try{
+          const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
+          const u=users.find(x=>x.id===localId);
+          if(u&&u.status==='active'&&u.subscriptionEnds&&new Date(u.subscriptionEnds)>new Date()){
+            window.currentUser=u;
+            window.state=window.loadData?.(u.id)||window.state;
+            originalShowApp();
+            return;
+          }
+        }catch{}
+      }
+      forceLogin();
+    }
   };
   function buildPublicLanding(){
     const old=document.getElementById('publicLanding'); if(old)old.remove();
@@ -95,4 +112,8 @@
     buildPublicLanding();
   }
   setupPublicLayer();
+  // IMPORTANT: restore the server-backed session on every full browser refresh.
+  // The old flow only defined checkSession but never invoked it, so index.html
+  // recreated the public landing page and the user appeared logged out.
+  setTimeout(()=>window.checkSession?.(),0);
 })();

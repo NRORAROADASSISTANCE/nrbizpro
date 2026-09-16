@@ -16,22 +16,59 @@
     if(screen) screen.classList.remove('hidden');
     if(typeof window.renderAuth==='function') window.renderAuth('login',message||'Please log in to continue.');
   }
+  function saveServerUser(d){
+    window.currentUser=d.user;
+    if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);
+    const key='nr-bizpro-users-v1';
+    try{const users=JSON.parse(localStorage.getItem(key)||'[]');const i=users.findIndex(u=>u.id===d.user.id);const local={...d.user};if(i>=0)users[i]={...users[i],...local};else users.push(local);localStorage.setItem(key,JSON.stringify(users));}catch{}
+  }
+  async function serverSignup(e){
+    e.preventDefault();
+    const business=document.getElementById('suBusiness')?.value.trim()||'';
+    const owner=document.getElementById('suOwner')?.value.trim()||'';
+    const mobile=document.getElementById('suMobile')?.value.trim()||'';
+    const email=document.getElementById('suEmail')?.value.trim().toLowerCase()||'';
+    const category=document.getElementById('suCategory')?.value.trim()||'';
+    const gst=document.getElementById('suGst')?.value.trim()||'';
+    const password=document.getElementById('suPassword')?.value||'';
+    const userId=(email.split('@')[0]||business.toLowerCase().replace(/[^a-z0-9._-]/g,'')).slice(0,40);
+    try{
+      const r=await fetch('/api/auth?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'signup',business,owner,mobile,email,category,gst,password,userId,address:'Not provided'})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok)throw Error(d.error||'Registration failed.');
+      saveServerUser(d);
+      window.renderAuth?.('plans');
+    }catch(err){window.renderAuth?.('signup',err.message)}
+  }
   async function serverLogin(e){
     e.preventDefault(); const myGeneration=++authGeneration;
     const id=document.getElementById('loginId')?.value.trim()||''; const password=document.getElementById('loginPassword')?.value||'';
     try{
       const r=await fetch('/api/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'login',id,password})});
       const d=await r.json(); if(myGeneration!==authGeneration)return;
-      if(!r.ok){if(d.paymentRequired&&d.user){window.currentUser=d.user;return window.renderAuth?.('plans','Membership payment is required before using NR BizPro.')}return window.renderAuth?.('login',d.error||'Invalid login details.')}
+      if(!r.ok){
+        if(d.paymentRequired&&d.user){saveServerUser(d);return window.renderAuth?.('plans','Membership payment is required before using NR BizPro.')}
+        try{
+          const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
+          const legacy=users.find(u=>((u.user_id||u.loginId||u.mobile||'').toString().toLowerCase()===id.toLowerCase()||String(u.mobile||'')===id)&&u.password===password);
+          if(legacy){
+            const userId=(legacy.user_id||legacy.loginId||String(legacy.email||'').split('@')[0]||legacy.business||'legacy').toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,40);
+            const sr=await fetch('/api/auth?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'signup',business:legacy.business||'Legacy Business',owner:legacy.owner||'Owner',userId,mobile:legacy.mobile||'',email:legacy.email||'',category:legacy.category||'General Business',gst:legacy.gst||'',address:legacy.address||'Not provided',password})});
+            const sd=await sr.json().catch(()=>({}));
+            if(sr.ok&&sd.user){saveServerUser(sd);return window.renderAuth?.('plans','Your older browser-only account has been connected to the secure business database. Please choose a membership plan to activate it.')}
+          }
+        }catch{}
+        return window.renderAuth?.('login',d.error||'Invalid login details.')
+      }
       clearDemoState();
-      window.currentUser=d.user; localStorage.removeItem('nr-bizpro-session-v1');
-      if(typeof window.loadData==='function') window.state=window.loadData(d.user.id); originalShowApp();
+      saveServerUser(d); localStorage.removeItem('nr-bizpro-session-v1'); originalShowApp();
     }catch(err){if(myGeneration===authGeneration)window.renderAuth?.('login','Server connection failed. Please try again.')}
   }
   window.login=serverLogin;
+  window.signup=serverSignup;
   window.checkSession=async function(){
     const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),2500);
-    try{const r=await fetch('/api/auth?action=me',{credentials:'include',signal:controller.signal});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();window.currentUser=d.user;if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);originalShowApp();return}}catch(e){clearTimeout(timer)}
+    try{const r=await fetch('/api/auth?action=me',{credentials:'include',signal:controller.signal});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);originalShowApp();return}}catch(e){clearTimeout(timer)}
     if(myGeneration===authGeneration){clearDemoState();localStorage.removeItem('nr-bizpro-session-v1');forceLogin()}
   };
   function buildPublicLanding(){

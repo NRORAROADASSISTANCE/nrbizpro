@@ -1,16 +1,52 @@
-// NR BizPro — final Bill History Edit/Delete controls
+// NR BizPro — final Bill History Edit/Delete + Date-wise History controls
 (function(){'use strict';
   const escH=v=>typeof window.esc==='function'?window.esc(v):String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
   const moneyH=v=>typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);
   const bills=()=>Array.isArray(window.state?.bills)?window.state.bills:[];
   const items=()=>Array.isArray(window.state?.items)?window.state.items:[];
+
+  function localDateKey(value){
+    if(!value)return '';
+    const s=String(value);
+    const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+    const d=new Date(value);if(Number.isNaN(d.getTime()))return '';
+    const y=d.getFullYear(),mo=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${da}`;
+  }
+  function billDateKey(b){return localDateKey(b?.billDate||b?.date)}
+  function formatDate(value){const k=localDateKey(value);if(!k)return '—';const [y,m,d]=k.split('-');return `${d}/${m}/${y}`}
+
+  function ensureDateControls(){
+    const head=document.querySelector('#bills .panel-head');if(!head)return;
+    if(document.getElementById('billFromDate'))return;
+    const search=document.getElementById('billSearch');
+    const wrap=document.createElement('div');
+    wrap.id='billHistoryFilters';
+    wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;margin-top:10px';
+    wrap.innerHTML=`<label style="font-size:12px;color:#52627a">From <input id="billFromDate" type="date" class="search" style="min-width:145px"></label><label style="font-size:12px;color:#52627a">To <input id="billToDate" type="date" class="search" style="min-width:145px"></label><button type="button" id="billDateToday" class="secondary">Today</button><button type="button" id="billDateClear" class="secondary">Clear Dates</button><span id="billHistorySummary" style="font-size:13px;color:#52627a;margin-left:auto"></span>`;
+    head.appendChild(wrap);
+    ['billFromDate','billToDate'].forEach(id=>document.getElementById(id).addEventListener('change',render));
+    document.getElementById('billDateToday').onclick=()=>{const k=localDateKey(new Date().toISOString());document.getElementById('billFromDate').value=k;document.getElementById('billToDate').value=k;render()};
+    document.getElementById('billDateClear').onclick=()=>{document.getElementById('billFromDate').value='';document.getElementById('billToDate').value='';render()};
+  }
+
   function render(){
+    ensureDateControls();
     const tb=document.getElementById('billTable');if(!tb)return;
     const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
-    let a=bills().slice().reverse();
+    const from=document.getElementById('billFromDate')?.value||'';
+    const to=document.getElementById('billToDate')?.value||'';
+    let a=bills().slice().sort((x,y)=>new Date(y.date||0)-new Date(x.date||0));
     if(q)a=a.filter(b=>(String(b.invoice||'')+' '+String(b.customer||'')+' '+String(b.mobile||'')).toLowerCase().includes(q));
-    tb.innerHTML=a.length?a.map(b=>`<tr><td><b>${escH(b.invoice||'—')}</b></td><td>${escH(b.billDate||b.date||'—')}<br><small>${escH(b.billTime||'')}</small></td><td>${escH(b.customer||'Walk-in Customer')}<br><small>${escH(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyH(b.total)}</b><br>${Number(b.discount||0)>0?`<small>Discount: ${moneyH(b.discount)}</small>`:''}</td><td><button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button> <button type="button" class="danger" onclick="window.NRBillDelete('${b.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No bills found.</td></tr>';
+    if(from)a=a.filter(b=>billDateKey(b)>=from);
+    if(to)a=a.filter(b=>billDateKey(b)<=to);
+    const total=a.reduce((sum,b)=>sum+(Number(b.total)||0),0);
+    const summary=document.getElementById('billHistorySummary');
+    if(summary)summary.textContent=`${a.length} bill${a.length===1?'':'s'} • ${moneyH(total)}`;
+    tb.innerHTML=a.length?a.map(b=>`<tr><td><b>${escH(b.invoice||'—')}</b></td><td><b>${escH(formatDate(b.billDate||b.date))}</b><br><small>${escH(b.billTime||'')}</small></td><td>${escH(b.customer||'Walk-in Customer')}<br><small>${escH(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyH(b.total)}</b><br>${Number(b.discount||0)>0?`<small>Discount: ${moneyH(b.discount)}</small>`:''}</td><td><button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button> <button type="button" class="danger" onclick="window.NRBillDelete('${b.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No bills found for the selected date/search.</td></tr>';
   }
+
   function edit(id){
     const b=bills().find(x=>x.id===id);if(!b)return alert('Bill not found');
     const list=items(),cart=(b.items||[]).map(x=>({id:x.id,name:x.name,qty:Number(x.qty)||1,price:Number(x.price)||0,gst:Number(x.gst)||0}));
@@ -28,6 +64,7 @@
     document.getElementById('rhItem').onchange=function(){if(!this.value)return;const i=list.find(x=>x.id===this.value);if(i)window.NRHEditCart.push({id:i.id,name:i.name,qty:1,price:Number(i.sell)||0,gst:Number(i.gst)||0});this.value='';draw()};
     document.getElementById('rhDiscType').onchange=draw;document.getElementById('rhDiscValue').oninput=draw;draw();
   }
+
   window.NRHSaveEdit=function(){
     const b=bills().find(x=>x.id===window.NRHEditId);if(!b)return;
     const list=items(),lines=window.NRHEditCart||[];let sub=0,gst=0;

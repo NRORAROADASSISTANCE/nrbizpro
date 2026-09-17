@@ -1,9 +1,16 @@
-// NR BizPro — show all products across all selected business modules
+// NR BizPro — show products for the logged-in business, respecting selected modules
 (function(){
   'use strict';
   const selected=()=>Array.isArray(window.state?.settings?.modules)&&window.state.settings.modules.length?window.state.settings.modules:[];
   const allItems=()=>Array.isArray(window.state?.items)?window.state.items:[];
-  const visible=()=>{const mods=selected();if(!mods.length)return allItems();return allItems().filter(i=>!i.businessModule||mods.includes(i.businessModule)||mods.includes(i.businessCategory));};
+  const visible=()=>{
+    // Business isolation is the source of truth when available. This prevents a
+    // paint-shop product/sample from appearing inside an EV showroom account.
+    if(window.NRBizProBusinessDataIsolation?.visible)return window.NRBizProBusinessDataIsolation.visible();
+    const mods=selected();
+    if(!mods.length)return allItems();
+    return allItems().filter(i=>!i.businessModule||mods.includes(i.businessModule)||mods.includes(i.businessCategory));
+  };
   const moneyP=v=>typeof window.money==='function'?window.money(v):('₹'+(Number(v)||0).toFixed(2));
   const escP=v=>typeof window.esc==='function'?window.esc(v):String(v??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
   function render(){

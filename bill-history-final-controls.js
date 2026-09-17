@@ -4,6 +4,7 @@
   const moneyH=v=>typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);
   const bills=()=>Array.isArray(window.state?.bills)?window.state.bills:[];
   const items=()=>Array.isArray(window.state?.items)?window.state.items:[];
+  const visibleBills=()=>window.NRBizProBillIsolation?.visible?window.NRBizProBillIsolation.visible():bills();
 
   function localDateKey(value){
     if(!value)return '';
@@ -43,7 +44,7 @@
     const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
     const from=document.getElementById('billFromDate')?.value||'';
     const to=document.getElementById('billToDate')?.value||'';
-    let a=bills().slice().sort((x,y)=>new Date(y.date||0)-new Date(x.date||0));
+    let a=visibleBills().slice().sort((x,y)=>new Date(y.date||0)-new Date(x.date||0));
     if(q)a=a.filter(b=>(String(b.invoice||'')+' '+String(b.customer||'')+' '+String(b.mobile||'')).toLowerCase().includes(q));
     if(from)a=a.filter(b=>billDateKey(b)>=from);
     if(to)a=a.filter(b=>billDateKey(b)<=to);
@@ -57,7 +58,7 @@
   }
 
   function edit(id){
-    const b=bills().find(x=>x.id===id);if(!b)return alert('Bill not found');
+    const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');
     const list=items(),cart=(b.items||[]).map(x=>({id:x.id,name:x.name,qty:Number(x.qty)||1,price:Number(x.price)||0,gst:Number(x.gst)||0}));
     window.NRHEditCart=cart;window.NRHEditId=id;
     const opts=list.map(i=>`<option value="${escH(i.id)}">${escH(i.name)} — ${moneyH(i.sell)}</option>`).join('');
@@ -76,7 +77,7 @@
   }
 
   window.NRHSaveEdit=function(){
-    const b=bills().find(x=>x.id===window.NRHEditId);if(!b)return;
+    const b=visibleBills().find(x=>x.id===window.NRHEditId);if(!b)return;
     const list=items(),lines=window.NRHEditCart||[];let sub=0,gst=0;
     b.items=lines.map(l=>{const i=list.find(x=>x.id===l.id),rate=Number(l.price)||Number(i?.sell)||0,g=Number(l.gst)||Number(i?.gst)||0,amt=rate*(Number(l.qty)||1);sub+=amt;gst+=amt*g/100;return{id:l.id,name:i?.name||l.name||'Item',type:i?.type||'Product',qty:Number(l.qty)||1,price:rate,gst:g,amount:amt}});
     const type=document.getElementById('rhDiscType').value,val=Number(document.getElementById('rhDiscValue').value)||0,disc=type==='percent'?Math.min(sub,sub*val/100):Math.min(sub,val),taxable=Math.max(0,sub-disc);gst=sub?gst*(taxable/sub):0;const total=taxable+gst;
@@ -86,8 +87,8 @@
     Object.assign(b,{customer:document.getElementById('rhCustomer').value.trim()||'Walk-in Customer',mobile:document.getElementById('rhMobile').value.trim(),customerAddress:document.getElementById('rhAddress').value.trim(),customerGstin:document.getElementById('rhGstin').value.trim(),subtotal:sub,discount:disc,discountType:type,discountValue:val,gstAmount:gst,total,amountReceived:received,dueAmount:due,paymentStatus:due===0?'paid':(received>0?'partial':'due'),dueDate:due>0?dueDate:''});
     if(typeof window.save==='function')window.save();closeModal();render();window.updateStats?.();alert('Bill updated successfully');
   };
-  window.NRBillDelete=function(id){const b=bills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(!confirm('Delete '+(b.invoice||'this bill')+'? This cannot be undone.'))return;window.state.bills=bills().filter(x=>x.id!==id);if(typeof window.save==='function')window.save();render();window.updateStats?.();alert('Bill deleted successfully');};
-  window.NRBillEdit=edit;window.NRBillPrint=window.NRBillPrint||function(id){const b=bills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(typeof window.printBill==='function')return window.printBill(id);alert('Print function not available');};
+  window.NRBillDelete=function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(!confirm('Delete '+(b.invoice||'this bill')+'? This cannot be undone.'))return;window.state.bills=bills().filter(x=>x.id!==id);if(typeof window.save==='function')window.save();render();window.updateStats?.();alert('Bill deleted successfully');};
+  window.NRBillEdit=edit;window.NRBillPrint=window.NRBillPrint||function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(typeof window.printBill==='function')return window.printBill(id);alert('Print function not available');};
   window.renderBills=render;
   document.addEventListener('input',e=>{if(e.target?.id==='billSearch')render()});
   window.addEventListener('load',()=>{setTimeout(render,300);setTimeout(render,1200)});

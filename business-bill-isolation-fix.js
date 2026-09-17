@@ -1,0 +1,25 @@
+// NR BizPro — isolate Bill History by the logged-in business module/category
+(function(){'use strict';
+ const norm=v=>{const c=String(v||'').toLowerCase();if(/ev|electric/.test(c))return'ev';if(/paint/.test(c))return'paint';if(/plumb|pipe/.test(c))return'plumbing';if(/medical|pharmacy|chemist|drug/.test(c))return'medical';if(/garage|service center/.test(c))return'garage';if(/electronic|mobile/.test(c))return'electronics';if(/furniture/.test(c))return'furniture';if(/jewel/.test(c))return'jewellery';if(/clothing|fashion|garment/.test(c))return'clothing';if(/stationery|book/.test(c))return'stationery';if(/footwear|shoe|chappal|slipper/.test(c))return'footwear';if(/fertil|agri/.test(c))return'fertilizer';if(/spare/.test(c))return'spareparts';if(/grocery|general store|retail|supermarket/.test(c))return'retail';if(/restaurant|bakery/.test(c))return'restaurant';if(/hardware|building|construction/.test(c))return'hardware';if(/dairy|milk/.test(c))return'dairy';if(/salon|beauty/.test(c))return'salon';if(/printing|xerox|online/.test(c))return'printing';return'general'};
+ const cat=()=>norm(window.currentUser?.category||window.state?.settings?.category||'General Business');
+ function itemMatches(x){const c=cat();if(c==='general')return true;const raw=String(x?.businessModule||x?.businessCategory||x?.businessType||x?.industry||'').toLowerCase();if(raw)return norm(raw)===c||raw.includes(c)||({ev:/ev|electric/,paint:/paint/,plumbing:/plumb|pipe/,medical:/medical|pharmacy|chemist|drug/,garage:/garage|service center/}[c]?.test(raw)||false);
+  const t=String(x?.name||'').toLowerCase();
+  if(c==='ev')return !/paint|birla|asian paints|berger|dulux|putty|primer/.test(t);
+  if(c==='paint')return /paint|birla|asian paints|berger|dulux|putty|primer/.test(t);
+  return true;
+ }
+ function billMatches(b){
+   const arr=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
+   if(arr.length)return arr.some(itemMatches);
+   const raw=String(b?.businessModule||b?.businessCategory||b?.category||'').toLowerCase();
+   if(raw)return norm(raw)===cat();
+   return cat()==='general';
+ }
+ function visibleBills(){return Array.isArray(window.state?.bills)?window.state.bills.filter(billMatches):[]}
+ const old=window.renderBills;
+ window.renderBills=function(){const tb=document.getElementById('billTable');if(!tb)return;const q=(document.getElementById('billSearch')?.value||'').toLowerCase();const rows=visibleBills().filter(b=>!q||[b.invoice,b.customer,b.mobile].join(' ').toLowerCase().includes(q));tb.innerHTML=rows.map(b=>`<tr><td><b>${window.esc?.(b.invoice)||b.invoice}</b></td><td>${new Date(b.date).toLocaleString('en-IN')}</td><td>${window.esc?.(b.customer)||b.customer||'Walk-in Customer'}</td><td>${(b.items||b.lines||[]).length}</td><td><b>${window.money?.(b.total)||'₹0'}</b></td><td><button class="secondary" onclick="printBill('${b.id}')">Print</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No bills for this business yet.</td></tr>'};
+ window.NRBizProBillIsolation={visible:visibleBills,matches:billMatches};
+ setTimeout(()=>window.renderBills?.(),0);
+ window.addEventListener('authReady',()=>setTimeout(()=>window.renderBills?.(),0));
+ window.addEventListener('loginSuccess',()=>setTimeout(()=>window.renderBills?.(),0));
+})();

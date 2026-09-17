@@ -8,7 +8,8 @@
   const u=window.currentUser||{};
   const s=window.state||{};
   const settings=s.settings||{};
-  const name=String(settings.tradeName||settings.businessName||settings.name||u.tradeName||u.business||'Your Business').trim()||'Your Business';
+  const candidates=[u.tradeName,u.business,u.businessName,settings.tradeName,settings.businessName,settings.name];
+  const name=String(candidates.find(v=>{const x=String(v??'').trim();return x&&x.toLowerCase()!=='your business'&&x.toLowerCase()!=='your business name';})||'Your Business').trim();
   h.innerHTML='Welcome to <strong>'+esc(name)+'</strong>';
   if(p)p.textContent='Your business workspace — billing, customers, inventory and reports, all in one place.';
  }

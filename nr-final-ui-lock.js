@@ -25,6 +25,8 @@
   function esc(v){return typeof window.esc==='function'?window.esc(v):String(v??'').replace(/[&<>\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]});}
   function money(v){return typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);}
   function patchPrint(){
+    // Do not overwrite the premium NRBIZPRO.IN printer once it has been installed.
+    if(typeof window.__NRPremiumPrintBill==='function')return;
     window.__nrFinalPrintFn=window.__nrFinalPrintFn||function(id){
       var s=window.state||{},b=(s.bills||[]).find(function(x){return x.id===id});if(!b)return;
       var u=window.currentUser||{},bs=s.settings||{};

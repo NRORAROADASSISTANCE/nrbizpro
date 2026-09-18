@@ -27,7 +27,20 @@ async function verifyRazorpayPayment(response){try{const r=await fetch('/api/ver
 function activateAfterVerifiedPayment(paymentId){const days=currentUser.pendingPlan==='yearly'?365:30,base=new Date();base.setDate(base.getDate()+days);currentUser.status='active';currentUser.plan=currentUser.pendingPlan;currentUser.subscriptionEnds=base.toISOString();currentUser.pendingPlan=null;currentUser.pendingAmount=0;currentUser.lastPaymentId=paymentId;persistUser();localStorage.setItem(SESSION_KEY,currentUser.id);state=loadData(currentUser.id);state.settings.name=currentUser.business;state.settings.category=currentUser.category;state.settings.mobile=currentUser.mobile;state.settings.gst=currentUser.gst;save();showApp()}
 function login(e){e.preventDefault();const id=loginId.value.trim().toLowerCase(),password=loginPassword.value,user=readUsers().find(u=>((u.user_id||u.loginId||u.mobile||'').toString().toLowerCase()===id||u.mobile===id)&&u.password===password);if(!user)return renderAuth('login','Invalid login details.');currentUser=user;if(user.status!=='active'||!user.subscriptionEnds||new Date(user.subscriptionEnds)<=new Date())return renderAuth('plans','Subscription required or expired.');localStorage.setItem(SESSION_KEY,user.id);state=loadData(user.id);showApp()}
 async function logout(){try{localStorage.setItem('nr-bizpro-explicit-logout','1');localStorage.removeItem('nr-bizpro-last-auth-user')}catch{} try{await fetch('/api/auth?action=logout',{method:'POST',credentials:'include',cache:'no-store'});}catch{} localStorage.removeItem(SESSION_KEY);currentUser=null;state=null;app.classList.add('hidden');authScreen.classList.remove('hidden');renderAuth('login')}
-function checkSession(){const id=getSession();if(!id)return renderAuth('login');const user=readUsers().find(u=>u.id===id);if(!user)return logout();currentUser=user;if(user.status!=='active'||!user.subscriptionEnds||new Date(user.subscriptionEnds)<=new Date()){localStorage.removeItem(SESSION_KEY);return renderAuth('plans','Subscription expired. Renew to continue.')}state=loadData(id);showApp()}
+function checkSession(){
+  try{if(localStorage.getItem('nr-bizpro-explicit-logout')==='1')return renderAuth('login')}catch{}
+  const id=getSession();
+  if(!id)return renderAuth('login');
+  const user=readUsers().find(u=>String(u.id)===String(id));
+  if(!user)return renderAuth('login','Session data is being restored. Please try again.');
+  // A refresh must not log an active account out because subscription fields are missing/stale
+  // in an older local record. Server-auth bridge validates membership in the background.
+  if(String(user.status||'').toLowerCase()!=='active')return renderAuth('plans','Membership activation is required to continue.');
+  currentUser=user;
+  state=loadData(id);
+  try{localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(user))}catch{}
+  showApp();
+}
 function showApp(){authScreen.classList.add('hidden');app.classList.remove('hidden');accountStatus.textContent='Active';subscriptionStat.textContent=currentUser.plan==='demo'?'Demo':currentUser.plan==='yearly'?'Yearly':'Monthly';loadSettings();renderItems();renderBills();renderCustomers();updateStats()}
 function showTab(id){document.querySelectorAll('.tab-panel').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));if(id==='items')renderItems();if(id==='bills')renderBills();if(id==='customers')renderCustomers()}document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 function openModal(t,b){modalTitle.textContent=t;modalBody.innerHTML=b;modal.classList.remove('hidden')}function closeModal(){modal.classList.add('hidden')}

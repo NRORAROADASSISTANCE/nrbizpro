@@ -63,7 +63,7 @@
       }
       clearDemoState();
       saveServerUser(d);
-      try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
+      try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
       originalShowApp();
     }catch(err){if(myGeneration===authGeneration)window.renderAuth?.('login','Server connection failed. Please try again.')}
   }

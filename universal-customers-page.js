@@ -7,22 +7,18 @@
  const customers=()=>Array.isArray(S().customers)?S().customers:[];
  const bills=()=>Array.isArray(S().bills)?S().bills:[];
 
+ function billMatchesCustomer(b,c){
+   const bm=String(b.mobile||b.customerMobile||'').trim();
+   const bn=String(b.customer||b.customerName||'').trim().toLowerCase();
+   const cm=String(c.mobile||'').trim();
+   const cn=String(c.name||'').trim().toLowerCase();
+   return cm ? (bm===cm && bn===cn) : (!bm && bn===cn);
+ }
  function billTotalForCustomer(c){
-   const m=String(c.mobile||'').trim();
-   const n=String(c.name||'').trim().toLowerCase();
-   return bills().filter(b=>{
-     const bm=String(b.mobile||b.customerMobile||'').trim();
-     const bn=String(b.customer||b.customerName||'').trim().toLowerCase();
-     return (m&&bm===m)||(n&&bn===n);
-   }).reduce((a,b)=>a+Number(b.total||b.grandTotal||0),0);
+   return bills().filter(b=>billMatchesCustomer(b,c)).reduce((a,b)=>a+Number(b.total||b.grandTotal||0),0);
  }
  function dueForCustomer(c){
-   const m=String(c.mobile||'').trim(), n=String(c.name||'').trim().toLowerCase();
-   return bills().filter(b=>{
-     const bm=String(b.mobile||b.customerMobile||'').trim();
-     const bn=String(b.customer||b.customerName||'').trim().toLowerCase();
-     return (m&&bm===m)||(n&&bn===n);
-   }).reduce((a,b)=>a+Math.max(0,Number(b.dueAmount??(Number(b.total||0)-Number(b.amountReceived||0)))||0),0);
+   return bills().filter(b=>billMatchesCustomer(b,c)).reduce((a,b)=>a+Math.max(0,Number(b.dueAmount??(Number(b.total||0)-Number(b.amountReceived||0)))||0),0);
  }
  function normalized(){
    const map=new Map();

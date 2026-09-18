@@ -70,23 +70,47 @@
   window.login=serverLogin;
   window.signup=serverSignup;
   window.checkSession=async function(){
-    const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);
-    try{const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Cache-Control':'no-cache'}});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}originalShowApp();return}}catch(e){clearTimeout(timer)}
-    if(myGeneration===authGeneration){
-      // Keep the active local session when the server check temporarily fails.
-      // A refresh must not log the user out because of a transient /me or cookie failure.
+    // Refresh-safe session restore: local active session keeps the workspace visible immediately.
+    const myGeneration=authGeneration;
+    let sid='';
+    try{sid=localStorage.getItem(SESSION_KEY)||''}catch{}
+    if(sid){
       try{
-        const sid=localStorage.getItem(SESSION_KEY);
         const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
         const u=users.find(x=>String(x.id)===String(sid));
         if(u&&String(u.status||'').toLowerCase()==='active'){
+          clearDemoState();
           window.currentUser=u;
           if(typeof window.loadData==='function')window.state=window.loadData(u.id);
-          return originalShowApp();
+          originalShowApp();
+          // Verify in background. Never force logout on a transient server/auth failure.
+          fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}})
+            .then(r=>r.json().catch(()=>({})))
+            .then(d=>{
+              if(myGeneration!==authGeneration)return;
+              if(d?.user){
+                saveServerUser(d);
+                try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
+                originalShowApp();
+              }
+            }).catch(()=>{});
+          return true;
         }
       }catch{}
-      forceLogin('Please log in to continue.');
     }
+    try{
+      const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+      const d=await r.json().catch(()=>({}));
+      if(myGeneration===authGeneration&&r.ok&&d.user){
+        clearDemoState();
+        saveServerUser(d);
+        try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
+        originalShowApp();
+        return true;
+      }
+    }catch{}
+    if(myGeneration===authGeneration)forceLogin('Please log in to continue.');
+    return false;
   };
   function buildPublicLanding(){
     const old=document.getElementById('publicLanding'); if(old)old.remove();

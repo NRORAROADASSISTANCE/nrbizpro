@@ -26,13 +26,29 @@
  }
  function normalized(){
    const map=new Map();
+   // Existing customer master records
    customers().forEach(c=>{
      const name=String(c.name||c.customer||'').trim(),mobile=String(c.mobile||c.phone||'').trim();
      if(!name&&!mobile)return;
      const key=mobile?'m:'+mobile:'n:'+name.toLowerCase();
      const prev=map.get(key);
-     if(!prev)map.set(key,{...c,name:name||'Customer',mobile});
-     else{prev.name=prev.name||name;prev.mobile=prev.mobile||mobile;}
+     if(!prev)map.set(key,{...c,name:name||'Customer',mobile,bills:Number(c.bills||0),total:Number(c.total||0)});
+     else{prev.name=prev.name||name;prev.mobile=prev.mobile||mobile;prev.email=prev.email||c.email;prev.address=prev.address||c.address;prev.gst=prev.gst||c.gst;}
+   });
+   // Automatically map customers from every saved bill, even when the bill was created
+   // before a customer master record existed.
+   bills().forEach(b=>{
+     const name=String(b.customer||b.customerName||'').trim(),mobile=String(b.mobile||b.customerMobile||'').trim();
+     if(!name||/^walk-in customer$/i.test(name))return;
+     const key=mobile?'m:'+mobile:'n:'+name.toLowerCase();
+     const prev=map.get(key);
+     if(!prev)map.set(key,{id:'bill-customer-'+key,name,mobile,email:b.customerEmail||'',gst:b.customerGstin||'',address:b.customerAddress||'',bills:0,total:0});
+     const row=map.get(key);
+     row.bills=Number(row.bills||0)+1;
+     row.total=Number(row.total||0)+Number(b.total||0);
+     row.email=row.email||b.customerEmail||'';
+     row.gst=row.gst||b.customerGstin||'';
+     row.address=row.address||b.customerAddress||'';
    });
    return Array.from(map.values()).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
  }

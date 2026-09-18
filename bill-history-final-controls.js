@@ -87,7 +87,17 @@
     Object.assign(b,{customer:document.getElementById('rhCustomer').value.trim()||'Walk-in Customer',mobile:document.getElementById('rhMobile').value.trim(),customerAddress:document.getElementById('rhAddress').value.trim(),customerGstin:document.getElementById('rhGstin').value.trim(),subtotal:sub,discount:disc,discountType:type,discountValue:val,gstAmount:gst,total,amountReceived:received,dueAmount:due,paymentStatus:due===0?'paid':(received>0?'partial':'due'),dueDate:due>0?dueDate:''});
     if(typeof window.save==='function')window.save();closeModal();render();window.updateStats?.();alert('Bill updated successfully');
   };
-  window.NRBillDelete=function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(!confirm('Delete '+(b.invoice||'this bill')+'? This cannot be undone.'))return;window.state.bills=bills().filter(x=>x.id!==id);if(typeof window.save==='function')window.save();render();window.updateStats?.();alert('Bill deleted successfully');};
+  window.NRBillDelete=async function(id){
+    const b=visibleBills().find(x=>x.id===id);
+    if(!b)return alert('Bill not found');
+    if(!confirm('Delete '+(b.invoice||'this bill')+'? This cannot be undone.'))return;
+    window.state.bills=bills().filter(x=>x.id!==id);
+    if(typeof window.save==='function')window.save();
+    try{
+      if(window.NRBizProCloudSync?.put) await window.NRBizProCloudSync.put();
+    }catch(e){console.warn('Bill delete cloud save failed',e);alert('Bill deleted locally, but cloud save failed. Please check internet and try again.');render();window.updateStats?.();return;}
+    render();window.updateStats?.();alert('Bill deleted successfully and synced to cloud.');
+  };
   window.NRBillEdit=edit;window.NRBillPrint=window.NRBillPrint||function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(typeof window.printBill==='function')return window.printBill(id);alert('Print function not available');};
   window.renderBills=render;
   document.addEventListener('input',e=>{if(e.target?.id==='billSearch')render()});

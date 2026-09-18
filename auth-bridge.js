@@ -73,20 +73,9 @@
     const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);
     try{const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Cache-Control':'no-cache'}});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}originalShowApp();return}}catch(e){clearTimeout(timer)}
     if(myGeneration===authGeneration){
-      try{
-        const localId=localStorage.getItem(SESSION_KEY);
-        if(localId){
-          const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
-          const u=users.find(x=>String(x.id)===String(localId));
-          if(u&&String(u.status||'').toLowerCase()==='active'){
-            window.currentUser=u;
-            window.state=window.loadData?.(u.id)||window.state;
-            originalShowApp();
-            return;
-          }
-        }
-      }catch{}
-      forceLogin();
+      // Never fall back to another locally cached account: server session identity is authoritative.
+      localStorage.removeItem(SESSION_KEY);
+      forceLogin('Your session has expired. Please log in again.');
     }
   };
   function buildPublicLanding(){

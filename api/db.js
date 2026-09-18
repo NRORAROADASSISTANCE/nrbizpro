@@ -11,16 +11,14 @@ export function hashOtp(otp){return crypto.createHash('sha256').update(`NRBizPro
 export function makeOtp(){return String(crypto.randomInt(100000,1000000))}
 export function token(){return crypto.randomBytes(32).toString('hex')}
 export function cookie(res,name,value,maxAge=60*60*24*30){
-  const base=`${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
-  if(process.env.VERCEL_ENV==='production'){
-    // Use a host-only cookie for the active app host. Also remove the old
-    // parent-domain cookie so two nr_session cookies cannot conflict on refresh.
-    res.setHeader('Set-Cookie',[base,`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Domain=.nrbizpro.in`]);
-  }else res.setHeader('Set-Cookie',base);
+  const base=name+'='+value+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge;
+  // Shared production cookie works on both nrbizpro.in and www.nrbizpro.in.
+  if(process.env.VERCEL_ENV==='production')res.setHeader('Set-Cookie',base+'; Domain=.nrbizpro.in');
+  else res.setHeader('Set-Cookie',base);
 }
 export function clearCookie(res,name){
-  const base=`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
-  if(process.env.VERCEL_ENV==='production')res.setHeader('Set-Cookie',[base,`${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Domain=.nrbizpro.in`]);
+  const base=name+'=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
+  if(process.env.VERCEL_ENV==='production')res.setHeader('Set-Cookie',base+'; Domain=.nrbizpro.in');
   else res.setHeader('Set-Cookie',base);
 }
 export function getCookie(req,name){const raw=req.headers.cookie||'';return raw.split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||null}

@@ -38,20 +38,99 @@
         <span>GST: <b id="fbGst">₹0.00</b></span> &nbsp;
         <b>Grand Total: <span id="fbTotal">₹0.00</span></b>
       </div>
+
+      <div style="margin-top:16px;padding:14px;border:1px solid #dfe5ef;border-radius:10px">
+        <h3 style="margin:0 0 12px">Payment Details</h3>
+        <div class="modal-grid">
+          <label class="field">Payment Mode<select id="fbPaymentMode">
+            <option value="Cash">Cash</option>
+            <option value="UPI / Online">UPI / Online</option>
+            <option value="Card">Card</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Finance / EMI">Finance / EMI</option>
+            <option value="Credit / Due">Credit / Due</option>
+            <option value="Mixed">Mixed</option>
+          </select></label>
+          <label class="field">Amount Received<input id="fbReceived" type="number" min="0" step="0.01" value="0"></label>
+          <label class="field">Transaction / Reference No.<input id="fbPaymentRef" placeholder="UPI ref / transaction no."></label>
+          <label class="field">Payment Status<select id="fbPaymentStatus"><option value="Paid">Paid</option><option value="Partial">Partial</option><option value="Due">Due</option></select></label>
+        </div>
+        <div id="fbMixedBox" style="display:none;margin-top:10px">
+          <div class="modal-grid">
+            <label class="field">Cash Amount<input id="fbCashAmount" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field">Online / UPI Amount<input id="fbOnlineAmount" type="number" min="0" step="0.01" value="0"></label>
+          </div>
+        </div>
+        <div id="fbFinanceBox" style="display:none;margin-top:10px">
+          <div class="modal-grid">
+            <label class="field">Finance Company<input id="fbFinanceCompany" placeholder="Bajaj / HDFC / TVS Credit / etc."></label>
+            <label class="field">Loan / Agreement No.<input id="fbLoanNo" placeholder="Loan reference number"></label>
+            <label class="field">Down Payment<input id="fbDownPayment" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field">Finance Amount<input id="fbFinanceAmount" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field">EMI Amount<input id="fbEmi" type="number" min="0" step="0.01" value="0"></label>
+            <label class="field">Tenure<input id="fbTenure" placeholder="12 / 24 / 36 months"></label>
+          </div>
+        </div>
+        <div id="fbBalanceBox" class="bill-summary" style="margin-top:10px"></div>
+      </div>
+
       <div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="secondary" id="fbPrint">Generate &amp; Print</button><button type="button" class="primary" id="fbSave">Generate Bill</button></div>`);
     const search=document.getElementById('fbSearch');
+    const paymentMode=document.getElementById('fbPaymentMode'),received=document.getElementById('fbReceived'),status=document.getElementById('fbPaymentStatus');
+    const financeBox=document.getElementById('fbFinanceBox'),mixedBox=document.getElementById('fbMixedBox');
+
+    const updatePaymentUI=()=>{
+      const mode=paymentMode.value,total=calc(window.__nrBillCart,document.getElementById('fbDiscountType').value,document.getElementById('fbDiscountValue').value).total;
+      financeBox.style.display=mode==='Finance / EMI'?'block':'none';
+      mixedBox.style.display=mode==='Mixed'?'block':'none';
+      if(mode==='Credit / Due'){received.value='0';status.value='Due'}
+      else if(mode==='Finance / EMI'){received.value=Number(document.getElementById('fbDownPayment')?.value||0).toFixed(2);status.value=Number(received.value)>=total?'Paid':Number(received.value)>0?'Partial':'Due'}
+      else if(mode!=='Mixed'&&status.value==='Due'&&Number(received.value)>=total)status.value='Paid';
+      updateBalance();
+    };
+    const updateBalance=()=>{
+      const total=calc(window.__nrBillCart,document.getElementById('fbDiscountType').value,document.getElementById('fbDiscountValue').value).total;
+      let got=Number(received.value)||0;
+      if(paymentMode.value==='Finance / EMI')got=Number(document.getElementById('fbDownPayment')?.value)||0;
+      if(paymentMode.value==='Mixed')got=(Number(document.getElementById('fbCashAmount')?.value)||0)+(Number(document.getElementById('fbOnlineAmount')?.value)||0);
+      const balance=Math.max(0,total-got);
+      document.getElementById('fbBalanceBox').innerHTML='<div><span>Grand Total</span><b>'+money(total)+'</b></div><div><span>Paid / Received</span><b>'+money(got)+'</b></div><div class="bill-net"><span>Balance Due</span><strong>'+money(balance)+'</strong></div>';
+      if(paymentMode.value!=='Credit / Due'&&paymentMode.value!=='Finance / EMI'&&paymentMode.value!=='Mixed'){
+        status.value=got>=total?'Paid':got>0?'Partial':'Due';
+      }
+    };
+
     const draw=()=>{
       const lines=window.__nrBillCart, box=document.getElementById('fbLines');
       box.innerHTML=lines.map((l,n)=>{const i=items().find(x=>x.id===l.id);return i?`<div class="bill-line"><span><b>${esc(i.name)}</b><small>${esc(i.unit||'')}</small></span><span><button type="button" onclick="window.__fbQty(${n},-1)">−</button> ${l.qty} <button type="button" onclick="window.__fbQty(${n},1)">+</button></span><b>${money((Number(i.sell)||0)*l.qty)}</b><button type="button" onclick="window.__fbRemove(${n})">×</button></div>`:''}).join('')||'<div class="empty">Add products or scan a barcode.</div>';
       const c=calc(lines,document.getElementById('fbDiscountType').value,document.getElementById('fbDiscountValue').value);
       document.getElementById('fbSub').textContent=money(c.sub);document.getElementById('fbDisc').textContent=money(c.disc);document.getElementById('fbGst').textContent=money(c.gst);document.getElementById('fbTotal').textContent=money(c.total);
+      updatePaymentUI();
     };
     window.__fbQty=(n,d)=>{const l=window.__nrBillCart[n];if(l){l.qty=Math.max(1,l.qty+d);draw()}};
     window.__fbRemove=n=>{window.__nrBillCart.splice(n,1);draw()};
     search.oninput=()=>{const q=search.value.trim().toLowerCase(),box=document.getElementById('fbSuggestions');if(!q){box.innerHTML='';return}const a=items().filter(i=>String(i.name||'').toLowerCase().includes(q)||String(i.barcode||'').toLowerCase()===q).slice(0,10);box.innerHTML=a.map(i=>`<button type="button" class="suggestion" data-id="${esc(i.id)}"><b>${esc(i.name)}</b><span>${money(i.sell)} • Stock ${esc(i.stock??0)}</span></button>`).join('')||'<div class="empty">No product found</div>';box.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{const i=items().find(x=>x.id===b.dataset.id);if(!i)return;if(i.type!=='Service'&&Number(i.stock)<=0)return alert('Out of stock');const l=window.__nrBillCart.find(x=>x.id===i.id);if(l)l.qty++;else window.__nrBillCart.push({id:i.id,qty:1});search.value='';box.innerHTML='';draw()})};
     search.onkeydown=e=>{if(e.key==='Enter'){const q=search.value.trim().toLowerCase(),i=items().find(x=>String(x.barcode||'').toLowerCase()===q);if(i){e.preventDefault();if(i.type!=='Service'&&Number(i.stock)<=0)return alert('Out of stock');const l=window.__nrBillCart.find(x=>x.id===i.id);if(l)l.qty++;else window.__nrBillCart.push({id:i.id,qty:1});search.value='';document.getElementById('fbSuggestions').innerHTML='';draw()}}};
     document.getElementById('fbDiscountType').onchange=draw;document.getElementById('fbDiscountValue').oninput=draw;
-    const saveBill=(print)=>{const d=document.getElementById('fbDate').value,t=document.getElementById('fbTime').value;if(!d||!t)return alert('Bill Date and Time are compulsory.');if(!window.__nrBillCart.length)return alert('Add at least one product');const lines=window.__nrBillCart.map(l=>{const i=items().find(x=>x.id===l.id);return {id:i.id,name:i.name,type:i.type||'Product',qty:l.qty,price:Number(i.sell)||0,gst:Number(i.gst)||0,amount:(Number(i.sell)||0)*l.qty}});const typ=document.getElementById('fbDiscountType').value,val=Number(document.getElementById('fbDiscountValue').value)||0,c=calc(lines,typ,val);lines.forEach(x=>{const i=items().find(y=>y.id===x.id);if(i&&i.type!=='Service')i.stock=Math.max(0,(Number(i.stock)||0)-x.qty)});const arr=bills(),b={id:crypto.randomUUID(),invoice:'INV-'+String(arr.length+1).padStart(4,'0'),date:new Date(d+'T'+t).toISOString(),billDate:d,billTime:t,billDateTime:d+'T'+t,customer:document.getElementById('fbCustomer').value.trim()||'Walk-in Customer',mobile:document.getElementById('fbMobile').value.trim(),customerAddress:document.getElementById('fbAddress').value.trim(),customerGstin:document.getElementById('fbGstin').value.trim(),items:lines,subtotal:c.sub,discount:c.disc,discountType:typ,discountValue:val,gstAmount:c.gst,total:c.total};arr.push(b);s.bills=arr;if(typeof window.save==='function')window.save();closeModal();if(typeof window.renderBills==='function')window.renderBills();if(typeof window.updateStats==='function')window.updateStats();if(print&&typeof window.NRBillPrint==='function')window.NRBillPrint(b.id);else if(print&&typeof window.printBill==='function')window.printBill(b.id);else alert('Bill generated successfully: '+b.invoice)};
+    paymentMode.onchange=updatePaymentUI;received.oninput=updateBalance;status.onchange=updateBalance;
+    ['fbCashAmount','fbOnlineAmount','fbDownPayment','fbFinanceAmount'].forEach(id=>document.getElementById(id)?.addEventListener('input',updatePaymentUI));
+
+    const saveBill=(print)=>{
+      const d=document.getElementById('fbDate').value,t=document.getElementById('fbTime').value;
+      if(!d||!t)return alert('Bill Date and Time are compulsory.');
+      if(!window.__nrBillCart.length)return alert('Add at least one product');
+      const lines=window.__nrBillCart.map(l=>{const i=items().find(x=>x.id===l.id);return {id:i.id,name:i.name,type:i.type||'Product',qty:l.qty,price:Number(i.sell)||0,gst:Number(i.gst)||0,amount:(Number(i.sell)||0)*l.qty,vehicleDetails:i.vehicleDetails||null}});
+      const typ=document.getElementById('fbDiscountType').value,val=Number(document.getElementById('fbDiscountValue').value)||0,c=calc(lines,typ,val);
+      const mode=paymentMode.value;let paid=Number(received.value)||0;
+      if(mode==='Finance / EMI')paid=Number(document.getElementById('fbDownPayment').value)||0;
+      if(mode==='Mixed')paid=(Number(document.getElementById('fbCashAmount').value)||0)+(Number(document.getElementById('fbOnlineAmount').value)||0);
+      const balance=Math.max(0,c.total-paid);
+      if(paid>c.total)return alert('Received amount cannot exceed grand total.');
+      if(mode==='Finance / EMI' && Number(document.getElementById('fbFinanceAmount').value||0)>c.total)return alert('Finance amount cannot exceed grand total.');
+      lines.forEach(x=>{const i=items().find(y=>y.id===x.id);if(i&&i.type!=='Service')i.stock=Math.max(0,(Number(i.stock)||0)-x.qty)});
+      const arr=bills(),b={id:crypto.randomUUID(),invoice:'INV-'+String(arr.length+1).padStart(4,'0'),date:new Date(d+'T'+t).toISOString(),billDate:d,billTime:t,billDateTime:d+'T'+t,customer:document.getElementById('fbCustomer').value.trim()||'Walk-in Customer',mobile:document.getElementById('fbMobile').value.trim(),customerAddress:document.getElementById('fbAddress').value.trim(),customerGstin:document.getElementById('fbGstin').value.trim(),items:lines,subtotal:c.sub,discount:c.disc,discountType:typ,discountValue:val,gstAmount:c.gst,total:c.total,paymentMode:mode,paymentStatus:document.getElementById('fbPaymentStatus').value,amountReceived:paid,balanceDue:balance,paymentReference:document.getElementById('fbPaymentRef').value.trim(),cashAmount:mode==='Mixed'?Number(document.getElementById('fbCashAmount').value)||0:0,onlineAmount:mode==='Mixed'?Number(document.getElementById('fbOnlineAmount').value)||0:0,finance:mode==='Finance / EMI'?{company:document.getElementById('fbFinanceCompany').value.trim(),loanNo:document.getElementById('fbLoanNo').value.trim(),downPayment:Number(document.getElementById('fbDownPayment').value)||0,financeAmount:Number(document.getElementById('fbFinanceAmount').value)||0,emi:Number(document.getElementById('fbEmi').value)||0,tenure:document.getElementById('fbTenure').value.trim()}:null};
+      arr.push(b);s.bills=arr;if(typeof window.save==='function')window.save();closeModal();if(typeof window.renderBills==='function')window.renderBills();if(typeof window.updateStats==='function')window.updateStats();if(print&&typeof window.NRBillPrint==='function')window.NRBillPrint(b.id);else if(print&&typeof window.printBill==='function')window.printBill(b.id);else alert('Bill generated successfully: '+b.invoice);
+    };
     document.getElementById('fbSave').onclick=()=>saveBill(false);document.getElementById('fbPrint').onclick=()=>saveBill(true);draw();search.focus();
   }
   function editBill(id){

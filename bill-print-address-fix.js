@@ -5,7 +5,8 @@
   const moneyP=n=>typeof money==='function'?money(n):('₹'+(Number(n)||0).toFixed(2));
   function patch(){
     if(typeof window.printBill!=='function')return;
-    if(window.printBill.__nrPremiumPrint)return;
+    // Always replace any older print handler. Legacy handlers used different markers and were overriding this design.
+    try{ delete window.printBill.__nrFinalPrint; delete window.printBill.__nrPremiumPrint; }catch(e){}
     window.printBill.__nrPremiumPrint=true;
     window.printBill=function(id){
       const b=state?.bills?.find(x=>x.id===id); if(!b)return;

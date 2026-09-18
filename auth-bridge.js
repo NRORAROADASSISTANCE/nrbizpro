@@ -73,9 +73,19 @@
     const myGeneration=authGeneration,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),3500);
     try{const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',signal:controller.signal,headers:{'Cache-Control':'no-cache'}});clearTimeout(timer);const d=await r.json();if(myGeneration!==authGeneration)return;if(r.ok&&d.user){clearDemoState();saveServerUser(d);try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}originalShowApp();return}}catch(e){clearTimeout(timer)}
     if(myGeneration===authGeneration){
-      // Never fall back to another locally cached account: server session identity is authoritative.
-      localStorage.removeItem(SESSION_KEY);
-      forceLogin('Your session has expired. Please log in again.');
+      // Keep the active local session when the server check temporarily fails.
+      // A refresh must not log the user out because of a transient /me or cookie failure.
+      try{
+        const sid=localStorage.getItem(SESSION_KEY);
+        const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
+        const u=users.find(x=>String(x.id)===String(sid));
+        if(u&&String(u.status||'').toLowerCase()==='active'){
+          window.currentUser=u;
+          if(typeof window.loadData==='function')window.state=window.loadData(u.id);
+          return originalShowApp();
+        }
+      }catch{}
+      forceLogin('Please log in to continue.');
     }
   };
   function buildPublicLanding(){

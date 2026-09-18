@@ -21,7 +21,9 @@
  }
  async function clean(){
   const u=window.currentUser,s=window.state;if(!u||!s)return;
-  const current=norm(s.settings?.category||u.category||'');if(current!=='ev')return;
+  const identity=[u.business,u.tradeName,u.businessName,s.settings?.name].join(' ').toLowerCase();
+  const isEV=/\bvh\s*ev\b|electric vehicle|ev showroom|electric scooter|electric two.?wheeler/.test(identity);
+  const current=norm(s.settings?.category||u.category||'');if(current!=='ev'&&!isEV)return;
   const key=cleanKey(u);
   if(localStorage.getItem(key)==='1')return;
 

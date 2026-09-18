@@ -7,7 +7,7 @@
  function paint(){const h=document.getElementById('businessWelcomeTitle'),p=document.getElementById('businessWelcomeText'),name=pick();if(!h||!name)return;h.innerHTML='Welcome to <strong>'+esc(name)+'</strong>';if(p)p.textContent='Your business workspace — billing, customers, inventory and reports, all in one place.';}
  function load(src,attr){if(document.querySelector('script['+attr+']'))return;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.body.appendChild(s);}
  async function refreshServerUser(){try{const r=await fetch('/api/auth?action=me',{credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}}),d=await r.json().catch(()=>({}));if(r.ok&&d.user){window.currentUser={...(window.currentUser||{}),...d.user};return true;}}catch{}return false;}
- function loadIsolation(){load('business-data-isolation-fix.js?v=20260917-4','data-nr-business-isolation');load('business-bill-isolation-fix.js?v=20260917-2','data-nr-bill-isolation');load('business-account-data-sanitizer.js?v=20260917-1','data-nr-account-sanitizer');}
+ function loadIsolation(){load('business-data-isolation-fix.js?v=20260918-1','data-nr-business-isolation');load('business-bill-isolation-fix.js?v=20260918-1','data-nr-bill-isolation');load('business-account-data-sanitizer.js?v=20260918-1','data-nr-account-sanitizer');}
  async function boot(){await refreshServerUser();paint();loadIsolation();setTimeout(paint,200);setTimeout(()=>{loadIsolation();paint()},800);}
  window.NRBizProWelcomeBrand={apply:paint,boot,loadIsolation};window.addEventListener('load',boot);window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);window.addEventListener('businessProfileSaved',boot);
 })();

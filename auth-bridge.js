@@ -9,6 +9,7 @@
     document.getElementById('industryTab')?.remove();
     document.getElementById('industryModule')?.remove();
   }
+  function safeShowApp(){try{const a=document.getElementById('app'),s=document.getElementById('authScreen');if(a&&!a.classList.contains('hidden')&&s?.classList.contains('hidden'))return; }catch{} safeShowApp();}
   function forceLogin(message){
     clearDemoState();
     const app=document.getElementById('app'),screen=document.getElementById('authScreen'),landing=document.getElementById('publicLanding');
@@ -64,7 +65,7 @@
       clearDemoState();
       saveServerUser(d);
       try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
-      originalShowApp();
+      safeShowApp();
     }catch(err){if(myGeneration===authGeneration)window.renderAuth?.('login','Server connection failed. Please try again.')}
   }
   window.login=serverLogin;
@@ -82,7 +83,7 @@
           clearDemoState();
           window.currentUser=u;
           if(typeof window.loadData==='function')window.state=window.loadData(u.id);
-          originalShowApp();
+          safeShowApp();
           // Verify in background. Never force logout on a transient server/auth failure.
           fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}})
             .then(r=>r.json().catch(()=>({})))
@@ -91,7 +92,7 @@
               if(d?.user){
                 saveServerUser(d);
                 try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
-                originalShowApp();
+                safeShowApp();
               }
             }).catch(()=>{});
           return true;
@@ -105,7 +106,7 @@
         clearDemoState();
         saveServerUser(d);
         try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
-        originalShowApp();
+        safeShowApp();
         return true;
       }
     }catch{}

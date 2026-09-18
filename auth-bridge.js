@@ -9,7 +9,7 @@
     document.getElementById('industryTab')?.remove();
     document.getElementById('industryModule')?.remove();
   }
-  function safeShowApp(){try{const a=document.getElementById('app'),s=document.getElementById('authScreen');if(a&&!a.classList.contains('hidden')&&s?.classList.contains('hidden'))return; }catch{} safeShowApp();}
+  function safeShowApp(){try{const a=document.getElementById('app'),s=document.getElementById('authScreen');if(a&&!a.classList.contains('hidden')&&s?.classList.contains('hidden'))return;}catch{} originalShowApp();}
   function forceLogin(message){
     clearDemoState();
     const app=document.getElementById('app'),screen=document.getElementById('authScreen'),landing=document.getElementById('publicLanding');

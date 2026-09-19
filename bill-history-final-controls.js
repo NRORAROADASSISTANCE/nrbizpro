@@ -23,17 +23,16 @@
   function ensureDateControls(){
     const head=document.querySelector('#bills .panel-head');if(!head)return;
     if(document.getElementById('billFromDate')){
-      const t=todayKey();
       const f=document.getElementById('billFromDate'),to=document.getElementById('billToDate');
-      if(f)f.max=t;if(to)to.max=t;
+      if(f)f.removeAttribute('max');if(to)to.removeAttribute('max');
       return;
     }
     const wrap=document.createElement('div');
     wrap.id='billHistoryFilters';
     wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;margin-top:10px';
-    wrap.innerHTML=`<label style="font-size:12px;color:#52627a">From <input id="billFromDate" type="date" class="search" style="min-width:145px" max="${todayKey()}"></label><label style="font-size:12px;color:#52627a">To <input id="billToDate" type="date" class="search" style="min-width:145px" max="${todayKey()}"></label><button type="button" id="billDateToday" class="secondary">Today</button><button type="button" id="billDateClear" class="secondary">Clear Dates</button><span id="billHistorySummary" style="font-size:13px;color:#52627a;margin-left:auto"></span>`;
+    wrap.innerHTML=`<label style="font-size:12px;color:#52627a">From <input id="billFromDate" type="date" class="search" style="min-width:145px"></label><label style="font-size:12px;color:#52627a">To <input id="billToDate" type="date" class="search" style="min-width:145px"></label><button type="button" id="billDateToday" class="secondary">Today</button><button type="button" id="billDateClear" class="secondary">Clear Dates</button><span id="billHistorySummary" style="font-size:13px;color:#52627a;margin-left:auto"></span>`;
     head.appendChild(wrap);
-    ['billFromDate','billToDate'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{const el=document.getElementById(id);if(el.value>todayKey())el.value=todayKey();render()}));
+    ['billFromDate','billToDate'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{render()}));
     document.getElementById('billDateToday').onclick=()=>{const k=todayKey();document.getElementById('billFromDate').value=k;document.getElementById('billToDate').value=k;render()};
     document.getElementById('billDateClear').onclick=()=>{document.getElementById('billFromDate').value='';document.getElementById('billToDate').value='';render()};
   }

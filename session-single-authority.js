@@ -36,7 +36,8 @@
     document.getElementById('authScreen')?.classList.add('hidden');
     document.getElementById('app')?.classList.remove('hidden');
     if(typeof window.showApp==='function')window.showApp();
-    window.NRBizProCloudSync?.sync?.();
+    // Do not cloud-sync from stale local profile before server verification.
+    // Verification below is authoritative for the business identity/profile.
     return true;
   }
 
@@ -59,6 +60,14 @@
         document.getElementById('authScreen')?.classList.add('hidden');
         document.getElementById('app')?.classList.remove('hidden');
         if(typeof window.showApp==='function')window.showApp();
+        try{
+          if(window.state?.settings&&d.user){
+            window.state.settings={...window.state.settings,name:d.user.business||window.state.settings.name||'',owner:d.user.owner||window.state.settings.owner||'',category:d.user.category||window.state.settings.category||'',mobile:d.user.mobile||window.state.settings.mobile||'',gst:d.user.gst||window.state.settings.gst||'',address:d.user.address||window.state.settings.address||'',email:d.user.email||window.state.settings.email||''};
+            if(typeof window.save==='function')window.save();
+            if(typeof window.loadSettings==='function')window.loadSettings();
+          }
+        }catch{}
+        window.NRBizProCloudSync?.sync?.();
         return true;
       }
     }catch{}

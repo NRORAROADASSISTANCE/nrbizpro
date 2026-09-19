@@ -15,7 +15,7 @@
     const y=d.getFullYear(),mo=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');
     return `${y}-${mo}-${da}`;
   }
-  function todayKey(){return localDateKey(new Date().toISOString())}
+  function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
   function billDateKey(b){return localDateKey(b?.billDate||b?.date)}
   function formatDate(value){const k=localDateKey(value);if(!k)return '—';const [y,m,d]=k.split('-');return `${d}/${m}/${y}`}
   function dueAmount(b){return Math.max(0,Number(b?.dueAmount??(Number(b?.total)||0)-(Number(b?.amountReceived)||0))||0)}
@@ -48,7 +48,6 @@
     if(q)a=a.filter(b=>(String(b.invoice||'')+' '+String(b.customer||'')+' '+String(b.mobile||'')).toLowerCase().includes(q));
     if(from)a=a.filter(b=>billDateKey(b)>=from);
     if(to)a=a.filter(b=>billDateKey(b)<=to);
-    a=a.filter(b=>{const k=billDateKey(b);return !k||k<=todayKey()});
     const total=a.reduce((sum,b)=>sum+(Number(b.total)||0),0);
     const summary=document.getElementById('billHistorySummary');
     if(summary)summary.textContent=`${a.length} bill${a.length===1?'':'s'} • ${moneyH(total)}`;

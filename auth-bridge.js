@@ -21,6 +21,14 @@
   function saveServerUser(d){
     window.currentUser=d.user;
     if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);
+    // Server business fields are authoritative. Repair older local records that
+    // contain blank/stale profile fields without deleting the business workspace.
+    try{
+      if(window.state?.settings&&d.user){
+        window.state.settings={...window.state.settings,name:d.user.business||window.state.settings.name||'',owner:d.user.owner||window.state.settings.owner||'',category:d.user.category||window.state.settings.category||'',mobile:d.user.mobile||window.state.settings.mobile||'',gst:d.user.gst||window.state.settings.gst||'',address:d.user.address||window.state.settings.address||'',email:d.user.email||window.state.settings.email||''};
+        if(typeof window.save==='function')window.save();
+      }
+    }catch{}
     const key='nr-bizpro-users-v1';
     try{const users=JSON.parse(localStorage.getItem(key)||'[]');const i=users.findIndex(u=>u.id===d.user.id);const local={...d.user};if(i>=0)users[i]={...users[i],...local};else users.push(local);localStorage.setItem(key,JSON.stringify(users));}catch{}
   }

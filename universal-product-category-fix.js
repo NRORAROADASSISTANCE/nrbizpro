@@ -68,7 +68,7 @@
   openModal(title,html);
   document.getElementById('ucm0')?.focus();
  }
- function saveProduct(){
+ async function saveProduct(){
   const btn=document.getElementById('universalSaveProduct');
   if(btn){btn.disabled=true;btn.textContent='Saving...'}
   try{
@@ -92,8 +92,9 @@
    st.moduleData['Product / Vehicle Records'].push(item.details);
    const u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser;
    if(!u?.id)throw Error('User session missing');
-   localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));
    window.state=st;
+   if(typeof window.save!=='function')throw Error('Database save is not ready');
+   await window.save();
    try{state=st}catch(e){}
    if(typeof closeModal==='function')closeModal();
    if(typeof renderItems==='function')renderItems();
@@ -110,7 +111,7 @@
  window.addEventListener('loginSuccess',install);
  document.addEventListener('click',function(e){
   const t=e.target&&e.target.closest?e.target.closest('#universalSaveProduct'):null;
-  if(t){e.preventDefault();e.stopImmediatePropagation();saveProduct()}
+  if(t){e.preventDefault();e.stopImmediatePropagation();saveProduct().catch(err=>{console.error(err);alert('Product save failed: '+(err?.message||'Please try again.'))})}
   const c=e.target&&e.target.closest?e.target.closest('#universalCancelProduct'):null;
   if(c){e.preventDefault();e.stopImmediatePropagation();if(typeof closeModal==='function')closeModal()}
  },true);

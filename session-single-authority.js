@@ -89,7 +89,16 @@
     document.getElementById('publicLanding')?.remove();
     window.renderAuth?.('login','You have been logged out successfully.');
   }
+  window.__NRForceLogout=forceLogout;
   window.logout=forceLogout;
+  // Capture the header Logout button before any legacy inline handler can run.
+  document.addEventListener('click',function(e){
+    const btn=e.target?.closest?.('button.logout');
+    if(!btn)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    forceLogout();
+  },true);
   window.__NRSessionAuthority={restore:restoreLocal,verify,logout:forceLogout};
 
   async function boot(){

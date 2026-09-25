@@ -74,7 +74,23 @@
     return false;
   }
 
-  window.__NRSessionAuthority={restore:restoreLocal,verify};
+  async function forceLogout(){
+    try{await fetch('/api/auth?action=logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},cache:'no-store',body:'{}'});}catch{}
+    try{
+      Object.keys(localStorage).forEach(k=>{
+        if(/^nr-bizpro-(session|last-auth-user|explicit-logout)/.test(k)||k==='nr-bizpro-users-v1')localStorage.removeItem(k);
+      });
+      localStorage.setItem(EXPLICIT,'1');
+      sessionStorage.clear();
+    }catch{}
+    try{window.currentUser=null;window.state=null;}catch{}
+    document.getElementById('app')?.classList.add('hidden');
+    document.getElementById('authScreen')?.classList.remove('hidden');
+    document.getElementById('publicLanding')?.remove();
+    window.renderAuth?.('login','You have been logged out successfully.');
+  }
+  window.logout=forceLogout;
+  window.__NRSessionAuthority={restore:restoreLocal,verify,logout:forceLogout};
 
   async function boot(){
     if(booting)return;

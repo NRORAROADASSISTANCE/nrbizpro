@@ -1,14 +1,16 @@
 const SESSION_KEY='nr-bizpro-session-v2';
 var currentUser=null;
 var state=null;
+var stateVersion=0;
 var saveChain=Promise.resolve();
+var lastSaveAt=null;
 const PLAN_MONTHLY=199;
 const PLAN_YEARLY=1999;
 const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(Number(n)||0);
 const esc=v=>String(v??'').replace(/[&<>\\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\\':'&#39;'}[m]));
-const api=async(action,options={})=>{const r=await fetch('/api/auth?action='+encodeURIComponent(action),{credentials:'include',cache:'no-store',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Request failed');return d};
-const save=()=>{if(!currentUser||!state)return;const snapshot=JSON.parse(JSON.stringify(state));saveChain=saveChain.then(()=>api('data',{method:'PUT',body:JSON.stringify(snapshot)})).catch(e=>{console.error(e);alert('Database save failed. Please retry.');});return saveChain};
-async function loadServerData(){const d=await api('data');state={items:Array.isArray(d.items)?d.items:[],bills:Array.isArray(d.bills)?d.bills:[],customers:Array.isArray(d.customers)?d.customers:[],settings:d.settings&&typeof d.settings==='object'?d.settings:{name:currentUser.business,category:currentUser.category,mobile:currentUser.mobile,gst:currentUser.gst,address:currentUser.address||''}};return state}
+const api=async(action,options={})=>{const r=await fetch('/api/auth?action='+encodeURIComponent(action),{credentials:'include',cache:'no-store',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok){const e=Error(d.error||'Request failed');e.status=r.status;e.data=d;throw e}return d};
+const save=()=>{if(!currentUser||!state)return saveChain;saveChain=saveChain.then(async()=>{const snapshot=JSON.parse(JSON.stringify(state));try{const d=await api('data',{method:'PUT',body:JSON.stringify({...snapshot,expectedVersion:stateVersion})});stateVersion=Number(d.version||stateVersion);lastSaveAt=d.updatedAt||new Date().toISOString();}catch(e){console.error(e);if(e.status===409){try{await loadServerData();alert('Data was changed from another tab/device. The latest database data was loaded safely; your local changes were not used to overwrite it.');}catch{alert('Another device updated this account. Please refresh before continuing.')}}else{alert('Database save failed. Your existing database data was not overwritten. Please retry.')}}});return saveChain};
+async function loadServerData(){const d=await api('data');stateVersion=Number(d.version||0);lastSaveAt=d.updatedAt||null;state={items:Array.isArray(d.items)?d.items:[],bills:Array.isArray(d.bills)?d.bills:[],customers:Array.isArray(d.customers)?d.customers:[],settings:d.settings&&typeof d.settings==='object'?d.settings:{name:currentUser.business,category:currentUser.category,mobile:currentUser.mobile,gst:currentUser.gst,address:currentUser.address||''}};return state}
 function renderAuth(mode='login',message=''){
  const el=document.getElementById('authContent');
  if(mode==='login')el.innerHTML=`<div class="auth-title"><h1>Login</h1><p>Access your NR BizPro business workspace.</p></div>${message?`<div class="notice">${esc(message)}</div>`:''}<form onsubmit="login(event)"><label>Login ID or Mobile<input id="loginId" required autocomplete="username" placeholder="Enter Login ID or mobile number"></label><label>Password<input id="loginPassword" required type="password" autocomplete="current-password"></label><button class="primary auth-btn">Login</button></form><p class="auth-switch">New business? <button onclick="renderAuth('signup')">Create account</button></p>`;

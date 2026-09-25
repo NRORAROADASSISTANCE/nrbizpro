@@ -85,8 +85,9 @@
   window.checkSession=async function(){
     // Refresh-safe session restore: local active session keeps the workspace visible immediately.
     const myGeneration=authGeneration;
-    let sid='';
-    try{sid=localStorage.getItem(SESSION_KEY)||''}catch{}
+    let sid='',explicitLogout=false;
+    try{sid=localStorage.getItem(SESSION_KEY)||'';explicitLogout=localStorage.getItem('nr-bizpro-explicit-logout')==='1'}catch{}
+    if(explicitLogout){forceLogin('You have been logged out.');return false}
     if(sid){
       try{
         const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');

@@ -127,5 +127,5 @@
   window.addEventListener('pageshow',boot);
   window.addEventListener('focus',repair);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)repair()});
-  setInterval(repair,1500);
+  // No polling loop: repair is event-driven to keep the UI responsive.
 })();

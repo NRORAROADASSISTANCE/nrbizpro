@@ -24,5 +24,5 @@
     window.__nrRestoreScroll=function(){Element.prototype.scrollIntoView=original;};
   }
   function refresh(){patch();lockScroll();try{window.__nrBusinessProductVisible=visible}catch(e){}try{if(typeof renderItems==='function')renderItems()}catch(e){}try{if(typeof updateStats==='function')updateStats()}catch(e){}}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);else refresh();window.addEventListener('load',refresh);window.addEventListener('loginSuccess',()=>setTimeout(refresh,30));setTimeout(refresh,100);setTimeout(refresh,500);setTimeout(refresh,1200);setTimeout(refresh,2500);setInterval(refresh,1500);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh);else refresh();window.addEventListener('load',refresh);window.addEventListener('loginSuccess',()=>setTimeout(refresh,30));setTimeout(refresh,100);setTimeout(refresh,500);setTimeout(refresh,1200);
 })();

@@ -13,13 +13,13 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`ALTER TABLE business_data ADD COLUMN IF NOT EXISTS state jsonb NOT NULL DEFAULT '{}'::jsonb`;
   await sql`ALTER TABLE business_data ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 0`;
   if(req.method==='GET'){
-    const r=await sql`SELECT items,bills,customers,settings,state,version,updated_at FROM business_data WHERE business_id=`+b.id+` LIMIT 1`;
+    const r=await sql`SELECT items,bills,customers,settings,state,version,updated_at FROM business_data WHERE business_id=${b.id} LIMIT 1`;
     if(!r.rowCount)return send(res,200,{ok:true,exists:false,businessId:b.id,items:[],bills:[],customers:[],settings:{},state:{},version:0,updatedAt:null});
     const x=r.rows[0];
     return send(res,200,{ok:true,exists:true,businessId:b.id,items:Array.isArray(x.items)?x.items:[],bills:Array.isArray(x.bills)?x.bills:[],customers:Array.isArray(x.customers)?x.customers:[],settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:x.state&&typeof x.state==='object'?x.state:{},version:Number(x.version||0),updatedAt:x.updated_at});
   }
   const body=req.body||{},items=Array.isArray(body.items)?body.items:[],bills=Array.isArray(body.bills)?body.bills:[],customers=Array.isArray(body.customers)?body.customers:[],settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{},state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings},expectedVersion=Number.isFinite(Number(body.expectedVersion))?Number(body.expectedVersion):0;
-  const current=await sql`SELECT version FROM business_data WHERE business_id=`+b.id+` LIMIT 1`;
+  const current=await sql`SELECT version FROM business_data WHERE business_id=${b.id} LIMIT 1`;
   const currentVersion=current.rowCount?Number(current.rows[0].version||0):0;
   if(current.rowCount&&currentVersion!==expectedVersion)return send(res,409,{error:'This account was updated in another tab or device. Your local changes were not overwritten. Reloaded data is now available.',conflict:true,version:currentVersion});
   if(!current.rowCount&&expectedVersion!==0)return send(res,409,{error:'This account data changed before saving. Please reload and try again.',conflict:true,version:0});

@@ -28,7 +28,7 @@
     return st;
   }
 
-  function saveProductDirect(){
+  async function saveProductDirect(){
     const st=syncState();
     const labels=[...document.querySelectorAll('#modalBody label.field')];
     if(!labels.length)throw Error('Product form is not ready');
@@ -48,8 +48,9 @@
     st.items.push(item);
     st.moduleData['Product / Vehicle Records'].push(item.details);
     let u=null;try{u=(typeof currentUser!=='undefined'&&currentUser)?currentUser:window.currentUser}catch(e){}
-    if(u?.id)localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));
     window.state=st;try{state=st}catch(e){}
+    if(typeof window.save!=='function')throw Error('Database save is not ready');
+    await window.save();
     if(typeof closeModal==='function')closeModal();
     try{if(typeof renderItems==='function')renderItems()}catch(e){console.warn('renderItems after save',e)}
     try{if(typeof updateStats==='function')updateStats()}catch(e){console.warn('updateStats after save',e)}
@@ -63,7 +64,7 @@
     if(!btn)return;
     btn.disabled=false;
     btn.type='button';
-    btn.onclick=function(e){e.preventDefault();e.stopPropagation();try{saveProductDirect()}catch(err){console.error(err);alert('Product save failed: '+(err?.message||'Please try again.'))}};
+    btn.onclick=function(e){e.preventDefault();e.stopPropagation();try{saveProductDirect().catch(err=>{console.error(err);alert('Product save failed: '+(err?.message||'Please try again.'))})}catch(err){console.error(err);alert('Product save failed: '+(err?.message||'Please try again.'))}};
   }
   function stabilizeCategory(){
     const sels=[document.getElementById('demoBusinessCategory'),document.getElementById('businessCategory')].filter(Boolean);

@@ -42,5 +42,5 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',force);else force();
   window.addEventListener('load',force);
-  setInterval(force,250);
+  // UI lock is applied on load/tab events; avoid a 250ms polling loop.
 })();

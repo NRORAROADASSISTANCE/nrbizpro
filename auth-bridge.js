@@ -72,6 +72,10 @@
       }
       clearDemoState();
       saveServerUser(d);
+      // The server login response is authoritative. Load the business workspace
+      // from PostgreSQL before rendering the app; the old local loadData path
+      // is not the source of truth anymore.
+      if(typeof window.loadServerData==='function') await window.loadServerData();
       try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
       safeShowApp();
     }catch(err){if(myGeneration===authGeneration)window.renderAuth?.('login','Server connection failed. Please try again.')}
@@ -113,6 +117,7 @@
       if(myGeneration===authGeneration&&r.ok&&d.user){
         clearDemoState();
         saveServerUser(d);
+        if(typeof window.loadServerData==='function') await window.loadServerData();
         try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
         safeShowApp();
         return true;

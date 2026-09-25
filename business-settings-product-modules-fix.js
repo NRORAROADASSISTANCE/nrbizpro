@@ -64,20 +64,21 @@
     document.getElementById('pmName').focus();
     calc();
   }
-  function saveProduct(){
+  async function saveProduct(){
     const st=getState();if(!st)return;
     const name=document.getElementById('pmName').value.trim(),barcode=document.getElementById('pmBarcode').value.trim(),module=document.getElementById('pmModule').value;
     if(!name)return alert('Enter product name');
     if(barcode&&st.items.some(i=>i.barcode===barcode))return alert('Barcode already exists');
     st.items=st.items||[];
     st.items.push({id:crypto.randomUUID(),name,barcode,type:document.getElementById('pmType').value,cost:+document.getElementById('pmCost').value||0,margin:+document.getElementById('pmMargin').value||0,marginType:document.getElementById('pmMarginType').value,sell:+document.getElementById('pmSell').value||0,gst:+document.getElementById('pmGst').value||0,stock:+document.getElementById('pmStock').value||0,businessModule:module,businessCategory:module});
-    saveState();
+    await window.save?.();
     document.getElementById('modal').classList.add('hidden');
     window.renderItems?.();window.updateStats?.();
   }
   function install(){
     renderSettings();
-    window.openItemModal=openProductModal;
+    // Product creation is owned by universal-product-category-fix.js.
+    // Do not replace the authoritative Add Product handler from this module.
   }
   window.NRBizProModuleSettings={MODULES,renderSettings,openProductModal,saveProduct};
   window.addEventListener('load',()=>setTimeout(install,300));

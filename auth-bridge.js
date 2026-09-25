@@ -77,7 +77,14 @@
       // is not the source of truth anymore.
       if(typeof window.loadServerData==='function') await window.loadServerData();
       try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
-      safeShowApp();
+      // Login/API success must never be converted into a misleading
+      // "Server connection failed" message by a legacy UI renderer.
+      try{safeShowApp()}catch(uiError){
+        console.error('NR BizPro UI render after login failed:',uiError);
+        document.getElementById('publicLanding')?.remove();
+        document.getElementById('authScreen')?.classList.add('hidden');
+        document.getElementById('app')?.classList.remove('hidden');
+      }
     }catch(err){if(myGeneration===authGeneration)window.renderAuth?.('login','Server connection failed. Please try again.')}
   }
   window.login=serverLogin;

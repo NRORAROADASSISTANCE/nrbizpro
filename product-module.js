@@ -60,7 +60,7 @@
   document.getElementById('businessCancelProduct')?.addEventListener('click',()=>closeModal());
   document.getElementById('bm0')?.focus();
  }
- function saveBusinessProduct(s){
+ async function saveBusinessProduct(s){
   const btn=document.getElementById('businessSaveProduct');
   if(btn){btn.disabled=true;btn.textContent='Saving...'}
   try{
@@ -79,8 +79,10 @@
    st.moduleData['Product / Vehicle Records'].push(item.details);
    const u=window.currentUser||(typeof currentUser!=='undefined'?currentUser:null);
    if(!u?.id)throw Error('User session missing');
-   localStorage.setItem('nr-bizpro-data-v2:'+u.id,JSON.stringify(st));
    window.state=st;try{state=st}catch(e){}
+   // PostgreSQL is the only source of truth. Do not write product data to localStorage.
+   if(typeof window.save!=='function')throw Error('Database save is not ready');
+   await window.save();
    if(typeof closeModal==='function')closeModal();
    if(typeof renderItems==='function')renderItems();
    if(typeof updateStats==='function')updateStats();

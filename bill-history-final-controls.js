@@ -3,7 +3,7 @@
   const escH=v=>typeof window.esc==='function'?window.esc(v):String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));
   const moneyH=v=>typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);
   const bills=()=>Array.isArray(window.state?.bills)?window.state.bills:[];
-  const items=()=>Array.isArray(window.state?.items)?window.state.items:[];
+  const items=()=>window.NRBizProWorkspace?.visibleItems?window.NRBizProWorkspace.visibleItems():(Array.isArray(window.state?.items)?window.state.items.filter(x=>x?.businessId===window.currentUser?.id):[]);
   const visibleBills=()=>window.NRBizProBillIsolation?.visible?window.NRBizProBillIsolation.visible():bills();
 
   function localDateKey(value){
@@ -78,8 +78,10 @@
     document.getElementById('rhDiscType').onchange=draw;document.getElementById('rhDiscValue').oninput=draw;document.getElementById('rhPaymentStatus').onchange=draw;document.getElementById('rhReceived').oninput=draw;draw();
   }
 
-  window.NRHSaveEdit=function(){
+  window.NRHSaveEdit=async function(){
     const b=visibleBills().find(x=>x.id===window.NRHEditId);if(!b)return;
+    if(!ensureTodayEditable(b))return;
+    const before=JSON.parse(JSON.stringify(window.state));
     const list=items(),lines=window.NRHEditCart||[];let sub=0,gst=0;
     b.items=lines.map(l=>{const i=list.find(x=>x.id===l.id),rate=Number(l.price)||Number(i?.sell)||0,g=Number(l.gst)||Number(i?.gst)||0,amt=rate*(Number(l.qty)||1);sub+=amt;gst+=amt*g/100;return{id:l.id,name:i?.name||l.name||'Item',type:i?.type||'Product',qty:Number(l.qty)||1,price:rate,gst:g,amount:amt}});
     const type=document.getElementById('rhDiscType').value,val=Number(document.getElementById('rhDiscValue').value)||0,disc=type==='percent'?Math.min(sub,sub*val/100):Math.min(sub,val),taxable=Math.max(0,sub-disc);gst=sub?gst*(taxable/sub):0;const total=taxable+gst;
@@ -87,7 +89,7 @@
     if(due>0&&!dueDate)return alert('Please select a Due Date for the outstanding amount.');
     if(dueDate&&dueDate<billDateKey(b))return alert('Due Date cannot be before the bill date.');
     Object.assign(b,{customer:document.getElementById('rhCustomer').value.trim()||'Walk-in Customer',mobile:document.getElementById('rhMobile').value.trim(),customerAddress:document.getElementById('rhAddress').value.trim(),customerGstin:document.getElementById('rhGstin').value.trim(),subtotal:sub,discount:disc,discountType:type,discountValue:val,gstAmount:gst,total,amountReceived:received,dueAmount:due,paymentStatus:due===0?'paid':(received>0?'partial':'due'),dueDate:due>0?dueDate:''});
-    if(typeof window.save==='function')window.save();closeModal();render();window.updateStats?.();alert('Bill updated successfully');
+    if(typeof window.save==='function'){const result=await window.save();if(!result?.ok){if(!result.conflict)window.state=before;render();window.updateStats?.();return;}}closeModal();render();window.updateStats?.();alert('Bill updated successfully');
   };
   window.NRBillDelete=async function(id){
     const b=visibleBills().find(x=>x.id===id);

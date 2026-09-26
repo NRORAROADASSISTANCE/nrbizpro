@@ -21,15 +21,7 @@
   function saveServerUser(d){
     window.currentUser=d.user;
     if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);
-    // Server business fields are authoritative. Repair older local records that
-    // contain blank/stale profile fields without deleting the business workspace.
-    try{
-      if(window.state?.settings&&d.user){
-        window.state.settings={...window.state.settings,name:d.user.business||window.state.settings.name||'',owner:d.user.owner||window.state.settings.owner||'',category:d.user.category||window.state.settings.category||'',mobile:d.user.mobile||window.state.settings.mobile||'',gst:d.user.gst||window.state.settings.gst||'',address:d.user.address||window.state.settings.address||'',email:d.user.email||window.state.settings.email||''};
-        if(typeof window.save==='function')window.save();
-      }
-    }catch{}
-    const key='nr-bizpro-users-v1';
+    // Do not merge server identity into a possibly stale local workspace here.\n    // loadServerData() must run first and is the only source of workspace state.\n    const key='nr-bizpro-users-v1';
     try{const users=JSON.parse(localStorage.getItem(key)||'[]');const i=users.findIndex(u=>u.id===d.user.id);const local={...d.user};if(i>=0)users[i]={...users[i],...local};else users.push(local);localStorage.setItem(key,JSON.stringify(users));}catch{}
   }
   async function serverSignup(e){
@@ -90,49 +82,29 @@
   window.login=serverLogin;
   window.signup=serverSignup;
   window.checkSession=async function(){
-    // Refresh-safe session restore: local active session keeps the workspace visible immediately.
+    // SECURITY: the server session is the only authority for the active business.
+    // Never restore an old local user/workspace before /api/auth?action=me.
     const myGeneration=authGeneration;
-    let sid='',explicitLogout=false;
-    try{sid=localStorage.getItem(SESSION_KEY)||'';explicitLogout=localStorage.getItem('nr-bizpro-explicit-logout')==='1'}catch{}
+    let explicitLogout=false;
+    try{explicitLogout=localStorage.getItem('nr-bizpro-explicit-logout')==='1'}catch{}
     if(explicitLogout){forceLogin('You have been logged out.');return false}
-    if(sid){
-      try{
-        const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
-        const u=users.find(x=>String(x.id)===String(sid));
-        if(u&&String(u.status||'').toLowerCase()==='active'){
-          clearDemoState();
-          window.currentUser=u;
-          if(typeof window.loadData==='function')window.state=window.loadData(u.id);
-          safeShowApp();
-          // Verify in background. Never force logout on a transient server/auth failure.
-          fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}})
-            .then(r=>r.json().catch(()=>({})))
-            .then(d=>{
-              if(myGeneration!==authGeneration)return;
-              if(d?.user){
-                saveServerUser(d);
-                try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
-                safeShowApp();
-              }
-            }).catch(()=>{});
-          return true;
-        }
-      }catch{}
-    }
     try{
       const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}});
       const d=await r.json().catch(()=>({}));
-      if(myGeneration===authGeneration&&r.ok&&d.user){
-        clearDemoState();
-        saveServerUser(d);
-        if(typeof window.loadServerData==='function') await window.loadServerData();
-        try{localStorage.setItem(SESSION_KEY,d.user.id)}catch{}
-        safeShowApp();
-        return true;
-      }
-    }catch{}
-    if(myGeneration===authGeneration)forceLogin('Please log in to continue.');
-    return false;
+      if(myGeneration!==authGeneration)return false;
+      if(!r.ok||!d.user){forceLogin('Please log in to continue.');return false}
+      clearDemoState();
+      // Set the authenticated identity from the server, then load only that
+      // businessId's PostgreSQL workspace before showing any business screen.
+      window.currentUser=d.user;
+      try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
+      if(typeof window.loadServerData==='function') await window.loadServerData();
+      safeShowApp();
+      return true;
+    }catch(e){
+      if(myGeneration===authGeneration)forceLogin('Session verification failed. Please log in again.');
+      return false;
+    }
   };
   function buildPublicLanding(){
     const old=document.getElementById('publicLanding'); if(old)old.remove();
@@ -159,5 +131,5 @@
   }
   setupPublicLayer();
   // Give the dedicated refresh guard time to install before the first session check.
-  setTimeout(()=>window.checkSession?.(),5000);
+  setTimeout(()=>window.checkSession?.(),500);
 })();

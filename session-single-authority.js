@@ -7,6 +7,7 @@
   const USER='nr-bizpro-last-auth-user';
   const EXPLICIT='nr-bizpro-explicit-logout';
   let booting=false;
+  window.__NRAuthGeneration=Number(window.__NRAuthGeneration||0);
 
   function readUser(){
     try{
@@ -30,9 +31,11 @@
   }
 
   async function verify(){
+    const verifyGeneration=++window.__NRAuthGeneration;
     try{
       const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}});
       const d=await r.json().catch(()=>({}));
+      if(verifyGeneration!==window.__NRAuthGeneration)return false;
       if(!r.ok||!d.user)return false;
       try{
         localStorage.removeItem(EXPLICIT);
@@ -42,6 +45,7 @@
         const i=users.findIndex(x=>String(x.id)===String(d.user.id));
         if(i>=0){users[i]={...users[i],...d.user};localStorage.setItem('nr-bizpro-users-v1',JSON.stringify(users));}
       }catch{}
+      if(verifyGeneration!==window.__NRAuthGeneration)return false;
       window.currentUser=d.user;
       // PostgreSQL is the workspace source of truth. Never hydrate from local
       // business data during session restore.

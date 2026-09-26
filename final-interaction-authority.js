@@ -8,6 +8,11 @@
  }
  window.closeModal=hideModal;
 
+ function openNewBillAuthoritative(){
+   const fn=window.NRVehicleOpenBill||window.openBillModal;
+   if(typeof fn==='function'){fn();return;}
+   alert('New Bill is still loading. Please refresh once.');
+ }
  function openAddProductAuthoritative(){
    const fn=window.__NRDirectAddProduct || window.__NRFinalAddProduct;
    if(typeof fn==='function'){ fn(); return; }
@@ -28,6 +33,7 @@
  window.__NRShowTab=showTabSafe;
  window.__NRFinalHideModal=hideModal;
  window.__NRFinalOpenAddProduct=openAddProductAuthoritative;
+ window.__NRFinalOpenNewBill=openNewBillAuthoritative;
 
  function bind(){
    window.closeModal=hideModal;
@@ -54,6 +60,7 @@
 
    document.querySelectorAll('button').forEach(b=>{
      const t=(b.textContent||'').trim().toLowerCase();
+     if(t.includes('new bill')){b.type='button';b.onclick=function(e){e.preventDefault();e.stopImmediatePropagation();openNewBillAuthoritative();};}
      if(t.includes('add product')){
        b.type='button';
        b.onclick=function(e){e.preventDefault();e.stopImmediatePropagation();openAddProductAuthoritative();};
@@ -68,6 +75,13 @@
      const el=e.target?.closest?.('button');
      if(!el)return;
      const text=(el.textContent||'').trim().toLowerCase();
+
+     if(text.includes('new bill')){
+       e.preventDefault();
+       e.stopImmediatePropagation();
+       openNewBillAuthoritative();
+       return;
+     }
 
      if(text.includes('add product')){
        e.preventDefault();

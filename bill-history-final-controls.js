@@ -17,6 +17,8 @@
   }
   function todayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
   function billDateKey(b){return localDateKey(b?.billDate||b?.date)}
+  function isTodayBill(b){return billDateKey(b)===todayKey()}
+  function ensureTodayEditable(b){if(!isTodayBill(b)){alert("Only today's bills can be edited. Old bills are view/print/delete only.");return false}return true}
   function formatDate(value){const k=localDateKey(value);if(!k)return '—';const [y,m,d]=k.split('-');return `${d}/${m}/${y}`}
   function dueAmount(b){return Math.max(0,Number(b?.dueAmount??(Number(b?.total)||0)-(Number(b?.amountReceived)||0))||0)}
 
@@ -50,13 +52,15 @@
     const total=a.reduce((sum,b)=>sum+(Number(b.total)||0),0);
     const summary=document.getElementById('billHistorySummary');
     if(summary)summary.textContent=`${a.length} bill${a.length===1?'':'s'} • ${moneyH(total)}`;
-    tb.innerHTML=a.length?a.map(b=>`<tr><td><b>${escH(b.invoice||'—')}</b></td><td><b>${escH(formatDate(b.billDate||b.date))}</b><br><small>${escH(b.billTime||'')}</small></td><td>${escH(b.customer||'Walk-in Customer')}<br><small>${escH(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyH(b.total)}</b><br>${Number(b.discount||0)>0?`<small>Discount: ${moneyH(b.discount)}</small>`:''}</td><td><b>${dueAmount(b)>0?moneyH(dueAmount(b)):'₹0.00'}</b>${b.dueDate?`<br><small>Due: ${escH(formatDate(b.dueDate))}</small>`:''}</td><td><button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button> <button type="button" class="danger" onclick="window.NRBillDelete('${b.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">No bills found for the selected date/search.</td></tr>';
+    tb.innerHTML=a.length?a.map(b=>`<tr><td><b>${escH(b.invoice||'—')}</b></td><td><b>${escH(formatDate(b.billDate||b.date))}</b><br><small>${escH(b.billTime||'')}</small></td><td>${escH(b.customer||'Walk-in Customer')}<br><small>${escH(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyH(b.total)}</b><br>${Number(b.discount||0)>0?`<small>Discount: ${moneyH(b.discount)}</small>`:''}</td><td><b>${dueAmount(b)>0?moneyH(dueAmount(b)):'₹0.00'}</b>${b.dueDate?`<br><small>Due: ${escH(formatDate(b.dueDate))}</small>`:''}</td><td>${isTodayBill(b)?'<button type="button" class="secondary" onclick="window.NRBillEdit(\''+b.id+'\')">Edit</button>':''} <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button> <button type="button" class="danger" onclick="window.NRBillDelete('${b.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">No bills found for the selected date/search.</td></tr>';
     const headRow=tb.closest('table')?.querySelector('thead tr');
     if(headRow&&headRow.children.length===6){const th=document.createElement('th');th.textContent='Due Amount';headRow.insertBefore(th,headRow.lastElementChild)}
   }
 
   function edit(id){
-    const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');
+    const b=visibleBills().find(x=>x.id===id);
+    if(!b)return alert('Bill not found');
+    if(!ensureTodayEditable(b))return;if(!b)return alert('Bill not found');
     const list=items(),cart=(b.items||[]).map(x=>({id:x.id,name:x.name,qty:Number(x.qty)||1,price:Number(x.price)||0,gst:Number(x.gst)||0}));
     window.NRHEditCart=cart;window.NRHEditId=id;
     const opts=list.map(i=>`<option value="${escH(i.id)}">${escH(i.name)} — ${moneyH(i.sell)}</option>`).join('');
@@ -96,7 +100,7 @@
     }catch(e){console.warn('Bill delete cloud save failed',e);alert('Bill deleted locally, but cloud save failed. Please check internet and try again.');render();window.updateStats?.();return;}
     render();window.updateStats?.();alert('Bill deleted successfully and synced to cloud.');
   };
-  window.NRBillEdit=edit;window.NRBillPrint=window.NRBillPrint||function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(typeof window.printBill==='function')return window.printBill(id);alert('Print function not available');};
+  window.NRBillEdit=function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(!ensureTodayEditable(b))return;return edit(id)};window.NRBillPrint=window.NRBillPrint||function(id){const b=visibleBills().find(x=>x.id===id);if(!b)return alert('Bill not found');if(typeof window.printBill==='function')return window.printBill(id);alert('Print function not available');};
   window.renderBills=render;
   document.addEventListener('input',e=>{if(e.target?.id==='billSearch')render()});
   window.addEventListener('load',()=>{setTimeout(render,300);setTimeout(render,1200)});

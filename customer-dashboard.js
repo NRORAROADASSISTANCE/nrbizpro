@@ -4,9 +4,9 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const sections=[['overview','Dashboard','📊'],['customers','Customers / Parties','👥'],['sales','Sales & Invoices','🧾'],['purchases','Purchases','🛒'],['inventory','Inventory / Stock','📦'],['payments','Payments & Outstanding','💳'],['expenses','Expenses','💰'],['reports','Reports','📈'],['staff','Staff & Permissions','👤']];
 function getState(){return window.state||{};}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});}
-function bills(){const s=getState();return Array.isArray(s.bills)?s.bills:[];}
-function items(){const s=getState();return Array.isArray(s.items)?s.items:[];}
-function customers(){const s=getState();return Array.isArray(s.customers)?s.customers:[];}
+function bills(){const s=getState();if(typeof window.NRBizProWorkspace?.visibleBills==='function')return window.NRBizProWorkspace.visibleBills();return Array.isArray(s.bills)?s.bills.filter(x=>x?.businessId===window.currentUser?.id):[];}
+function items(){const s=getState();if(typeof window.NRBizProWorkspace?.visibleItems==='function')return window.NRBizProWorkspace.visibleItems();return Array.isArray(s.items)?s.items.filter(x=>x?.businessId===window.currentUser?.id):[];}
+function customers(){const s=getState();return Array.isArray(s.customers)?s.customers.filter(x=>x?.businessId===window.currentUser?.id):[];}
 function visibleCustomers(){
  const out=[],seen=new Set();
  for(const x of customers()){

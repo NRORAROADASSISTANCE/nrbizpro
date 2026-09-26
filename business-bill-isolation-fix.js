@@ -3,7 +3,20 @@
  const norm=v=>{const c=String(v||'').toLowerCase();if(/ev|electric/.test(c))return'ev';if(/paint/.test(c))return'paint';if(/plumb|pipe/.test(c))return'plumbing';if(/medical|pharmacy|chemist|drug/.test(c))return'medical';if(/garage|service center/.test(c))return'garage';if(/electronic|mobile/.test(c))return'electronics';if(/furniture/.test(c))return'furniture';if(/jewel/.test(c))return'jewellery';if(/clothing|fashion|garment/.test(c))return'clothing';if(/stationery|book/.test(c))return'stationery';if(/footwear|shoe|chappal|slipper/.test(c))return'footwear';if(/fertil|agri/.test(c))return'fertilizer';if(/spare/.test(c))return'spareparts';if(/grocery|general store|retail|supermarket/.test(c))return'retail';if(/restaurant|bakery/.test(c))return'restaurant';if(/hardware|building|construction/.test(c))return'hardware';if(/dairy|milk/.test(c))return'dairy';if(/salon|beauty/.test(c))return'salon';if(/printing|xerox|online/.test(c))return'printing';return'general'};
  const cat=()=>{const u=window.currentUser||{};const identity=[u.business,u.tradeName,u.businessName,window.state?.settings?.name].join(' ').toLowerCase();if(/\bvh\s*ev\b|electric vehicle|ev showroom|electric scooter|electric two.?wheeler/.test(identity))return'ev';return norm(u.category||window.state?.settings?.category||'General Business')};
  function itemMatches(x){const c=cat();if(c==='general')return true;const raw=String(x?.businessModule||x?.businessCategory||x?.businessType||x?.industry||'').toLowerCase();if(raw)return norm(raw)===c||raw.includes(c)||({ev:/ev|electric/,paint:/paint/,plumbing:/plumb|pipe/,medical:/medical|pharmacy|chemist|drug/,garage:/garage|service center/}[c]?.test(raw)||false);const t=String(x?.name||'').toLowerCase();if(c==='ev')return !/paint|birla|asian paints|berger|dulux|putty|primer|emulsion|distemper/.test(t);if(c==='paint')return /paint|birla|asian paints|berger|dulux|putty|primer/.test(t);return true}
- function billMatches(b){const arr=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);if(arr.length)return arr.some(itemMatches);const raw=String(b?.businessModule||b?.businessCategory||b?.category||'').toLowerCase();if(raw)return norm(raw)===cat();return cat()==='general'}
+ function billMatches(b){
+   const c=cat();
+   const explicit=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
+   if(explicit)return norm(explicit)===c;
+   const arr=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
+   if(arr.length){
+     // A bill is visible only when every line belongs to the active module.
+     // "some()" caused EV/Fertilizer cross-module leakage.
+     return arr.every(item=>itemMatches(item));
+   }
+   // Untagged legacy bills cannot be safely assigned to a module.
+   // Keep them visible only in the General workspace rather than leaking them.
+   return c==='general';
+ }
  function visibleBills(){return Array.isArray(window.state?.bills)?window.state.bills.filter(billMatches):[]}
  function isToday(b){const raw=b?.billDate||b?.date||b?.createdAt||b?.created_at||'';if(!raw)return false;const d=new Date(raw),n=new Date();return !Number.isNaN(d.getTime())&&d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate()}
  function refreshStats(){const bs=visibleBills(),today=bs.filter(isToday),bc=document.getElementById('billCount'),ts=document.getElementById('todaySales');if(bc)bc.textContent=String(today.length);if(ts)ts.textContent=window.money?.(today.reduce((s,b)=>s+Number(b.total||0),0))||'₹0'}

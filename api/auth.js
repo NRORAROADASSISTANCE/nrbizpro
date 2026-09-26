@@ -18,20 +18,25 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
     const x=r.rows[0];
     return send(res,200,{ok:true,exists:true,businessId:b.id,items:Array.isArray(x.items)?x.items:[],bills:Array.isArray(x.bills)?x.bills:[],customers:Array.isArray(x.customers)?x.customers:[],settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:x.state&&typeof x.state==='object'?x.state:{},version:Number(x.version||0),updatedAt:x.updated_at});
   }
-  const body=req.body||{},items=Array.isArray(body.items)?body.items:[],bills=Array.isArray(body.bills)?body.bills:[],customers=Array.isArray(body.customers)?body.customers:[],settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{},state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings},expectedVersion=Number.isFinite(Number(body.expectedVersion))?Number(body.expectedVersion):0;
+  const body=req.body||{},items=Array.isArray(body.items)?body.items:[],bills=Array.isArray(body.bills)?body.bills:[],customers=Array.isArray(body.customers)?body.customers:[],settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{},state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings};
+  // Registered identity fields are server-controlled. Never accept customer-side changes to them through the generic business-data save endpoint.
+  const registeredSettings={name:b.business,owner:b.owner,mobile:b.mobile,email:b.email,category:b.category,gst:b.gst||'',address:b.address||''};
+  const safeSettings={...settings,...registeredSettings};
+  const safeState={...state,settings:safeSettings};
+  const expectedVersion=Number.isFinite(Number(body.expectedVersion))?Number(body.expectedVersion):0;
   const current=await sql`SELECT version FROM business_data WHERE business_id=${b.id} LIMIT 1`;
   const currentVersion=current.rowCount?Number(current.rows[0].version||0):0;
   if(current.rowCount&&currentVersion!==expectedVersion)return send(res,409,{error:'This account was updated in another tab or device. Your local changes were not overwritten. Reloaded data is now available.',conflict:true,version:currentVersion});
   if(!current.rowCount&&expectedVersion!==0)return send(res,409,{error:'This account data changed before saving. Please reload and try again.',conflict:true,version:0});
   if(!current.rowCount){
-    await sql`INSERT INTO business_data(business_id,items,bills,customers,settings,state,version,updated_at) VALUES(${b.id},${JSON.stringify(items)}::jsonb,${JSON.stringify(bills)}::jsonb,${JSON.stringify(customers)}::jsonb,${JSON.stringify(settings)}::jsonb,${JSON.stringify(state)}::jsonb,1,now())`;
+    await sql`INSERT INTO business_data(business_id,items,bills,customers,settings,state,version,updated_at) VALUES(${b.id},${JSON.stringify(items)}::jsonb,${JSON.stringify(bills)}::jsonb,${JSON.stringify(customers)}::jsonb,${JSON.stringify(safeSettings)}::jsonb,${JSON.stringify(safeState)}::jsonb,1,now())`;
     return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:1,updatedAt:new Date().toISOString()});
   }
   const backupId=cryptoRandom();
   const saved=await sql`WITH old AS (
       SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} AND version=${expectedVersion}
     ), upd AS (
-      UPDATE business_data SET items=${JSON.stringify(items)}::jsonb,bills=${JSON.stringify(bills)}::jsonb,customers=${JSON.stringify(customers)}::jsonb,settings=${JSON.stringify(settings)}::jsonb,state=${JSON.stringify(state)}::jsonb,version=version+1,updated_at=now()
+      UPDATE business_data SET items=${JSON.stringify(items)}::jsonb,bills=${JSON.stringify(bills)}::jsonb,customers=${JSON.stringify(customers)}::jsonb,settings=${JSON.stringify(safeSettings)}::jsonb,state=${JSON.stringify(safeState)}::jsonb,version=version+1,updated_at=now()
       WHERE business_id=${b.id} AND version=${expectedVersion}
       RETURNING version,updated_at
     )

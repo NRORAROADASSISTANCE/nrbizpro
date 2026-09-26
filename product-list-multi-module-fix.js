@@ -57,7 +57,14 @@
     const oldS=window.updateStats;if(oldS&&!oldS.__nrAllProducts){const f=function(){try{oldS.apply(this,arguments)}catch(e){}stats()};f.__nrAllProducts=true;window.updateStats=f;}
     render();stats();
   }
-  window.addEventListener('load',()=>{setTimeout(install,400);setTimeout(install,1200);setTimeout(install,2500);});
-  window.addEventListener('demoStarted',()=>setTimeout(install,300));
-  setInterval(()=>{if(window.state)stats()},1500);
+  // Login/showApp can happen AFTER window load. Re-install after authentication so
+  // the app's older local renderer cannot leave the pricing columns misaligned.
+  const refreshAfterLogin=()=>setTimeout(install,80);
+  window.addEventListener('load',()=>{setTimeout(install,400);setTimeout(install,1200);setTimeout(install,2500);setTimeout(install,5000);});
+  window.addEventListener('authReady',refreshAfterLogin);
+  window.addEventListener('loginSuccess',refreshAfterLogin);
+  window.addEventListener('demoStarted',refreshAfterLogin);
+  // The core app has a local renderItems() function, so a window-level override
+  // cannot intercept every call. Re-apply the authoritative table when logged in.
+  setInterval(()=>{if(window.state?.items && document.getElementById('itemTable')){install()}},1000);
 })();

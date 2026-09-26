@@ -25,7 +25,11 @@
     if(/wholesale|distributor/.test(c))return'wholesale';
     return'general';
   }
-  function active(){return norm(window.currentUser?.category||window.state?.settings?.category||'General Business');}
+  function modules(){var a=window.state?.settings?.modules;return Array.isArray(a)&&a.length?[...new Set(a.filter(Boolean).map(String))]:[String(window.state?.settings?.category||window.currentUser?.category||'General Business')];}
+  function activeRaw(){var ms=modules(),saved=String(window.state?.settings?.activeModule||'').trim();return saved&&ms.some(function(x){return String(x)===saved})?saved:ms[0];}
+  function active(){return norm(activeRaw());}
+  function setActiveModule(raw){var ms=modules(),next=String(raw||'').trim();if(!next||!ms.some(function(x){return String(x)===next}))return false;window.state.settings=window.state.settings||{};window.state.settings.activeModule=next;return true;}
+  function renderModuleSwitcher(){var host=document.getElementById('nrBillingModuleSwitcher');if(!host)return;var ms=modules(),cur=activeRaw();host.innerHTML='<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600"><span>Billing Module</span><select id="nrActiveBillingModule" style="min-width:210px;padding:8px 10px;border:1px solid #d8e1ed;border-radius:8px;background:#fff">'+ms.map(function(m){return '<option value="'+String(m).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" '+(String(m)===cur?'selected':'')+'>'+String(m).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</option>'}).join('')+'</select></label>';var sel=document.getElementById('nrActiveBillingModule');if(sel&&!sel.__bound){sel.__bound=true;sel.addEventListener('change',async function(){var before=window.state?.settings?.activeModule||cur,next=this.value;if(!setActiveModule(next)){this.value=before;return}this.disabled=true;try{var r=await window.save?.();if(!r?.ok){window.state.settings.activeModule=before;this.value=before;alert('Billing module change was not saved. Existing data was kept safe.');return}window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation?.refreshStats?.();window.NRBizProRenderAllProducts?.();}finally{this.disabled=false}})}}
   function itemMatch(item){
     var c=active(),raw=String(item?.businessCategory||item?.businessModule||item?.businessType||item?.industry||'').trim();
     if(c==='general')return !raw||norm(raw)==='general';
@@ -47,7 +51,7 @@
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}
   function visibleBills(){return (window.state?.bills||[]).filter(function(x){return accountMatch(x)&&billMatch(x);});}
-  window.NRBizProWorkspace={normalizeCategory:norm,activeCategory:active,itemMatches:itemMatch,billMatches:billMatch,visibleItems:visibleItems,visibleBills:visibleBills};
+  window.NRBizProWorkspace={normalizeCategory:norm,activeCategory:active,activeModule:activeRaw,setActiveModule:setActiveModule,getModules:modules,itemMatches:itemMatch,billMatches:billMatch,visibleItems:visibleItems,visibleBills:visibleBills};
   window.NRBizProBusinessDataIsolation={normalizeCategory:norm,matches:itemMatch,visible:visibleItems};
   window.NRBizProBillIsolation={visible:visibleBills,matches:billMatch,refreshStats:function(){
     var bs=visibleBills(),today=bs.filter(function(b){var v=b?.billDate||b?.date||b?.createdAt;var d=v?new Date(v):null,n=new Date();return d&&!isNaN(d.getTime())&&d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();});
@@ -57,6 +61,7 @@
   }};
   window.visibleItems=visibleItems;
   window.visibleBills=visibleBills;
-  window.addEventListener('authReady',function(){setTimeout(function(){window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation.refreshStats();},50);});
-  window.addEventListener('loginSuccess',function(){setTimeout(function(){window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation.refreshStats();},50);});
+  setTimeout(renderModuleSwitcher,1000);
+  window.addEventListener('authReady',function(){setTimeout(function(){renderModuleSwitcher();window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation.refreshStats();},50);});
+  window.addEventListener('loginSuccess',function(){setTimeout(function(){renderModuleSwitcher();window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation.refreshStats();},50);});
 })();

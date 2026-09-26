@@ -41,7 +41,9 @@
   }
   function accountMatch(record){
     var id=window.currentUser?.id;
-    return !record?.businessId||!id||record.businessId===id;
+    // Tenant isolation is mandatory: records without an owning business are not
+    // safe to expose to a logged-in business account.
+    return !!id&&String(record?.businessId||'')===String(id);
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}
   function visibleBills(){return (window.state?.bills||[]).filter(function(x){return accountMatch(x)&&billMatch(x);});}

@@ -10,7 +10,7 @@
     let bills=getBills().slice().reverse();
     if(q)bills=bills.filter(b=>String(b.invoice||'').toLowerCase().includes(q)||String(b.customer||'').toLowerCase().includes(q)||String(b.mobile||'').toLowerCase().includes(q));
     if(!bills.length){tb.innerHTML='<tr><td colspan="6" class="empty">No bills found.</td></tr>';return;}
-    tb.innerHTML=bills.map(b=>`<tr><td><b>${escP(b.invoice||'—')}</b></td><td>${b.date?new Date(b.date).toLocaleString('en-IN'):'—'}</td><td>${escP(b.customer||'Walk-in Customer')}<br><small>${escP(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyP(b.total)}</b></td><td><button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button></td></tr>`).join('');
+    tb.innerHTML=bills.map(b=>{const editable=billDateKeyRestore(b)===todayKeyRestore();return `<tr><td><b>${escP(b.invoice||'—')}</b></td><td>${b.date?new Date(b.date).toLocaleString('en-IN'):'—'}</td><td>${escP(b.customer||'Walk-in Customer')}<br><small>${escP(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyP(b.total)}</b></td><td>${editable?`<button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> `:''}<button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button></td></tr>`}).join('');
   }
 
   function printBillRestore(id){
@@ -27,7 +27,7 @@
   function editBill(id){
     const b=getBills().find(x=>x.id===id); if(!b)return alert('Bill not found');
     if(billDateKeyRestore(b)!==todayKeyRestore())return alert("Only today's bills can be edited. Old bills are view/print/delete only.");
-    const items=getItems(); window.NREditingBillId=id;
+    const items=(typeof window.NRBizProWorkspace?.visibleItems==='function'?window.NRBizProWorkspace.visibleItems():getItems()); window.NREditingBillId=id;
     const options=items.map(i=>`<option value="${escP(i.id)}">${escP(i.name)} — ${moneyP(i.sell)}</option>`).join('');
     window.openModal('Edit Bill',`<div class="modal-grid"><label class="field">Customer Name<input id="ebCustomer" value="${escP(b.customer||'Walk-in Customer')}"></label><label class="field">Customer Mobile<input id="ebMobile" value="${escP(b.mobile||'')}"></label><label class="field wide">Customer Address<textarea id="ebAddress" rows="2">${escP(b.customerAddress||'')}</textarea></label><label class="field">Customer GSTIN<input id="ebGstin" value="${escP(b.customerGstin||'')}"></label><label class="field wide">Add Item<select id="ebItem"><option value="">Select product</option>${options}</select></label></div><div id="ebLines" class="bill-lines"></div><div class="bill-total">Grand Total: <b id="ebTotal">${moneyP(b.total)}</b></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button><button type="button" class="primary" onclick="window.NRBillSaveEdit()">Save Changes</button></div>`);
     window.NREditCart=(b.items||[]).map(x=>({id:x.id,qty:Number(x.qty)||1,price:Number(x.price)||0}));

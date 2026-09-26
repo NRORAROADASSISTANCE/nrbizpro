@@ -3,6 +3,9 @@
   const originalShowApp=window.showApp;
   const SESSION_KEY='nr-bizpro-session-v1';
   let authGeneration=0;
+  // Shared generation prevents a refresh/pageshow session check for the previous
+  // account from overwriting a newly authenticated business account.
+  window.__NRAuthGeneration=Number(window.__NRAuthGeneration||0);
   function clearDemoState(){
     window.nrBizProDemoMode=false;
     if(window.currentUser?.plan==='demo')window.currentUser=null;
@@ -43,7 +46,7 @@
     }catch(err){window.renderAuth?.('signup',err.message)}
   }
   async function serverLogin(e){
-    e.preventDefault(); const myGeneration=++authGeneration;
+    e.preventDefault(); const myGeneration=++authGeneration; const loginGeneration=++window.__NRAuthGeneration;
     const id=document.getElementById('loginId')?.value.trim()||''; const password=document.getElementById('loginPassword')?.value||'';
     try{
       const r=await fetch('/api/auth?action=login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'login',id,password})});
@@ -63,11 +66,14 @@
         return window.renderAuth?.('login',d.error||'Invalid login details.')
       }
       clearDemoState();
+      if(loginGeneration!==window.__NRAuthGeneration)return;
       saveServerUser(d);
       // The server login response is authoritative. Load the business workspace
       // from PostgreSQL before rendering the app; the old local loadData path
       // is not the source of truth anymore.
+      if(loginGeneration!==window.__NRAuthGeneration)return;
       if(typeof window.loadServerData==='function') await window.loadServerData();
+      if(loginGeneration!==window.__NRAuthGeneration)return;
       try{localStorage.setItem(SESSION_KEY,d.user.id);localStorage.setItem('nr-bizpro-last-auth-user',JSON.stringify(d.user));localStorage.removeItem('nr-bizpro-explicit-logout')}catch{}
       // Login/API success must never be converted into a misleading
       // "Server connection failed" message by a legacy UI renderer.

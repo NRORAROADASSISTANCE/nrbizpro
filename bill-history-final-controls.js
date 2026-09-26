@@ -135,10 +135,8 @@
       original.apply(this,arguments);
       setTimeout(()=>{
         const b=window.state?.bills?.[0];if(!b)return;
-        const bd=key(b.billDate||b.date)||today();
-        if(bd>today())b.billDate=today();
-        b.billDate=today();
-        const now=new Date();b.billTime=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        // Preserve the bill's original business date/time. History edits must never
+        // move an old invoice into Today's Bills merely because payment details changed.
         b.amountReceived=received;b.dueAmount=due;b.paymentStatus=due===0?'paid':(received>0?'partial':'due');b.dueDate=due>0?dueDate:'';
         if(typeof window.save==='function')window.save();
         if(typeof window.renderBills==='function')window.renderBills();

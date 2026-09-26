@@ -1,7 +1,7 @@
 // NR BizPro — Payments & Outstanding enhancements
 (function(){'use strict';
   const S=()=>window.state||{};
-  const bills=()=>Array.isArray(S().bills)?S().bills:[];
+  const bills=()=>typeof window.NRBizProWorkspace?.visibleBills==='function'?window.NRBizProWorkspace.visibleBills():(Array.isArray(S().bills)?S().bills.filter(x=>x?.businessId===window.currentUser?.id):[]);
   const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
   const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const amount=b=>Number(b?.total??b?.grandTotal??b?.amount??0)||0;

@@ -9,6 +9,10 @@
     const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
     let bills=getBills().slice().reverse();
     if(q)bills=bills.filter(b=>String(b.invoice||'').toLowerCase().includes(q)||String(b.customer||'').toLowerCase().includes(q)||String(b.mobile||'').toLowerCase().includes(q));
+    const allHistory=bills;
+    const totalSales=allHistory.reduce((sum,b)=>sum+Number(b.total||0),0);
+    const summary=document.getElementById('billHistorySummary');
+    if(summary)summary.innerHTML='<div class="stat" style="min-width:170px;padding:10px 14px"><span>Total Sales</span><strong>'+moneyP(totalSales)+'</strong></div><div class="stat" style="min-width:140px;padding:10px 14px"><span>Total Bills</span><strong>'+allHistory.length+'</strong></div>';
     if(!bills.length){tb.innerHTML='<tr><td colspan="6" class="empty">No bills found.</td></tr>';return;}
     tb.innerHTML=bills.map(b=>{const editable=billDateKeyRestore(b)===todayKeyRestore();return `<tr><td><b>${escP(b.invoice||'—')}</b></td><td>${b.date?new Date(b.date).toLocaleString('en-IN'):'—'}</td><td>${escP(b.customer||'Walk-in Customer')}<br><small>${escP(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${moneyP(b.total)}</b></td><td>${editable?`<button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> `:''}<button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button></td></tr>`}).join('');
   }

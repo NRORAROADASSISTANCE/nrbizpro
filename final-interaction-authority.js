@@ -9,7 +9,7 @@
  window.closeModal=hideModal;
 
  function openAddProductAuthoritative(){
-   const fn=window.__NRFinalAddProduct;
+   const fn=window.__NRDirectAddProduct || window.__NRFinalAddProduct;
    if(typeof fn==='function'){ fn(); return; }
    const fn2=window.openItemModal;
    if(typeof fn2==='function'){ fn2(); return; }

@@ -50,10 +50,23 @@
   }
   function accountMatch(record){
     var id=window.currentUser?.id;
-    // /api/auth?action=data reads/writes only the current business_id. Therefore
-    // legacy records without an embedded businessId are still account-scoped.
-    // When a businessId exists, it must still match the logged-in account.
-    return !!id&&(!record?.businessId||String(record.businessId)===String(id));
+    if(!id)return false;
+    if(record?.businessId)return String(record.businessId)===String(id);
+    // Legacy bills may not have an embedded businessId. Never expose an
+    // unowned legacy bill blindly: identify its owner from module/category or
+    // from the product IDs stored on its lines.
+    var raw=String(record?.businessCategoryKey||record?.businessModule||record?.businessCategory||record?.businessType||record?.category||'').trim();
+    if(raw)return norm(raw)===active();
+    var lines=Array.isArray(record?.items)?record.items:(Array.isArray(record?.lines)?record.lines:[]);
+    if(lines.length){
+      var owned=window.state?.items||[];
+      var ids=lines.map(function(x){return String(x?.productId||x?.itemId||x?.id||'').trim()}).filter(Boolean);
+      if(ids.length)return ids.every(function(pid){
+        return owned.some(function(item){return String(item?.id||'')===pid&&String(item?.businessId||'')===String(id)});
+      });
+    }
+    // No ownership metadata = do not risk showing another business's bill.
+    return false;
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}
   function visibleBills(){return (window.state?.bills||[]).filter(function(x){return accountMatch(x)&&billMatch(x);});}

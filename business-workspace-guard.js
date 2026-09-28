@@ -41,12 +41,14 @@
   }
   function billMatch(b){
     var c=active(),raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
+    // Vehicle invoices are EV/CV showroom records. They must never appear in a
+    // non-vehicle module such as Fertilizer/Agriculture, even when legacy records
+    // lack a reliable businessType field.
+    if(b?.vehicle && c!=='ev')return false;
     if(raw)return norm(raw)===c;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
     if(lines.length)return lines.every(itemMatch);
-    // Legacy bills without module metadata belong to this account's server-scoped
-    // dataset; do not hide them merely because newer records carry extra metadata.
-    return true;
+    return false;
   }
   function accountMatch(record){
     var id=window.currentUser?.id;

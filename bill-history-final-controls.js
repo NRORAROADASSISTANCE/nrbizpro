@@ -106,7 +106,8 @@
   window.renderBills=render;
   document.addEventListener('input',e=>{if(e.target?.id==='billSearch')render()});
   window.addEventListener('load',()=>{setTimeout(render,300);setTimeout(render,1200)});
-  setInterval(()=>{if(document.getElementById('billTable'))render()},1500);
+  // Do not continuously repaint Bill History. A timer here caused the table to
+  // jump/flash and reset focus while the user was viewing or searching history.
 })();
 
 // NR BizPro — billing date guard, payment/due capture and due amount column

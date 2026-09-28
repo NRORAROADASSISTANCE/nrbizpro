@@ -25,8 +25,19 @@
     if(/wholesale|distributor/.test(c))return'wholesale';
     return'general';
   }
-  function modules(){var a=window.state?.settings?.modules;return Array.isArray(a)&&a.length?[...new Set(a.filter(Boolean).map(String))]:[String(window.state?.settings?.category||window.currentUser?.category||'General Business')];}
-  function activeRaw(){var ms=modules(),saved=String(window.state?.settings?.activeModule||'').trim();return saved&&ms.some(function(x){return String(x)===saved})?saved:ms[0];}
+  function modules(){
+    // The logged-in server account is the only authority for the billing module.
+    // Never let stale/cross-account state.settings.modules from an earlier
+    // session/device decide which business module is shown.
+    var cat=String(window.currentUser?.category||'').trim();
+    return [cat||'General Business'];
+  }
+  function activeRaw(){
+    var ms=modules();
+    var authoritative=ms[0];
+    if(window.state?.settings)window.state.settings.activeModule=authoritative;
+    return authoritative;
+  }
   function active(){return norm(activeRaw());}
   function setActiveModule(raw){var ms=modules(),next=String(raw||'').trim();if(!next||!ms.some(function(x){return String(x)===next}))return false;window.state.settings=window.state.settings||{};window.state.settings.activeModule=next;return true;}
   function renderModuleSwitcher(){var host=document.getElementById('nrBillingModuleSwitcher');if(!host)return;var ms=modules(),cur=activeRaw();host.innerHTML='<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600"><span>Billing Module</span><select id="nrActiveBillingModule" style="min-width:210px;padding:8px 10px;border:1px solid #d8e1ed;border-radius:8px;background:#fff">'+ms.map(function(m){return '<option value="'+String(m).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" '+(String(m)===cur?'selected':'')+'>'+String(m).replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</option>'}).join('')+'</select></label>';var sel=document.getElementById('nrActiveBillingModule');if(sel&&!sel.__bound){sel.__bound=true;sel.addEventListener('change',async function(){var before=window.state?.settings?.activeModule||cur,next=this.value;if(!setActiveModule(next)){this.value=before;return}this.disabled=true;try{var r=await window.save?.();if(!r?.ok){window.state.settings.activeModule=before;this.value=before;alert('Billing module change was not saved. Existing data was kept safe.');return}window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation?.refreshStats?.();window.NRBizProRenderAllProducts?.();}finally{this.disabled=false}})}}

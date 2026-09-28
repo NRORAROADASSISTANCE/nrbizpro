@@ -5,7 +5,13 @@
   const money=v=>typeof window.money==='function'?window.money(v):'₹'+(Number(v)||0).toFixed(2);
   const stateNow=()=>window.state||{};
   const items=()=>{const all=Array.isArray(stateNow().items)?stateNow().items:[];const guard=window.NRBizProWorkspace?.visibleItems;return typeof guard==='function'?guard():all;};
-  const bills=()=>Array.isArray(stateNow().bills)?stateNow().bills:[];
+  const bills=()=>{
+    const all=Array.isArray(stateNow().bills)?stateNow().bills:[];
+    const guard=window.NRBizProBillIsolation?.visible;
+    if(typeof guard==='function')return guard();
+    const id=window.currentUser?.id;
+    return id?all.filter(b=>!b?.businessId||String(b.businessId)===String(id)):all;
+  };
   const billDateKey=b=>{const v=String(b?.billDate||b?.date||'');const m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];const d=new Date(v);return Number.isNaN(d.getTime())?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
   const todayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
   const isTodayBill=b=>billDateKey(b)===todayKey();
@@ -156,5 +162,5 @@
   function deleteBill(id){const b=bills().find(x=>x.id===id);if(!b)return;if(!confirm('Delete invoice '+(b.invoice||'')+'? This cannot be undone.'))return;stateNow().bills=bills().filter(x=>x.id!==id);if(typeof window.save==='function')window.save();if(typeof window.renderBills==='function')window.renderBills();if(typeof window.updateStats==='function')window.updateStats();alert('Bill deleted successfully');}
   function render(){const tb=document.getElementById('billTable');if(!tb)return;const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();const list=bills().slice().reverse().filter(b=>!q||`${b.invoice||''} ${b.customer||''} ${b.mobile||''}`.toLowerCase().includes(q));tb.innerHTML=list.length?list.map(b=>`<tr><td><b>${esc(b.invoice||'—')}</b></td><td>${esc(b.billDate||new Date(b.date||Date.now()).toLocaleDateString('en-IN'))}<br><small>${esc(b.billTime||'')}</small></td><td>${esc(b.customer||'Walk-in Customer')}<br><small>${esc(b.mobile||'')}</small></td><td>${(b.items||[]).length}</td><td><b>${money(b.total)}</b><br><small>Discount: ${money(b.discount||0)}</small></td><td><button type="button" class="secondary" onclick="window.NRBillEdit('${b.id}')">Edit</button> <button type="button" class="secondary" onclick="window.NRBillPrint('${b.id}')">Print</button> <button type="button" class="danger" onclick="window.NRBillDelete('${b.id}')">Delete</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No bills found.</td></tr>'}
   function install(){window.openBillModal=openNewBill;window.launchNewBill=openNewBill;window.NRBillEdit=editBill;window.NRBillDelete=deleteBill;window.renderBills=render;}
-  install();window.addEventListener('load',install);setInterval(install,1500);
+  install();window.addEventListener('load',()=>setTimeout(install,50));window.addEventListener('authReady',()=>setTimeout(install,50));window.addEventListener('loginSuccess',()=>setTimeout(install,50));
 })();

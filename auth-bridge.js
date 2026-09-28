@@ -137,5 +137,5 @@
   }
   setupPublicLayer();
   // Give the dedicated refresh guard time to install before the first session check.
-  setTimeout(()=>window.checkSession?.(),500);
+  setTimeout(()=>{if(!window.__NRSessionVerified){if(window.__NRSessionAuthority?.verify)window.__NRSessionAuthority.verify();else window.checkSession?.();}},500);
 })();

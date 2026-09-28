@@ -7,7 +7,7 @@
   const USER='nr-bizpro-last-auth-user';
   const EXPLICIT='nr-bizpro-explicit-logout';
   let booting=false;
-  window.__NRAuthGeneration=Number(window.__NRAuthGeneration||0);
+  window.__NRAuthGeneration=Number(window.__NRAuthGeneration||0); window.__NRSessionVerified=false;
 
   function readUser(){
     try{
@@ -36,7 +36,7 @@
       const r=await fetch('/api/auth?action=me',{method:'GET',credentials:'include',cache:'no-store',headers:{'Cache-Control':'no-cache'}});
       const d=await r.json().catch(()=>({}));
       if(verifyGeneration!==window.__NRAuthGeneration)return false;
-      if(!r.ok||!d.user)return false;
+      if(!r.ok||!d.user){window.__NRSessionVerified=false;return false;}
       try{
         localStorage.removeItem(EXPLICIT);
         localStorage.setItem(SESSION,String(d.user.id));
@@ -46,7 +46,7 @@
         if(i>=0){users[i]={...users[i],...d.user};localStorage.setItem('nr-bizpro-users-v1',JSON.stringify(users));}
       }catch{}
       if(verifyGeneration!==window.__NRAuthGeneration)return false;
-      window.currentUser=d.user;
+      window.currentUser=d.user; window.__NRSessionVerified=true;
       // PostgreSQL is the workspace source of truth. Never hydrate from local
       // business data during session restore.
       if(typeof window.loadServerData==='function') await window.loadServerData();

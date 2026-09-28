@@ -2,9 +2,23 @@
 (function(){'use strict';
  const norm=v=>{const c=String(v||'').toLowerCase();if(/ev|electric/.test(c))return'ev';if(/paint/.test(c))return'paint';if(/plumb|pipe/.test(c))return'plumbing';if(/medical|pharmacy|chemist|drug/.test(c))return'medical';if(/garage|service center/.test(c))return'garage';if(/electronic|mobile/.test(c))return'electronics';if(/furniture/.test(c))return'furniture';if(/jewel/.test(c))return'jewellery';if(/clothing|fashion|garment/.test(c))return'clothing';if(/stationery|book/.test(c))return'stationery';if(/footwear|shoe|chappal|slipper/.test(c))return'footwear';if(/fertil|agri/.test(c))return'fertilizer';if(/spare/.test(c))return'spareparts';if(/grocery|general store|retail|supermarket/.test(c))return'retail';if(/restaurant|bakery/.test(c))return'restaurant';if(/hardware|building|construction/.test(c))return'hardware';if(/dairy|milk/.test(c))return'dairy';if(/salon|beauty/.test(c))return'salon';if(/printing|xerox|online/.test(c))return'printing';return'general'};
  const cat=()=>{const u=window.currentUser||{};const identity=[u.business,u.tradeName,u.businessName,window.state?.settings?.name].join(' ').toLowerCase();if(/\bvh\s*ev\b|electric vehicle|ev showroom|electric scooter|electric two.?wheeler/.test(identity))return'ev';return norm(u.category||window.state?.settings?.category||'General Business')};
- function itemMatches(x){const c=cat();if(c==='general')return true;const raw=String(x?.businessModule||x?.businessCategory||x?.businessType||x?.industry||'').toLowerCase();if(raw)return norm(raw)===c||raw.includes(c)||({ev:/ev|electric/,paint:/paint/,plumbing:/plumb|pipe/,medical:/medical|pharmacy|chemist|drug/,garage:/garage|service center/}[c]?.test(raw)||false);const t=String(x?.name||'').toLowerCase();if(c==='ev')return !/paint|birla|asian paints|berger|dulux|putty|primer|emulsion|distemper/.test(t);if(c==='paint')return /paint|birla|asian paints|berger|dulux|putty|primer/.test(t);return true}
+ function vehicleLike(x){
+   const raw=[x?.businessModule,x?.businessCategory,x?.businessType,x?.industry,x?.type,x?.name,x?.productName,x?.model,x?.brand,x?.vehicle,x?.vehicleNumber,x?.registrationNo,x?.chassisNo,x?.vin].filter(Boolean).join(' ').toLowerCase();
+   return !!x?.vehicle||!!x?.vehicleNumber||!!x?.chassisNo||!!x?.vin||/ev showroom|electric vehicle|electric scooter|electric bike|two.?wheeler|four.?wheeler|vehicle|scooter|motorcycle|chassis|vin|tvs i.?qube|ather|ola electric|bajaj chetak|hero vida|revolt/.test(raw);
+ }
+ function itemMatches(x){
+   const c=cat();if(c==='general')return true;
+   const raw=String(x?.businessModule||x?.businessCategory||x?.businessType||x?.industry||'').toLowerCase();
+   if(raw)return norm(raw)===c||raw.includes(c)||({ev:/ev|electric/,paint:/paint/,plumbing:/plumb|pipe/,medical:/medical|pharmacy|chemist|drug/}[c]?.test(raw)||false);
+   if(c!=='ev'&&vehicleLike(x))return false;
+   const t=String(x?.name||x?.productName||'').toLowerCase();
+   if(c==='ev')return vehicleLike(x)&&!/paint|birla|asian paints|berger|dulux|putty|primer|emulsion|distemper/.test(t);
+   if(c==='paint')return /paint|birla|asian paints|berger|dulux|putty|primer/.test(t);
+   return !vehicleLike(x);
+ }
  function billMatches(b){
    const c=cat();
+   if(b?.businessId&&window.currentUser?.id&&String(b.businessId)!==String(window.currentUser.id))return false;
    const explicit=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
    if(explicit)return norm(explicit)===c;
    const arr=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);

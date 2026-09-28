@@ -54,36 +54,54 @@
     var raw=[x?.businessModule,x?.businessCategory,x?.businessType,x?.industry,x?.type,x?.name,x?.productName,x?.model,x?.brand,x?.vehicle,x?.vehicleNumber,x?.registrationNo,x?.chassisNo,x?.vin].filter(Boolean).join(' ').toLowerCase();
     return !!x?.vehicle||!!x?.vehicleNumber||!!x?.chassisNo||!!x?.vin||/ev showroom|electric vehicle|electric scooter|electric bike|two.?wheeler|four.?wheeler|vehicle|scooter|motorcycle|chassis|vin|tvs i.?qube|ather|ola electric|bajaj chetak|hero vida|revolt/.test(raw);
   }
+  function lineBelongsToCurrentBusiness(item){
+    var id=window.currentUser?.id,c=active();
+    if(!item)return false;
+    if(item.businessId&&id&&String(item.businessId)!==String(id))return false;
+    var raw=String(item?.businessCategoryKey||item?.businessModule||item?.businessCategory||item?.businessType||item?.industry||'').trim();
+    if(raw&&norm(raw)!==c)return false;
+    if(c!=='ev'&&vehicleLike(item))return false;
+    // If a bill line points to a known product, that product must belong to
+    // the current account. This catches old bills that were saved with the
+    // wrong businessId but contain another account's product.
+    var pid=String(item?.productId||item?.itemId||'').trim();
+    if(pid){
+      var product=(window.state?.items||[]).find(function(x){return String(x?.id||'')===pid});
+      if(!product)return false;
+      if(product.businessId&&id&&String(product.businessId)!==String(id))return false;
+      if(!itemMatch(product))return false;
+    }
+    return true;
+  }
   function billMatch(b){
-    var c=active(),raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
-    if(b?.businessId&&window.currentUser?.id&&String(b.businessId)!==String(window.currentUser.id))return false;
+    var c=active(),id=window.currentUser?.id;
+    if(!b||!id)return false;
+    if(b.businessId&&String(b.businessId)!==String(id))return false;
     if(b?.vehicle&&c!=='ev')return false;
-    if(raw)return norm(raw)===c;
+    var raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
+    if(raw&&norm(raw)!==c)return false;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
-    if(lines.length)return lines.every(function(item){
-      if(c!=='ev'&&vehicleLike(item))return false;
-      return itemMatch(item);
-    });
-    return false;
+    if(lines.length)return lines.every(lineBelongsToCurrentBusiness);
+    return !!b.businessId&&String(b.businessId)===String(id)&&(!raw||norm(raw)===c);
   }
   function accountMatch(record){
     var id=window.currentUser?.id;
     if(!id)return false;
-    if(record?.businessId)return String(record.businessId)===String(id);
-    // Legacy bills may not have an embedded businessId. Never expose an
-    // unowned legacy bill blindly: identify its owner from module/category or
-    // from the product IDs stored on its lines.
+    if(record?.businessId&&String(record.businessId)!==String(id))return false;
     var raw=String(record?.businessCategoryKey||record?.businessModule||record?.businessCategory||record?.businessType||record?.category||'').trim();
     if(raw)return norm(raw)===active();
+    if(record?.businessId)return String(record.businessId)===String(id);
+    // Legacy records without a businessId are shown only when ownership can
+    // be established from their module/category or product IDs.
     var lines=Array.isArray(record?.items)?record.items:(Array.isArray(record?.lines)?record.lines:[]);
     if(lines.length){
-      var owned=window.state?.items||[];
-      var ids=lines.map(function(x){return String(x?.productId||x?.itemId||x?.id||'').trim()}).filter(Boolean);
-      if(ids.length)return ids.every(function(pid){
-        return owned.some(function(item){return String(item?.id||'')===pid&&String(item?.businessId||'')===String(id)});
+      return lines.every(function(line){
+        var pid=String(line?.productId||line?.itemId||'').trim();
+        if(!pid)return false;
+        var product=(window.state?.items||[]).find(function(item){return String(item?.id||'')===pid});
+        return !!product&&String(product?.businessId||'')===String(id)&&itemMatch(product);
       });
     }
-    // No ownership metadata = do not risk showing another business's bill.
     return false;
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}

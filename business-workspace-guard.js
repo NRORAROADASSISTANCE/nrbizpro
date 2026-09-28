@@ -81,7 +81,7 @@
     var raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
     if(raw&&norm(raw)!==c)return false;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
-    if(lines.length)return lines.every(lineBelongsToCurrentBusiness);
+    if(lines.length)return lines.every(function(line){var pid=String(line?.productId||line?.itemId||'').trim();if(!pid)return false;return lineBelongsToCurrentBusiness(line);});
     return !!b.businessId&&String(b.businessId)===String(id)&&(!raw||norm(raw)===c);
   }
   function accountMatch(record){
@@ -106,7 +106,7 @@
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}
   function visibleBills(){return (window.state?.bills||[]).filter(function(x){return accountMatch(x)&&billMatch(x);});}
-  window.NRBizProWorkspace={normalizeCategory:norm,activeCategory:active,activeModule:activeRaw,setActiveModule:setActiveModule,getModules:modules,itemMatches:itemMatch,billMatches:billMatch,visibleItems:visibleItems,visibleBills:visibleBills};
+  window.NRBizProWorkspace={normalizeCategory:norm,activeCategory:active,activeModule:activeRaw,setActiveModule:setActiveModule,getModules:modules,itemMatches:itemMatch,billMatches:billMatch,visibleItems:visibleItems,visibleBills:visibleBills,refresh:function(){renderModuleSwitcher();window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation?.refreshStats?.();}};
   window.NRBizProBusinessDataIsolation={normalizeCategory:norm,matches:itemMatch,visible:visibleItems};
   window.NRBizProBillIsolation={visible:visibleBills,matches:billMatch,refreshStats:function(){
     var bs=visibleBills(),today=bs.filter(function(b){var v=b?.billDate||b?.date||b?.createdAt;var d=v?new Date(v):null,n=new Date();return d&&!isNaN(d.getTime())&&d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();});

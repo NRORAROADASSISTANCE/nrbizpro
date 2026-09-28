@@ -50,15 +50,20 @@
     // records visible instead of making them disappear from the workspace.
     return true;
   }
+  function vehicleLike(x){
+    var raw=[x?.businessModule,x?.businessCategory,x?.businessType,x?.industry,x?.type,x?.name,x?.productName,x?.model,x?.brand,x?.vehicle,x?.vehicleNumber,x?.registrationNo,x?.chassisNo,x?.vin].filter(Boolean).join(' ').toLowerCase();
+    return !!x?.vehicle||!!x?.vehicleNumber||!!x?.chassisNo||!!x?.vin||/ev showroom|electric vehicle|electric scooter|electric bike|two.?wheeler|four.?wheeler|vehicle|scooter|motorcycle|chassis|vin|tvs i.?qube|ather|ola electric|bajaj chetak|hero vida|revolt/.test(raw);
+  }
   function billMatch(b){
     var c=active(),raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
-    // Vehicle invoices are EV/CV showroom records. They must never appear in a
-    // non-vehicle module such as Fertilizer/Agriculture, even when legacy records
-    // lack a reliable businessType field.
-    if(b?.vehicle && c!=='ev')return false;
+    if(b?.businessId&&window.currentUser?.id&&String(b.businessId)!==String(window.currentUser.id))return false;
+    if(b?.vehicle&&c!=='ev')return false;
     if(raw)return norm(raw)===c;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
-    if(lines.length)return lines.every(itemMatch);
+    if(lines.length)return lines.every(function(item){
+      if(c!=='ev'&&vehicleLike(item))return false;
+      return itemMatch(item);
+    });
     return false;
   }
   function accountMatch(record){

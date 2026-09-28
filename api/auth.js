@@ -69,7 +69,17 @@ function normalizeBusinessDataForAccount(b,items,bills){
  const category=String(b?.category||'General Business').trim().toLowerCase();
  const catKey=v=>{const c=String(v||'').toLowerCase();if(/ev|electric/.test(c))return'ev';if(/paint/.test(c))return'paint';if(/plumb|pipe/.test(c))return'plumbing';if(/medical|pharmacy|chemist|drug/.test(c))return'medical';if(/fertil|agri/.test(c))return'fertilizer';if(/hardware|building|construction/.test(c))return'hardware';if(/garage|service center/.test(c))return'garage';if(/grocery|general store|retail|supermarket/.test(c))return'retail';if(/restaurant|bakery/.test(c))return'restaurant';return'general'};
  const ownKey=catKey(category);
- const safeItems=(Array.isArray(items)?items:[]).filter(x=>String(x?.businessId||'')===id);
+ const safeItems=(Array.isArray(items)?items:[]).filter(x=>{
+   const itemBusinessId=String(x?.businessId||'').trim();
+   if(itemBusinessId===id)return true;
+   // Legacy products created before ownership tags were added live inside this account's
+   // own business_data row, so keep untagged legacy products instead of deleting them.
+   if(!itemBusinessId){
+     const raw=String(x?.businessCategory||x?.businessType||x?.industry||x?.category||'').trim();
+     return !raw || catKey(raw)===ownKey;
+   }
+   return false;
+ });
  const ownProductIds=new Set(safeItems.map(x=>String(x?.id||'')).filter(Boolean));
  const safeBills=(Array.isArray(bills)?bills:[]).filter(bill=>{
    if(String(bill?.businessId||'')!==id)return false;

@@ -64,7 +64,7 @@
     // If a bill line points to a known product, that product must belong to
     // the current account. This catches old bills that were saved with the
     // wrong businessId but contain another account's product.
-    var pid=String(item?.productId||item?.itemId||'').trim();
+    var pid=String(item?.productId||item?.itemId||item?.id||'').trim();
     if(pid){
       var product=(window.state?.items||[]).find(function(x){return String(x?.id||'')===pid});
       if(!product)return false;
@@ -81,7 +81,7 @@
     var raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
     if(raw&&norm(raw)!==c)return false;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
-    if(lines.length)return lines.every(function(line){var pid=String(line?.productId||line?.itemId||'').trim();if(!pid)return false;return lineBelongsToCurrentBusiness(line);});
+    if(lines.length)return lines.every(function(line){var pid=String(line?.productId||line?.itemId||line?.id||'').trim();if(!pid)return false;return lineBelongsToCurrentBusiness(line);});
     return !!b.businessId&&String(b.businessId)===String(id)&&(!raw||norm(raw)===c);
   }
   function accountMatch(record){

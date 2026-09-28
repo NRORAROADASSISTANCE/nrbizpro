@@ -10,7 +10,28 @@ const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',ma
 const esc=v=>String(v??'').replace(/[&<>\\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\\':'&#39;'}[m]));
 const api=async(action,options={})=>{const r=await fetch('/api/auth?action='+encodeURIComponent(action),{credentials:'include',cache:'no-store',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});let d={};try{d=await r.json()}catch{}if(!r.ok){const e=Error(d.error||'Request failed');e.status=r.status;e.data=d;throw e}return d};
 const save=()=>{if(!currentUser||!state)return Promise.resolve({ok:false,reason:'session-not-ready'});saveChain=saveChain.then(async()=>{const snapshot=JSON.parse(JSON.stringify(state));try{const d=await api('data',{method:'PUT',body:JSON.stringify({...snapshot,expectedVersion:stateVersion})});stateVersion=Number(d.version||stateVersion);lastSaveAt=d.updatedAt||new Date().toISOString();return {ok:true,version:stateVersion,updatedAt:lastSaveAt};}catch(e){console.error(e);if(e.status===409){try{await loadServerData();alert('Data was changed from another tab/device. The latest database data was loaded safely; your local changes were not used to overwrite it.');}catch{alert('Another device updated this account. Please refresh before continuing.')}return {ok:false,conflict:true};}alert('Database save failed. Your existing database data was not overwritten. Please retry.');return {ok:false,conflict:false,error:e};}});return saveChain};
-async function loadServerData(){const d=await api('data');stateVersion=Number(d.version||0);lastSaveAt=d.updatedAt||null;const savedState=d.state&&typeof d.state==='object'&&!Array.isArray(d.state)?d.state:{};state={...savedState,items:Array.isArray(d.items)?d.items:[],bills:Array.isArray(d.bills)?d.bills:[],customers:Array.isArray(d.customers)?d.customers:[],settings:d.settings&&typeof d.settings==='object'?d.settings:{name:currentUser.business,category:currentUser.category,mobile:currentUser.mobile,gst:currentUser.gst,address:currentUser.address||''}};return state}
+async function loadServerData(){
+ const d=await api('data');
+ stateVersion=Number(d.version||0);lastSaveAt=d.updatedAt||null;
+ const savedState=d.state&&typeof d.state==='object'&&!Array.isArray(d.state)?d.state:{};
+ const dbSettings=d.settings&&typeof d.settings==='object'?d.settings:{};
+ // Business identity and billing module are authoritative per logged-in account.
+ // Never restore another account's active module from stale local/server state.
+ const registered={
+   name:currentUser.business,owner:currentUser.owner,mobile:currentUser.mobile,
+   email:currentUser.email,category:currentUser.category,gst:currentUser.gst||'',
+   address:currentUser.address||''
+ };
+ const ownCategory=String(currentUser.category||'General Business').trim();
+ const safeSettings={
+   ...dbSettings,...registered,
+   modules:[ownCategory],
+   activeModule:ownCategory
+ };
+ state={...savedState,items:Array.isArray(d.items)?d.items:[],bills:Array.isArray(d.bills)?d.bills:[],
+   customers:Array.isArray(d.customers)?d.customers:[],settings:safeSettings};
+ return state
+}
 function renderAuth(mode='login',message=''){
  const el=document.getElementById('authContent');
  if(mode==='login')el.innerHTML=`<div class="auth-title"><h1>Login</h1><p>Access your NR BizPro business workspace.</p></div>${message?`<div class="notice">${esc(message)}</div>`:''}<form onsubmit="login(event)"><label>Login ID or Mobile<input id="loginId" required autocomplete="username" placeholder="Enter Login ID or mobile number"></label><label>Password<input id="loginPassword" required type="password" autocomplete="current-password"></label><button class="primary auth-btn">Login</button></form><p class="auth-switch">New business? <button onclick="renderAuth('signup')">Create account</button></p>`;

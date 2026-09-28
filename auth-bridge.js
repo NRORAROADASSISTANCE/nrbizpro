@@ -136,6 +136,6 @@
     buildPublicLanding();
   }
   setupPublicLayer();
-  // Give the dedicated refresh guard time to install before the first session check.
-  setTimeout(()=>{if(!window.__NRSessionVerified){if(window.__NRSessionAuthority?.verify)window.__NRSessionAuthority.verify();else window.checkSession?.();}},500);
+  // Session authority is verified by the dedicated bootstrap in index.html.
+  // Do not launch a second fallback check that can race during slow script loading.
 })();

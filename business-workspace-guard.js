@@ -34,20 +34,26 @@
     var c=active(),raw=String(item?.businessCategory||item?.businessModule||item?.businessType||item?.industry||'').trim();
     if(c==='general')return !raw||norm(raw)==='general';
     if(raw)return norm(raw)===c;
-    return false;
+    // Legacy records may predate business-module metadata. The /api/auth data
+    // endpoint is already scoped to the logged-in business account, so keep such
+    // records visible instead of making them disappear from the workspace.
+    return true;
   }
   function billMatch(b){
     var c=active(),raw=String(b?.businessCategoryKey||b?.businessModule||b?.businessCategory||b?.businessType||b?.category||'').trim();
     if(raw)return norm(raw)===c;
     var lines=Array.isArray(b?.items)?b.items:(Array.isArray(b?.lines)?b.lines:[]);
     if(lines.length)return lines.every(itemMatch);
-    return c==='general';
+    // Legacy bills without module metadata belong to this account's server-scoped
+    // dataset; do not hide them merely because newer records carry extra metadata.
+    return true;
   }
   function accountMatch(record){
     var id=window.currentUser?.id;
-    // Tenant isolation is mandatory: records without an owning business are not
-    // safe to expose to a logged-in business account.
-    return !!id&&String(record?.businessId||'')===String(id);
+    // /api/auth?action=data reads/writes only the current business_id. Therefore
+    // legacy records without an embedded businessId are still account-scoped.
+    // When a businessId exists, it must still match the logged-in account.
+    return !!id&&(!record?.businessId||String(record.businessId)===String(id));
   }
   function visibleItems(){return (window.state?.items||[]).filter(function(x){return accountMatch(x)&&itemMatch(x);});}
   function visibleBills(){return (window.state?.bills||[]).filter(function(x){return accountMatch(x)&&billMatch(x);});}

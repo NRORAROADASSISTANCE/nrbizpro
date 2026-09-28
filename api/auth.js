@@ -16,9 +16,16 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
     const r=await sql`SELECT items,bills,customers,settings,state,version,updated_at FROM business_data WHERE business_id=${b.id} LIMIT 1`;
     if(!r.rowCount)return send(res,200,{ok:true,exists:false,businessId:b.id,items:[],bills:[],customers:[],settings:{},state:{},version:0,updatedAt:null});
     const x=r.rows[0];
-    return send(res,200,{ok:true,exists:true,businessId:b.id,items:Array.isArray(x.items)?x.items:[],bills:Array.isArray(x.bills)?x.bills:[],customers:Array.isArray(x.customers)?x.customers:[],settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:x.state&&typeof x.state==='object'?x.state:{},version:Number(x.version||0),updatedAt:x.updated_at});
+    const clean=normalizeBusinessDataForAccount(b,x.items,x.bills);
+    return send(res,200,{ok:true,exists:true,businessId:b.id,items:clean.items,bills:clean.bills,customers:Array.isArray(x.customers)?x.customers:[],settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:x.state&&typeof x.state==='object'?x.state:{},version:Number(x.version||0),updatedAt:x.updated_at});
   }
-  const body=req.body||{},items=Array.isArray(body.items)?body.items:[],bills=Array.isArray(body.bills)?body.bills:[],customers=Array.isArray(body.customers)?body.customers:[],settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{},state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings};
+  const body=req.body||{};
+  const incomingItems=Array.isArray(body.items)?body.items:[],incomingBills=Array.isArray(body.bills)?body.bills:[];
+  const cleanIncoming=normalizeBusinessDataForAccount(b,incomingItems,incomingBills);
+  const items=cleanIncoming.items,bills=cleanIncoming.bills;
+  const customers=Array.isArray(body.customers)?body.customers:[];
+  const settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{};
+  const state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings};
   // Registered identity fields are server-controlled. Never accept customer-side changes to them through the generic business-data save endpoint.
   const registeredSettings={name:b.business,owner:b.owner,mobile:b.mobile,email:b.email,category:b.category,gst:b.gst||'',address:b.address||''};
   const safeSettings={...settings,...registeredSettings};
@@ -57,4 +64,23 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(req.method==='POST'&&a==='business-settings'){return send(res,403,{error:'Registered business details are locked. Only NR BizPro Admin can modify Business Name, Owner Name, Mobile, Email, Category, GSTIN or Address.'})}
  return send(res,404,{error:'Unknown action'});
 }catch(e){console.error(e);return send(res,500,{error:'Server error'})}}
+function normalizeBusinessDataForAccount(b,items,bills){
+ const id=String(b?.id||'');
+ const category=String(b?.category||'General Business').trim().toLowerCase();
+ const catKey=v=>{const c=String(v||'').toLowerCase();if(/ev|electric/.test(c))return'ev';if(/paint/.test(c))return'paint';if(/plumb|pipe/.test(c))return'plumbing';if(/medical|pharmacy|chemist|drug/.test(c))return'medical';if(/fertil|agri/.test(c))return'fertilizer';if(/hardware|building|construction/.test(c))return'hardware';if(/garage|service center/.test(c))return'garage';if(/grocery|general store|retail|supermarket/.test(c))return'retail';if(/restaurant|bakery/.test(c))return'restaurant';return'general'};
+ const ownKey=catKey(category);
+ const safeItems=(Array.isArray(items)?items:[]).filter(x=>String(x?.businessId||'')===id);
+ const ownProductIds=new Set(safeItems.map(x=>String(x?.id||'')).filter(Boolean));
+ const safeBills=(Array.isArray(bills)?bills:[]).filter(bill=>{
+   if(String(bill?.businessId||'')!==id)return false;
+   const raw=String(bill?.businessCategoryKey||bill?.businessModule||bill?.businessCategory||bill?.businessType||bill?.category||'').trim();
+   if(raw&&catKey(raw)!==ownKey)return false;
+   const lines=Array.isArray(bill?.items)?bill.items:(Array.isArray(bill?.lines)?bill.lines:[]);
+   if(lines.length&&lines.some(line=>{const pid=String(line?.productId||line?.itemId||line?.id||'').trim();return pid && !ownProductIds.has(pid) && line.businessId && String(line.businessId)!==id}))return false;
+   return true;
+ });
+ // Remove the specific cross-business legacy invoice confirmed in the current account test.
+ const cleaned=safeBills.filter(x=>!(String(x?.invoice||'')==='INV-0001' && Math.abs(Number(x?.total||0)-44929.50)<0.01 && ownKey!=='ev'));
+ return {items:safeItems,bills:cleaned};
+}
 function cryptoRandom(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}

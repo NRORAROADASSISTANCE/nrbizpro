@@ -11,9 +11,10 @@
     window.printBill=function(id){
       const b=state?.bills?.find(x=>x.id===id); if(!b)return;
       const s=state.settings||{},u=window.currentUser||{};
-      const businessName=s.name||u.business||'NR BizPro';
-      const businessAddress=s.address||u.address||'';
-      const businessMobile=s.mobile||u.mobile||'', businessEmail=s.email||u.email||'', businessGst=s.gst||u.gst||'';
+      // Registered business identity is authoritative for the invoice header.
+      const businessName=u.business||u.tradeName||u.businessName||s.name||'NR BizPro';
+      const businessAddress=u.address||u.businessAddress||s.address||'';
+      const businessMobile=u.mobile||u.phone||s.mobile||'', businessEmail=u.email||s.email||'', businessGst=u.gst||u.gstin||s.gst||'';
       const customerAddress=b.customerAddress||b.address||'';
       const dt=new Date(b.date||Date.now());
       const billDate=b.billDate||dt.toLocaleDateString('en-IN'),billTime=b.billTime||dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});

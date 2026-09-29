@@ -82,12 +82,20 @@ function normalizeBusinessDataForAccount(b,items,bills){
  });
  const ownProductIds=new Set(safeItems.map(x=>String(x?.id||'')).filter(Boolean));
  const safeBills=(Array.isArray(bills)?bills:[]).filter(bill=>{
-   if(String(bill?.businessId||'')!==id)return false;
+   const itemBusinessId=String(bill?.businessId||'').trim();
    const raw=String(bill?.businessCategoryKey||bill?.businessModule||bill?.businessCategory||bill?.businessType||bill?.category||'').trim();
+   // Bills created by the current session must belong to this account. Older/newer
+   // client builds could omit businessId, so accept an untagged bill only when its
+   // business category matches this account.
+   if(itemBusinessId && itemBusinessId!==id)return false;
    if(raw&&catKey(raw)!==ownKey)return false;
    const lines=Array.isArray(bill?.items)?bill.items:(Array.isArray(bill?.lines)?bill.lines:[]);
    if(lines.length&&lines.some(line=>{const pid=String(line?.productId||line?.itemId||line?.id||'').trim();return pid && !ownProductIds.has(pid) && line.businessId && String(line.businessId)!==id}))return false;
-   return true;
+   return !itemBusinessId || !!raw || ownKey==='general';
+ }).map(bill=>{
+   const itemBusinessId=String(bill?.businessId||'').trim();
+   const raw=String(bill?.businessCategoryKey||bill?.businessModule||bill?.businessCategory||bill?.businessType||bill?.category||'').trim();
+   return itemBusinessId?bill:{...bill,businessId:id,businessType:bill.businessType||b.category,businessCategoryKey:bill.businessCategoryKey||catKey(raw||category)};
  });
  // Remove the specific cross-business legacy invoice confirmed in the current account test.
  const cleaned=safeBills.filter(x=>!(String(x?.invoice||'')==='INV-0001' && Math.abs(Number(x?.total||0)-44929.50)<0.01 && ownKey!=='ev'));

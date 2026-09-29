@@ -20,7 +20,7 @@
   box.addEventListener('click',function(e){
    const b=e.target.closest('button.suggestion');if(!b)return;
    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-   const onclick=b.getAttribute('onclick')||'';const m=onclick.match(/addToCart\\(['\"]([^'\"]+)['\"]\\)/);const id=m?m[1]:b.dataset.productId;
+   const onclick=b.getAttribute('onclick')||'';const m=onclick.match(/addToCart\(\s*['\"]([^'\"]+)['\"]\s*\)/);const id=b.dataset.productId||(m?m[1]:'');
    if(id)add(id);
   },true);
  }

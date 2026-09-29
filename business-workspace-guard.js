@@ -109,7 +109,7 @@
   window.NRBizProWorkspace={normalizeCategory:norm,activeCategory:active,activeModule:activeRaw,setActiveModule:setActiveModule,getModules:modules,itemMatches:itemMatch,billMatches:billMatch,visibleItems:visibleItems,visibleBills:visibleBills,refresh:function(){renderModuleSwitcher();window.renderItems?.();window.renderBills?.();window.NRBizProBillIsolation?.refreshStats?.();}};
   window.NRBizProBusinessDataIsolation={normalizeCategory:norm,matches:itemMatch,visible:visibleItems};
   window.NRBizProBillIsolation={visible:visibleBills,matches:billMatch,refreshStats:function(){
-    var bs=visibleBills(),today=bs.filter(function(b){var v=b?.billDate||b?.date||b?.createdAt;var d=v?new Date(v):null,n=new Date();return d&&!isNaN(d.getTime())&&d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();});
+    var bs=visibleBills(),n=new Date(),todayKey=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'),today=bs.filter(function(b){if(typeof b?.billDate==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(b.billDate))return b.billDate===todayKey;var v=b?.date||b?.createdAt,d=v?new Date(v):null;return d&&!isNaN(d.getTime())&&d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();});
     var bc=document.getElementById('billCount'),ts=document.getElementById('todaySales'),money=window.money||function(v){return '₹'+Number(v||0).toFixed(2);};
     if(bc)bc.textContent=String(today.length);
     if(ts)ts.textContent=money(today.reduce(function(a,b){return a+Number(b.total||0);},0));

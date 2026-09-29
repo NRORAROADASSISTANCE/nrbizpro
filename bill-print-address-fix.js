@@ -12,8 +12,8 @@
       const b=state?.bills?.find(x=>x.id===id); if(!b)return;
       const s=state.settings||{},u=window.currentUser||{};
       // Registered business identity is authoritative for the invoice header.
-      const businessName=u.business||u.tradeName||u.businessName||s.name||'NR BizPro';
-      const businessAddress=u.address||u.businessAddress||s.address||'';
+      const businessName=u.business||u.tradeName||u.businessName||b.businessName||b.business||s.name||'NR BizPro';
+      const businessAddress=u.address||u.businessAddress||b.businessAddress||b.address||s.address||s.businessAddress||s.registeredAddress||'';
       const businessMobile=u.mobile||u.phone||s.mobile||'', businessEmail=u.email||s.email||'', businessGst=u.gst||u.gstin||s.gst||'';
       const customerAddress=b.customerAddress||b.address||'';
       const dt=new Date(b.date||Date.now());

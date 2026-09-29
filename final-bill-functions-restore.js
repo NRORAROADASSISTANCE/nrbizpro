@@ -19,6 +19,8 @@
 
   function printBillRestore(id){
     const b=getBills().find(x=>x.id===id); if(!b)return alert('Bill not found');
+    // Always use the premium invoice renderer; never fall back to the legacy simple template.
+    if(typeof window.__NRPremiumPrintBill==='function'){window.__NRPremiumPrintBill(id);return;}
     if(typeof window.printBill==='function')return window.printBill(id);
     const s=window.state?.settings||{};
     const rows=(b.items||[]).map(x=>`<tr><td>${escP(x.name)}</td><td>${x.qty||1}</td><td>${moneyP(x.price)}</td><td>${moneyP((Number(x.qty)||1)*(Number(x.price)||0))}</td></tr>`).join('');

@@ -96,7 +96,7 @@
     if(typeof original!=='function'||original.__nrVehicleCapture)return;
     function wrapped(){
       const activeModule=window.NRBizProWorkspace?.activeModule?.()||window.state?.settings?.activeModule||window.currentUser?.category||'';
-      const isEV=/vehicle\\s*showroom|ev\\s*(?:two[- ]wheeler|four[- ]wheeler)?\\s*showroom|electric\\s*vehicle\\s*showroom|two\\s*wheeler\\s*showroom|four\\s*wheeler\\s*showroom/i.test(String(activeModule));
+      const isEV=/vehicle\s*showroom|ev\s*(?:two[- ]wheeler|four[- ]wheeler)?\s*showroom|electric\s*vehicle\s*showroom|two\s*wheeler\s*showroom|four\s*wheeler\s*showroom/i.test(String(activeModule));
       const val=id=>document.getElementById(id)?.value?.trim()||'';
       const payment=val('nbPaymentMode');
       const vehicle=isEV?{brand:val('nbVehicleBrand'),model:val('nbVehicleModel'),variant:val('nbVehicleVariant'),range:val('nbVehicleRange'),topSpeed:val('nbVehicleTopSpeed'),number:val('nbVehicleNumber'),chassis:val('nbChassisNumber'),engine:val('nbEngineNumber'),battery:val('nbBatteryNumber'),colour:val('nbVehicleColour')}:null;

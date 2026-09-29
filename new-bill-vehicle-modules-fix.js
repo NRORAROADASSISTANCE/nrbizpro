@@ -71,7 +71,20 @@
     const s=document.getElementById('nbSearch');s?.addEventListener('input',searchBill);s?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const q=s.value.trim().toLowerCase(),i=(state.items||[]).find(x=>(x.barcode||'').toLowerCase()===q);if(i){addBillItem(i.id);s.value='';searchBill()}}});
     ['nbMarkup','nbDiscount'].forEach(id=>document.getElementById(id)?.addEventListener('input',renderBill));s?.focus();renderBill();
   }
-  function searchBill(){const q=(document.getElementById('nbSearch')?.value||'').trim().toLowerCase(),box=document.getElementById('nbSuggestions');if(!box)return;if(!q){box.innerHTML='';return}const list=(state.items||[]).filter(i=>(i.name||'').toLowerCase().includes(q)||(i.barcode||'').toLowerCase()===q).slice(0,10);box.innerHTML=list.map(i=>`<button class="suggestion" onclick="window.NRVehicleAddBillItem('${i.id}')"><b>${escP(i.name)}</b><span>${escP(i.businessModule||i.businessCategory||'General')} • ${moneyP(i.sell)} • Stock ${i.stock}</span></button>`).join('')||'<div class="empty">No product found</div>'}
+  function searchBill(){
+    const q=(document.getElementById('nbSearch')?.value||'').trim().toLowerCase(),box=document.getElementById('nbSuggestions');
+    if(!box)return;
+    if(!q){box.innerHTML='';return}
+    const list=(state.items||[]).filter(i=>(i.name||'').toLowerCase().includes(q)||(i.barcode||'').toLowerCase()===q).slice(0,10);
+    box.innerHTML=list.map(i=>`<button type="button" class="suggestion nr-bill-product-option" data-product-id="${escP(i.id)}"><b>${escP(i.name)}</b><span>${escP(i.businessModule||i.businessCategory||'General')} • ${moneyP(i.sell)} • Stock ${i.stock}</span></button>`).join('')||'<div class="empty">No product found</div>';
+    box.querySelectorAll('.nr-bill-product-option').forEach(btn=>{
+      btn.addEventListener('click',function(e){
+        e.preventDefault(); e.stopPropagation();
+        const id=this.getAttribute('data-product-id');
+        if(id) window.NRVehicleAddBillItem?.(id);
+      },{once:true});
+    });
+  }
   function addBillItem(id){const i=state.items.find(x=>x.id===id);if(!i)return;if(i.stock<=0&&i.type!=='Service')return alert('Out of stock');const line=window.billCart.find(x=>x.id===id);if(line){if(line.qty<i.stock)line.qty++;}else window.billCart.push({id,qty:1});renderBill();document.getElementById('nbSearch')?.focus()}
   function renderBill(){const box=document.getElementById('nbLines');if(!box)return;if(!window.billCart.length){box.innerHTML='<div class="empty">Add products or scan a barcode.</div>'}else{box.innerHTML=window.billCart.map(l=>{const i=state.items.find(x=>x.id===l.id),amt=(+i.sell||0)*l.qty;return `<div class="bill-line"><span><b>${escP(i.name)}</b><small>${escP(i.businessModule||'')}</small></span><span><button onclick="window.NRVehicleQty('${i.id}',-1)">−</button> ${l.qty} <button onclick="window.NRVehicleQty('${i.id}',1)">+</button></span><b>${moneyP(amt)}</b><button onclick="window.NRVehicleRemove('${i.id}')">×</button></div>`}).join('')}
     let sub=0,gst=0;window.billCart.forEach(l=>{const i=state.items.find(x=>x.id===l.id),amt=(+i.sell||0)*l.qty;sub+=amt;gst+=amt*(+i.gst||0)/100});const markup=+document.getElementById('nbMarkup')?.value||0,disc=+document.getElementById('nbDiscount')?.value||0,total=Math.max(0,sub+markup-disc+gst);document.getElementById('nbSubtotal').textContent=moneyP(sub);document.getElementById('nbGst').textContent=moneyP(gst);document.getElementById('nbTotal').textContent=moneyP(total);

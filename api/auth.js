@@ -11,13 +11,22 @@ async function hmsSetup(){
  await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS website_url text NOT NULL DEFAULT ''`;
  await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
  await sql`CREATE TABLE IF NOT EXISTS hms_sessions (token text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
- await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())\`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())`;
 }
 function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||'',website:h.website_url||''})}
 function hmsCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
 async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(!t)return null;const r=await sql\`SELECT h.* FROM hms_sessions s JOIN hms_hospitals h ON h.id=s.hospital_id WHERE s.token=\${t} AND s.expires_at>now() LIMIT 1\`;return r.rows[0]||null}
 
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
+ 
+ if(req.method==='GET'&&a==='hms-public'){
+  const id=String(req.query?.hospital||'').trim();
+  if(!id)return send(res,400,{error:'Hospital ID is required.'});
+  const r=await sql\`SELECT id,hospital,owner,mobile,email,address,website_url FROM hms_hospitals WHERE id=\${id} LIMIT 1\`;
+  const h=r.rows[0]; if(!h)return send(res,404,{error:'Hospital not found.'});
+  return send(res,200,{hospital:{id:h.id,name:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,address:h.address,website:h.website_url}});
+ }
+
  if((req.method==='GET'||req.method==='PUT'||req.method==='POST')&&a==='data'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   await sql`ALTER TABLE business_data ADD COLUMN IF NOT EXISTS customers jsonb NOT NULL DEFAULT '[]'`;

@@ -27,6 +27,18 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   return send(res,200,{hospital:{id:h.id,name:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,address:h.address,website:h.website_url}});
  }
 
+
+ if(req.method==='POST'&&a==='hms-public-appointment'){
+  const x=req.body||{},id=String(x.hospitalId||'').trim(),patient=String(x.patient||'').trim(),mobile=String(x.mobile||'').trim(),date=String(x.date||'').trim(),doctor=String(x.doctor||'').trim(),service=String(x.service||'').trim(),note=String(x.note||'').trim();
+  if(!id||!patient||!mobile||!date||!doctor||!service)return send(res,400,{error:'Please fill patient name, mobile, date, doctor and service.'});
+  const h=await sql\`SELECT id FROM hms_hospitals WHERE id=\${id} LIMIT 1\`;if(!h.rowCount)return send(res,404,{error:'Hospital not found.'});
+  const r=await sql\`SELECT appointments FROM hms_data WHERE hospital_id=\${id} LIMIT 1\`;const list=Array.isArray(r.rows[0]?.appointments)?r.rows[0].appointments:[];
+  const appointment={id:cryptoRandom(),date,patient,mobile,doctor,status:'Requested',service,note,source:'Hospital Website',createdAt:new Date().toISOString()};
+  list.push(appointment);
+  await sql\`UPDATE hms_data SET appointments=\${JSON.stringify(list)}::jsonb,updated_at=now() WHERE hospital_id=\${id}\`;
+  return send(res,200,{ok:true,appointment:{id:appointment.id,date:appointment.date,doctor:appointment.doctor,service:appointment.service,status:appointment.status}});
+ }
+
  if((req.method==='GET'||req.method==='PUT'||req.method==='POST')&&a==='data'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   await sql`ALTER TABLE business_data ADD COLUMN IF NOT EXISTS customers jsonb NOT NULL DEFAULT '[]'`;

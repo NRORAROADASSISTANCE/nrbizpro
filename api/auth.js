@@ -57,6 +57,9 @@ async function hmsSetup(){
  await hmsSeedDemo();
 }
 async function hmsSeedDemo(){
+ await sql`CREATE TABLE IF NOT EXISTS hms_demo_settings (id text PRIMARY KEY,disabled boolean NOT NULL DEFAULT false)`;
+ const ctl=await sql`SELECT disabled FROM hms_demo_settings WHERE id='demo' LIMIT 1`;
+ if(ctl.rows[0]?.disabled)return;
  const hid='demo-hospital',ph=await hashPassword('Demo@12345');
  await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash) VALUES(${hid},'NR HMS Demo Hospital','Demo Admin','9000000000','demo.hospital@nrbizpro.in','demo-hospital','Nizamabad, Telangana','https://nrbizpro.in/hospital-site.html?hospital=demo-hospital',${ph}) ON CONFLICT(id) DO NOTHING`;
  await sql`INSERT INTO hms_doctors(id,hospital_id,doctor_id,name,specialization,mobile,password_hash) VALUES('demo-doctor',${hid},'demo-doctor','Dr. Demo Doctor','General Medicine','9000000002',${ph}) ON CONFLICT(id) DO NOTHING`;
@@ -252,6 +255,17 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(req.method==='POST'&&a==='hms-owner-create'){
   if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),website=String(x.website||'').trim(),password=String(x.password||'');if(!hospital||!owner||!mobile||!email||!address||!website||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!/^https?:\/\/[^\s]+$/i.test(website))return send(res,400,{error:'Please fill all hospital details. Website must start with http:// or https://.'});const ex=await sql`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(${userId}) OR lower(email)=lower(${email}) OR mobile=${mobile} LIMIT 1`;if(ex.rowCount)return send(res,409,{error:'Hospital already exists with this Login ID, email or mobile.'});const id=token(),ph=await hashPassword(password);await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash,approval_status,payment_status,approval_note,approved_by,approved_at) VALUES(${id},${hospital},${owner},${mobile},${email},${userId},${address},${website},${ph},'approved','paid','Created and verified by Company Owner',${email},now())`;await sql`INSERT INTO hms_data(hospital_id) VALUES(${id})`;return send(res,200,{ok:true,message:'Hospital created and activated.'});
  }
+ if(req.method==='POST'&&a==='hms-owner-delete'){
+  if(!(await sessionAdmin(req))) return send(res,401,{error:'Company Owner login required.'});
+  const id=String(req.body?.hospitalId||'').trim();
+  if(!id)return send(res,400,{error:'Hospital ID is required.'});
+  const r=await sql`SELECT id,hospital FROM hms_hospitals WHERE id=${id} LIMIT 1`;
+  if(!r.rowCount)return send(res,404,{error:'Hospital not found.'});
+  if(id==='demo-hospital') await sql`INSERT INTO hms_demo_settings(id,disabled) VALUES('demo',true) ON CONFLICT(id) DO UPDATE SET disabled=true`;
+  await sql`DELETE FROM hms_hospitals WHERE id=${id}`;
+  return send(res,200,{ok:true,deletedId:id});
+ }
+
  if(req.method==='POST'&&a==='hms-owner-approve'){
   if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const id=String(req.body?.id||'').trim(),note=String(req.body?.note||'Verified by Company Owner').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});await sql`UPDATE hms_hospitals SET approval_status='approved',payment_status='pending',approval_note=${note},approved_by='Company Owner',approved_at=now(),updated_at=now() WHERE id=${id}`;return send(res,200,{ok:true,message:'Hospital approved. Payment is now pending.'});
  }

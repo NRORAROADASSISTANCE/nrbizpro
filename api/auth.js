@@ -17,6 +17,10 @@ async function hmsDoctorSetup(){
  await sql`CREATE TABLE IF NOT EXISTS hms_pros (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,pro_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,can_negotiate boolean NOT NULL DEFAULT false,max_discount numeric(12,2) NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,pro_id))`;
  await sql`CREATE TABLE IF NOT EXISTS hms_pro_sessions (token text PRIMARY KEY,pro_id text NOT NULL REFERENCES hms_pros(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_package_negotiations (id text PRIMARY KEY,hospital_id text NOT NULL,patient_opd text NOT NULL,patient_name text NOT NULL,standard_amount numeric(12,2) NOT NULL,final_amount numeric(12,2) NOT NULL,discount numeric(12,2) NOT NULL,reason text NOT NULL,pro_id text NOT NULL,pro_name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_users (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,login_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,login_id))`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_sessions (token text PRIMARY KEY,medical_id text NOT NULL REFERENCES hms_medical_users(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_stock (id text PRIMARY KEY,hospital_id text NOT NULL,medicine text NOT NULL,batch text NOT NULL DEFAULT '',expiry text NOT NULL DEFAULT '',quantity numeric(12,2) NOT NULL DEFAULT 0,unit_price numeric(12,2) NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_sales (id text PRIMARY KEY,hospital_id text NOT NULL,opd text NOT NULL,patient_name text NOT NULL,medicine text NOT NULL,quantity numeric(12,2) NOT NULL,amount numeric(12,2) NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctor_sessions (token text PRIMARY KEY,doctor_id text NOT NULL REFERENCES hms_doctors(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await hmsSeedDemo();
 }
@@ -41,6 +45,7 @@ async function hmsSeedDemo(){
  await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash) VALUES(${hid},'NR HMS Demo Hospital','Demo Admin','9000000000','demo.hospital@nrbizpro.in','demo-hospital','Nizamabad, Telangana','https://nrbizpro.in/hospital-site.html?hospital=demo-hospital',${ph}) ON CONFLICT(id) DO NOTHING`;
  await sql`INSERT INTO hms_doctors(id,hospital_id,doctor_id,name,specialization,mobile,password_hash) VALUES('demo-doctor',${hid},'demo-doctor','Dr. Demo Doctor','General Medicine','9000000002',${ph}) ON CONFLICT(id) DO NOTHING`;
  await sql`INSERT INTO hms_pros(id,hospital_id,pro_id,name,mobile,password_hash,can_negotiate,max_discount) VALUES('demo-pro',${hid},'demo-pro','Demo PRO','9000000003',${ph},true,20000) ON CONFLICT(id) DO UPDATE SET can_negotiate=true,max_discount=20000`;
+ await sql`INSERT INTO hms_medical_users(id,hospital_id,login_id,name,mobile,password_hash) VALUES('demo-medical',${hid},'demo-medical','Demo Medical','9000000004',${ph}) ON CONFLICT(id) DO NOTHING`;
  await sql`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills) VALUES(${hid},${JSON.stringify([{opdNumber:'DEMO-OPD-001',name:'Ravi Kumar',mobile:'9000000001',age:'38',gender:'Male',bloodGroup:'B+',address:'Nizamabad, Telangana',symptoms:'Fever and body pain',diagnosis:'Viral fever',medicines:'Paracetamol'}])}::jsonb,${JSON.stringify([{name:'Dr. Demo Doctor',specialization:'General Medicine',mobile:'9000000002'}])}::jsonb,${JSON.stringify([{date:'2026-09-30',patient:'Ravi Kumar',doctor:'Dr. Demo Doctor',status:'Scheduled',service:'OPD'}])}::jsonb,${JSON.stringify([{invoice:'DEMO-INV-001',patient:'Ravi Kumar',service:'OPD Consultation',amount:500}])}::jsonb) ON CONFLICT(hospital_id) DO NOTHING`;
 }
 function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||'',website:h.website_url||''})}
@@ -48,6 +53,8 @@ function hmsCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_ses
 async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(!t)return null;const r=await sql`SELECT h.* FROM hms_sessions s JOIN hms_hospitals h ON h.id=s.hospital_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
 function hmsProCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_pro_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
 async function hmsProSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_pro_session');if(!t)return null;const r=await sql`SELECT p.* FROM hms_pro_sessions s JOIN hms_pros p ON p.id=s.pro_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
+function hmsMedicalCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_medical_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
+async function hmsMedicalSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_medical_session');if(!t)return null;const r=await sql`SELECT m.* FROM hms_medical_sessions s JOIN hms_medical_users m ON m.id=s.medical_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
 
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
  
@@ -216,6 +223,36 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  }
  if(req.method==='GET'&&a==='hms-pro-list'){const p=await hmsProSession(req);if(!p)return send(res,401,{error:'PRO login required.'});const r=await sql`SELECT id,patient_opd AS "patientOpd",patient_name AS "patientName",standard_amount AS "standardAmount",final_amount AS "finalAmount",discount,reason,pro_name AS "negotiatedBy",created_at AS "createdAt" FROM hms_package_negotiations WHERE hospital_id=${p.hospital_id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{ok:true,items:r.rows})}
  if(req.method==='POST'&&a==='hms-pro-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_pro_session');if(t)await sql`DELETE FROM hms_pro_sessions WHERE token=${t}`;hmsProCookie(res,'',0);return send(res,200,{ok:true})}
+
+ if(req.method==='POST'&&a==='hms-medical-create'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital login required.'});
+  const x=req.body||{},loginId=String(x.loginId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),password=String(x.password||'');
+  if(!/^[a-z0-9._-]{4,40}$/.test(loginId)||!name||!mobile||password.length<8)return send(res,400,{error:'Medical Login ID, name, mobile and 8+ character password are required.'});
+  const ph=await hashPassword(password);await sql`INSERT INTO hms_medical_users(id,hospital_id,login_id,name,mobile,password_hash) VALUES(${token()},${h.id},${loginId},${name},${mobile},${ph}) ON CONFLICT(hospital_id,login_id) DO UPDATE SET name=EXCLUDED.name,mobile=EXCLUDED.mobile,password_hash=EXCLUDED.password_hash`;return send(res,200,{ok:true});
+ }
+ if(req.method==='POST'&&a==='hms-medical-login'){
+  const hospitalId=String(req.body?.hospitalId||'').trim(),loginId=String(req.body?.loginId||'').trim().toLowerCase(),password=String(req.body?.password||'');
+  const r=await sql`SELECT * FROM hms_medical_users WHERE hospital_id=${hospitalId} AND lower(login_id)=${loginId} LIMIT 1`,m=r.rows[0];
+  if(!m||!(await verifyPassword(password,m.password_hash)))return send(res,401,{error:'Invalid Medical Login details.'});
+  const t=token();await sql`INSERT INTO hms_medical_sessions(token,medical_id,expires_at) VALUES(${t},${m.id},now()+interval '30 days')`;hmsMedicalCookie(res,t);return send(res,200,{ok:true,medical:{id:m.login_id,name:m.name,hospitalId:m.hospital_id}});
+ }
+ if(req.method==='GET'&&a==='hms-medical-me'){const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});return send(res,200,{ok:true,medical:{id:m.login_id,name:m.name,hospitalId:m.hospital_id}})}
+ if(req.method==='GET'&&a==='hms-medical-patient'){
+  const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const opd=String(req.query?.opd||'').trim().toUpperCase();if(!opd)return send(res,400,{error:'OPD number is required.'});
+  const r=await sql`SELECT patients FROM hms_data WHERE hospital_id=${m.hospital_id} LIMIT 1`,patients=Array.isArray(r.rows[0]?.patients)?r.rows[0].patients:[],p=patients.find(x=>String(x.opdNumber||'').toUpperCase()===opd);
+  if(!p)return send(res,404,{error:'Patient not found.'});return send(res,200,{patient:{opdNumber:p.opdNumber,name:p.name,mobile:p.mobile,medicines:p.medicines||'',diagnosis:p.diagnosis||''}});
+ }
+ if(req.method==='GET'&&a==='hms-medical-stock'){const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const r=await sql`SELECT id,medicine,batch,expiry,quantity,unit_price AS "unitPrice",updated_at AS "updatedAt" FROM hms_medical_stock WHERE hospital_id=${m.hospital_id} ORDER BY medicine LIMIT 500`;return send(res,200,{items:r.rows})}
+ if(req.method==='POST'&&a==='hms-medical-stock-save'){
+  const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const x=req.body||{},medicine=String(x.medicine||'').trim();if(!medicine)return send(res,400,{error:'Medicine name is required.'});
+  const id=String(x.id||'').trim()||token();await sql`INSERT INTO hms_medical_stock(id,hospital_id,medicine,batch,expiry,quantity,unit_price,updated_at) VALUES(${id},${m.hospital_id},${medicine},${String(x.batch||'')},${String(x.expiry||'')},${Number(x.quantity||0)},${Number(x.unitPrice||0)},now()) ON CONFLICT(id) DO UPDATE SET medicine=EXCLUDED.medicine,batch=EXCLUDED.batch,expiry=EXCLUDED.expiry,quantity=EXCLUDED.quantity,unit_price=EXCLUDED.unit_price,updated_at=now()`;return send(res,200,{ok:true});
+ }
+ if(req.method==='POST'&&a==='hms-medical-sale'){
+  const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const x=req.body||{},medicine=String(x.medicine||'').trim(),opd=String(x.opd||'').trim(),patient=String(x.patientName||'').trim(),qty=Number(x.quantity||0),amount=Number(x.amount||0);if(!medicine||!opd||!patient||qty<=0||amount<0)return send(res,400,{error:'Patient, OPD, medicine, quantity and amount are required.'});
+  await sql`INSERT INTO hms_medical_sales(id,hospital_id,opd,patient_name,medicine,quantity,amount) VALUES(${token()},${m.hospital_id},${opd},${patient},${medicine},${qty},${amount})`;return send(res,200,{ok:true});
+ }
+ if(req.method==='GET'&&a==='hms-medical-sales'){const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const r=await sql`SELECT id,opd,patient_name AS "patientName",medicine,quantity,amount,created_at AS "createdAt" FROM hms_medical_sales WHERE hospital_id=${m.hospital_id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{items:r.rows})}
+ if(req.method==='POST'&&a==='hms-medical-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_medical_session');if(t)await sql`DELETE FROM hms_medical_sessions WHERE token=${t}`;hmsMedicalCookie(res,'',0);return send(res,200,{ok:true})}
 
  if(req.method==='POST'&&a==='hms-logout'){
   const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(t)await sql`DELETE FROM hms_sessions WHERE token=${t}`;hmsCookie(res,'',0);return send(res,200,{ok:true});

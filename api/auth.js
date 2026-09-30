@@ -19,7 +19,7 @@ async function hmsDoctorSetup(){
  await sql`UPDATE hms_hospitals SET approval_status='approved',payment_status='paid' WHERE approval_status IS NULL OR approval_status=''`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctors (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,doctor_id text NOT NULL,name text NOT NULL,specialization text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,doctor_id))`;
  await sql`CREATE INDEX IF NOT EXISTS hms_doctors_hospital_idx ON hms_doctors(hospital_id)`;
- await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',ipd jsonb NOT NULL DEFAULT '[]',rooms jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())`;await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS ipd jsonb NOT NULL DEFAULT '[]'`;await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS rooms jsonb NOT NULL DEFAULT '[]'`;
  await sql`CREATE TABLE IF NOT EXISTS hms_pros (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,pro_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,can_negotiate boolean NOT NULL DEFAULT false,max_discount numeric(12,2) NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,pro_id))`;
  await sql`CREATE TABLE IF NOT EXISTS hms_pro_sessions (token text PRIMARY KEY,pro_id text NOT NULL REFERENCES hms_pros(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_package_negotiations (id text PRIMARY KEY,hospital_id text NOT NULL,patient_opd text NOT NULL,patient_name text NOT NULL,standard_amount numeric(12,2) NOT NULL,final_amount numeric(12,2) NOT NULL,discount numeric(12,2) NOT NULL,reason text NOT NULL,pro_id text NOT NULL,pro_name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
@@ -218,13 +218,13 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(req.method==='GET'&&a==='hms-me'){const h=await hmsSession(req);if(!h)return send(res,401,{error:'Not logged in'});return send(res,200,{user:hmsPub(h)})}
  if(req.method==='GET'&&a==='hms-data'){
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
-  const r=await sql`SELECT patients,doctors,appointments,bills FROM hms_data WHERE hospital_id=${h.id} LIMIT 1`,x=r.rows[0]||{};
-  return send(res,200,{patients:Array.isArray(x.patients)?x.patients:[],doctors:Array.isArray(x.doctors)?x.doctors:[],appointments:Array.isArray(x.appointments)?x.appointments:[],bills:Array.isArray(x.bills)?x.bills:[]});
+  const r=await sql`SELECT patients,doctors,appointments,bills,ipd,rooms FROM hms_data WHERE hospital_id=${h.id} LIMIT 1`,x=r.rows[0]||{};
+  return send(res,200,{patients:Array.isArray(x.patients)?x.patients:[],doctors:Array.isArray(x.doctors)?x.doctors:[],appointments:Array.isArray(x.appointments)?x.appointments:[],bills:Array.isArray(x.bills)?x.bills:[],ipd:Array.isArray(x.ipd)?x.ipd:[],rooms:Array.isArray(x.rooms)?x.rooms:[]});
  }
  if(req.method==='PUT'&&a==='hms-data'){
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
-  const b=req.body||{},patients=Array.isArray(b.patients)?b.patients:[],doctors=Array.isArray(b.doctors)?b.doctors:[],appointments=Array.isArray(b.appointments)?b.appointments:[],bills=Array.isArray(b.bills)?b.bills:[];
-  await sql`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills,updated_at) VALUES(${h.id},${JSON.stringify(patients)}::jsonb,${JSON.stringify(doctors)}::jsonb,${JSON.stringify(appointments)}::jsonb,${JSON.stringify(bills)}::jsonb,now()) ON CONFLICT(hospital_id) DO UPDATE SET patients=EXCLUDED.patients,doctors=EXCLUDED.doctors,appointments=EXCLUDED.appointments,bills=EXCLUDED.bills,updated_at=now()`;
+  const b=req.body||{},patients=Array.isArray(b.patients)?b.patients:[],doctors=Array.isArray(b.doctors)?b.doctors:[],appointments=Array.isArray(b.appointments)?b.appointments:[],bills=Array.isArray(b.bills)?b.bills:[];const ipd=Array.isArray(b.ipd)?b.ipd:[],rooms=Array.isArray(b.rooms)?b.rooms:[];
+  await sql`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills,ipd,rooms,updated_at) VALUES(${h.id},${JSON.stringify(patients)}::jsonb,${JSON.stringify(doctors)}::jsonb,${JSON.stringify(appointments)}::jsonb,${JSON.stringify(bills)}::jsonb,${JSON.stringify(ipd)}::jsonb,${JSON.stringify(rooms)}::jsonb,now()) ON CONFLICT(hospital_id) DO UPDATE SET patients=EXCLUDED.patients,doctors=EXCLUDED.doctors,appointments=EXCLUDED.appointments,bills=EXCLUDED.bills,ipd=EXCLUDED.ipd,rooms=EXCLUDED.rooms,updated_at=now()`;
   return send(res,200,{ok:true});
  }
  if(req.method==='POST'&&a==='hms-pro-create'){

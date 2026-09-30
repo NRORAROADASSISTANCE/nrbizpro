@@ -21,4 +21,61 @@
 .tableCard{background:rgba(255,255,255,.97);border:1px solid #d2dce3;border-radius:15px;padding:16px;box-shadow:0 12px 28px rgba(30,49,62,.18);overflow:auto}
 .tableTitle{font-weight:900;color:#173653;margin-bottom:10px}.tbl{width:100%;border-collapse:collapse;font-size:11px}.tbl th,.tbl td{padding:10px 8px;border-bottom:1px solid #e5ebef;text-align:left;white-space:nowrap}.tbl th{color:#526b7e;background:#f7fafc}.pill{display:inline-block;padding:4px 7px;border-radius:99px;font-size:9px;font-weight:800}.approved{background:#e6f7ed;color:#16803c}.pending{background:#fff5d8;color:#9a6b00}.rejected{background:#ffe9e9;color:#b42318}.paid{background:#e6f7ed;color:#16803c}.action{border:0;border-radius:6px;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer;margin-right:4px}.approve{background:#e7f3ff;color:#1261a0}.pay{background:#e7f7ed;color:#16803c}.reject{background:#ffe9e9;color:#b42318}
 @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.portalHead{align-items:flex-start}.portalTitle{font-size:18px}}
-</style></head><body><div class="office"></div><main class="wrap" id="loginWrap"><div class="logo"><div class="logoMark">HMS</div><div class="hms">NR HMS</div><div class="tag">Healthcare Management System</div></div><section class="card"><div class="title">Company Owner Portal</div><div class="sub">Secure hospital verification & management access</div><label class="field">Company Owner Email<input id="e" type="email" placeholder="admin@nrbizpro.in" autocomplete="username" spellcheck="false"></label><label class="field">Company Owner Password<input id="p" type="password" placeholder="Enter owner password" autocomplete="current-password"></label><button class="primary" id="b">Login as Company Owner</button><div id="m"></div><div class="hint">This is the permanent Company Owner login — not a hospital/demo login.</div></section></main><script>const $=id=>document.getElementById(id);$('b').onclick=async()=>{const email=$('e').value.trim(),password=$('p').value;if(!email||!password){$('m').innerHTML='<div class="notice">Enter Company Owner email and password.</div>';return}$('b').disabled=true;$('b').textContent='Signing in...';try{const r=await fetch('/api/auth?action=hms-owner-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',cache:'no-store',body:JSON.stringify({email,password})});const text=await r.text();let d={};try{d=JSON.parse(text)}catch{}if(!r.ok)throw Error(d.error||'Company Owner login failed.');$('m').innerHTML='<div style="color:#16803c;margin-top:12px;font-weight:700">Login successful. Opening owner portal...</div>';await loadPortal()}catch(e){$('m').innerHTML='<div class="notice">'+String(e.message).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))+'</div>'}finally{$('b').disabled=false;$('b').textContent='Login as Company Owner'}}</script></body></html>
+</style></head><body><div class="office"></div><main class="wrap" id="loginWrap"><div class="logo"><div class="logoMark">HMS</div><div class="hms">NR HMS</div><div class="tag">Healthcare Management System</div></div><section class="card"><div class="title">Company Owner Portal</div><div class="sub">Secure hospital verification & management access</div><label class="field">Company Owner Email<input id="e" type="email" placeholder="admin@nrbizpro.in" autocomplete="username" spellcheck="false"></label><label class="field">Company Owner Password<input id="p" type="password" placeholder="Enter owner password" autocomplete="current-password"></label><button class="primary" id="b">Login as Company Owner</button><div id="m"></div><div class="hint">This is the permanent Company Owner login — not a hospital/demo login.</div></section></main>
+<section class="portal" id="portal">
+  <div class="portalHead">
+    <div><div class="portalTitle">NR HMS — Company Owner Dashboard</div><div class="portalSub">Hospital registration, approval and payment verification</div></div>
+    <button class="logout" id="logoutBtn">Logout</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="sTotal">0</b><span>Total Hospitals</span></div>
+    <div class="stat"><b id="sPending">0</b><span>Pending Review</span></div>
+    <div class="stat"><b id="sApproved">0</b><span>Approved</span></div>
+    <div class="stat"><b id="sPayment">0</b><span>Payment Pending</span></div>
+  </div>
+  <div class="tableCard">
+    <div class="tableTitle">Hospital Registrations</div>
+    <div id="portalMsg"></div>
+    <table class="tbl">
+      <thead><tr><th>Hospital</th><th>Owner</th><th>Mobile</th><th>Email</th><th>Login ID</th><th>Approval</th><th>Payment</th><th>Registered</th><th>Actions</th></tr></thead>
+      <tbody id="hospitalRows"><tr><td colspan="9">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+<script>const $=id=>document.getElementById(id);$('b').onclick=async()=>{const email=$('e').value.trim(),password=$('p').value;if(!email||!password){$('m').innerHTML='<div class="notice">Enter Company Owner email and password.</div>';return}$('b').disabled=true;$('b').textContent='Signing in...';try{const r=await fetch('/api/auth?action=hms-owner-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',cache:'no-store',body:JSON.stringify({email,password})});const text=await r.text();let d={};try{d=JSON.parse(text)}catch{}if(!r.ok)throw Error(d.error||'Company Owner login failed.');$('m').innerHTML='<div style="color:#16803c;margin-top:12px;font-weight:700">Login successful. Opening owner portal...</div>';await loadPortal()}catch(e){$('m').innerHTML='<div class="notice">'+String(e.message).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))+'</div>'}finally{$('b').disabled=false;$('b').textContent='Login as Company Owner'}}<script>
+const esc=v=>String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const pill=(v,type)=>'<span class="pill '+(type||'pending')+'">'+esc(v||'pending')+'</span>';
+async function loadPortal(){
+  const me=await fetch('/api/auth?action=hms-owner-me',{credentials:'include',cache:'no-store'});
+  const mt=await me.text(); let md={}; try{md=JSON.parse(mt)}catch{}
+  if(!me.ok) throw Error(md.error||'Company Owner session expired.');
+  $('loginWrap').style.display='none';
+  $('portal').style.display='block';
+  const r=await fetch('/api/auth?action=hms-owner-hospitals',{credentials:'include',cache:'no-store'});
+  const text=await r.text(); let d={}; try{d=JSON.parse(text)}catch{}
+  if(!r.ok) throw Error(d.error||'Unable to load hospitals.');
+  const items=Array.isArray(d.items)?d.items:[];
+  $('sTotal').textContent=items.length;
+  $('sPending').textContent=items.filter(x=>x.approvalStatus==='pending_review').length;
+  $('sApproved').textContent=items.filter(x=>x.approvalStatus==='approved').length;
+  $('sPayment').textContent=items.filter(x=>x.paymentStatus!=='paid').length;
+  $('hospitalRows').innerHTML=items.length?items.map(x=>{
+    const a=x.approvalStatus||'pending_review', p=x.paymentStatus||'pending';
+    const actions=(a!=='approved'?'<button class="action approve" onclick="approveHospital(\''+esc(x.id)+'\')">Approve</button>':'')+
+      (p!=='paid'&&a==='approved'?'<button class="action pay" onclick="markPaid(\''+esc(x.id)+'\')">Mark Paid</button>':'')+
+      (a!=='rejected'?'<button class="action reject" onclick="rejectHospital(\''+esc(x.id)+'\')">Reject</button>':'');
+    return '<tr><td><b>'+esc(x.hospital)+'</b></td><td>'+esc(x.owner)+'</td><td>'+esc(x.mobile)+'</td><td>'+esc(x.email)+'</td><td>'+esc(x.user_id)+'</td><td>'+pill(a==='pending_review'?'Pending Review':a,a==='approved'?'approved':a==='rejected'?'rejected':'pending')+'</td><td>'+pill(p,p==='paid'?'paid':'pending')+'</td><td>'+esc(x.createdAt?new Date(x.createdAt).toLocaleString(): '')+'</td><td>'+actions+'</td></tr>';
+  }).join(''):'<tr><td colspan="9">No hospital registrations yet.</td></tr>';
+}
+async function ownerAction(action,id,body){
+  const r=await fetch('/api/auth?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',cache:'no-store',body:JSON.stringify(Object.assign({hospitalId:id},body||{}))});
+  const t=await r.text();let d={};try{d=JSON.parse(t)}catch{}
+  if(!r.ok)throw Error(d.error||'Action failed.');
+  await loadPortal();
+}
+async function approveHospital(id){const note=prompt('Approval note (optional):','Approved by Company Owner');if(note===null)return;try{await ownerAction('hms-owner-approve',id,{note})}catch(e){alert(e.message)}}
+async function markPaid(id){if(!confirm('Mark this hospital payment as PAID?'))return;try{await ownerAction('hms-owner-payment',id,{note:'Payment verified by Company Owner'})}catch(e){alert(e.message)}}
+async function rejectHospital(id){const note=prompt('Reason for rejection:');if(!note)return;try{await ownerAction('hms-owner-reject',id,{note})}catch(e){alert(e.message)}}
+$('logoutBtn').onclick=async()=>{try{await fetch('/api/auth?action=hms-owner-logout',{method:'POST',credentials:'include'})}catch{} location.reload()};
+if(new URLSearchParams(location.search).get('panel')==='1') loadPortal().catch(e=>{$('m').innerHTML='<div class="notice">'+esc(e.message)+'</div>'});
+</script></body></html>

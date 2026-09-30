@@ -217,11 +217,13 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  }
  if(req.method==='GET'&&a==='hms-me'){const h=await hmsSession(req);if(!h)return send(res,401,{error:'Not logged in'});return send(res,200,{user:hmsPub(h)})}
  if(req.method==='GET'&&a==='hms-data'){
+  await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS ipd jsonb NOT NULL DEFAULT '[]'`;await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS rooms jsonb NOT NULL DEFAULT '[]'`;
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
   const r=await sql`SELECT patients,doctors,appointments,bills,ipd,rooms FROM hms_data WHERE hospital_id=${h.id} LIMIT 1`,x=r.rows[0]||{};
   return send(res,200,{patients:Array.isArray(x.patients)?x.patients:[],doctors:Array.isArray(x.doctors)?x.doctors:[],appointments:Array.isArray(x.appointments)?x.appointments:[],bills:Array.isArray(x.bills)?x.bills:[],ipd:Array.isArray(x.ipd)?x.ipd:[],rooms:Array.isArray(x.rooms)?x.rooms:[]});
  }
  if(req.method==='PUT'&&a==='hms-data'){
+  await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS ipd jsonb NOT NULL DEFAULT '[]'`;await sql`ALTER TABLE hms_data ADD COLUMN IF NOT EXISTS rooms jsonb NOT NULL DEFAULT '[]'`;
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
   const b=req.body||{},patients=Array.isArray(b.patients)?b.patients:[],doctors=Array.isArray(b.doctors)?b.doctors:[],appointments=Array.isArray(b.appointments)?b.appointments:[],bills=Array.isArray(b.bills)?b.bills:[];const ipd=Array.isArray(b.ipd)?b.ipd:[],rooms=Array.isArray(b.rooms)?b.rooms:[];
   await sql`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills,ipd,rooms,updated_at) VALUES(${h.id},${JSON.stringify(patients)}::jsonb,${JSON.stringify(doctors)}::jsonb,${JSON.stringify(appointments)}::jsonb,${JSON.stringify(bills)}::jsonb,${JSON.stringify(ipd)}::jsonb,${JSON.stringify(rooms)}::jsonb,now()) ON CONFLICT(hospital_id) DO UPDATE SET patients=EXCLUDED.patients,doctors=EXCLUDED.doctors,appointments=EXCLUDED.appointments,bills=EXCLUDED.bills,ipd=EXCLUDED.ipd,rooms=EXCLUDED.rooms,updated_at=now()`;

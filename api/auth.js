@@ -6,6 +6,16 @@ function clientDevice(req){return String(req.headers?.['x-nr-demo-device']||'').
 async function demoLimit(req,increment=false){const ip=clientIp(req),device=clientDevice(req);if(!increment){const r=await sql`SELECT prints_used FROM demo_print_limits WHERE client_ip=${ip} LIMIT 1`;const d=await sql`SELECT prints_used FROM demo_device_limits WHERE device_id=${device} LIMIT 1`;const used=Math.max(Number(r.rows[0]?.prints_used||0),Number(d.rows[0]?.prints_used||0));return {ip,device,used,remaining:Math.max(0,3-used)}}const r=await sql`INSERT INTO demo_print_limits(client_ip,prints_used,first_used_at,last_used_at) VALUES(${ip},1,now(),now()) ON CONFLICT(client_ip) DO UPDATE SET prints_used=demo_print_limits.prints_used+1,last_used_at=now() WHERE demo_print_limits.prints_used<3 RETURNING prints_used`;if(!r.rowCount)return {ip,device,used:3,remaining:0,allowed:false};const used=Number(r.rows[0].prints_used||0);await sql`INSERT INTO demo_device_limits(device_id,prints_used,first_used_at,last_used_at) VALUES(${device},${used},now(),now()) ON CONFLICT(device_id) DO UPDATE SET prints_used=GREATEST(demo_device_limits.prints_used,${used}),last_used_at=now()`;return {ip,device,used,remaining:Math.max(0,3-used),allowed:true}}
 async function registerDemoDevice(device){if(!device||device==='unknown')return {ok:true,registered:false};const existing=await sql`SELECT 1 FROM demo_business_devices WHERE business_id='demo-nrbizpro' AND device_id=${device} LIMIT 1`;if(existing.rowCount){await sql`UPDATE demo_business_devices SET last_seen_at=now() WHERE business_id='demo-nrbizpro' AND device_id=${device}`;return {ok:true,registered:true,existing:true}}const added=await sql`INSERT INTO demo_business_devices(business_id,device_id,first_seen_at,last_seen_at) SELECT 'demo-nrbizpro',${device},now(),now() WHERE (SELECT count(*) FROM demo_business_devices WHERE business_id='demo-nrbizpro')<2 ON CONFLICT(business_id,device_id) DO NOTHING RETURNING device_id`;if(added.rowCount)return {ok:true,registered:true,newDevice:true};const count=await sql`SELECT count(*)::int AS n FROM demo_business_devices WHERE business_id='demo-nrbizpro'`;return {ok:false,registered:false,limit:Number(count.rows[0]?.n||2)} }
 function pub(b,demoLimitInfo=null){if(!b)return null;return {id:b.id,userId:b.user_id,business:b.business,owner:b.owner,mobile:b.mobile,email:b.email,category:b.category,gst:b.gst,address:b.address||'',status:b.status,plan:b.plan,subscriptionEnds:b.subscription_ends,pendingPlan:b.pending_plan,pendingAmount:Number(b.pending_amount||0),lastPaymentId:b.last_payment_id,phoneVerified:!!b.phone_verified,emailVerified:!!b.email_verified,registrationFee:3500,demoPrintsUsed:demoLimitInfo?demoLimitInfo.used:Number(b.demo_prints_used||0),demoPrintsRemaining:demoLimitInfo?demoLimitInfo.remaining:Math.max(0,3-Number(b.demo_prints_used||0))}}
+
+async function hmsSetup(){
+ await sql\`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())\`;
+ await sql\`CREATE TABLE IF NOT EXISTS hms_sessions (token text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)\`;
+ await sql\`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())\`;
+}
+function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||''})}
+function hmsCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
+async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(!t)return null;const r=await sql\`SELECT h.* FROM hms_sessions s JOIN hms_hospitals h ON h.id=s.hospital_id WHERE s.token=\${t} AND s.expires_at>now() LIMIT 1\`;return r.rows[0]||null}
+
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
  if((req.method==='GET'||req.method==='PUT'||req.method==='POST')&&a==='data'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
@@ -62,6 +72,41 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(req.method==='POST'&&a==='logout'){const t=(await import('./db.js')).getCookie(req,'nr_session');if(t)await sql`DELETE FROM sessions WHERE token=${t}`;clearCookie(res,'nr_session');return send(res,200,{ok:true})}
  if(req.method==='POST'&&a==='pending'){const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please complete registration first.'});const plan=String(req.body?.plan||'');if(!Object.prototype.hasOwnProperty.call(PLAN_FEES,plan))return send(res,400,{error:'Select a valid membership plan.'});const amount=plan==='test10'?10:PLAN_FEES[plan]+3500;await sql`UPDATE businesses SET pending_plan=${plan},pending_amount=${amount},updated_at=now() WHERE id=${b.id}`;const r=await sql`SELECT * FROM businesses WHERE id=${b.id}`;return send(res,200,{user:pub(r.rows[0]),registrationFee:plan==='test10'?0:3500,planFee:PLAN_FEES[plan],total:amount})}
  if(req.method==='POST'&&a==='business-settings'){return send(res,403,{error:'Registered business details are locked. Only NR BizPro Admin can modify Business Name, Owner Name, Mobile, Email, Category, GSTIN or Address.'})}
+
+ if(String(a||'').startsWith('hms-')) await hmsSetup();
+ if(req.method==='POST'&&a==='hms-signup'){
+  const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),password=String(x.password||'');
+  if(!hospital||!owner||!mobile||!email||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!address)return send(res,400,{error:'Please fill all hospital details. Login ID must be 4-40 characters and password must be at least 8 characters.'});
+  const ex=await sql\`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(\${userId}) OR lower(email)=lower(\${email}) OR mobile=\${mobile} LIMIT 1\`;
+  if(ex.rowCount)return send(res,409,{error:'Hospital account already exists with this Login ID, email or mobile.'});
+  const id=cryptoRandom(),h=await hashPassword(password);
+  await sql\`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,password_hash) VALUES(\${id},\${hospital},\${owner},\${mobile},\${email},\${userId},\${address},\${h})\`;
+  await sql\`INSERT INTO hms_data(hospital_id) VALUES(\${id})\`;
+  const t=token();await sql\`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(\${t},\${id},now()+interval '30 days')\`;hmsCookie(res,t);
+  return send(res,200,{user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address})});
+ }
+ if(req.method==='POST'&&a==='hms-login'){
+  const id=String(req.body?.id||'').trim().toLowerCase(),password=String(req.body?.password||'');
+  const r=await sql\`SELECT * FROM hms_hospitals WHERE lower(user_id)=\${id} OR mobile=\${id} LIMIT 1\`,h=r.rows[0];
+  if(!h||!(await verifyPassword(password,h.password_hash)))return send(res,401,{error:'Invalid Hospital Login ID or password.'});
+  const t=token();await sql\`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(\${t},\${h.id},now()+interval '30 days')\`;hmsCookie(res,t);
+  return send(res,200,{user:hmsPub(h)});
+ }
+ if(req.method==='GET'&&a==='hms-me'){const h=await hmsSession(req);if(!h)return send(res,401,{error:'Not logged in'});return send(res,200,{user:hmsPub(h)})}
+ if(req.method==='GET'&&a==='hms-data'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
+  const r=await sql\`SELECT patients,doctors,appointments,bills FROM hms_data WHERE hospital_id=\${h.id} LIMIT 1\`,x=r.rows[0]||{};
+  return send(res,200,{patients:Array.isArray(x.patients)?x.patients:[],doctors:Array.isArray(x.doctors)?x.doctors:[],appointments:Array.isArray(x.appointments)?x.appointments:[],bills:Array.isArray(x.bills)?x.bills:[]});
+ }
+ if(req.method==='PUT'&&a==='hms-data'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Please log in to continue.'});
+  const b=req.body||{},patients=Array.isArray(b.patients)?b.patients:[],doctors=Array.isArray(b.doctors)?b.doctors:[],appointments=Array.isArray(b.appointments)?b.appointments:[],bills=Array.isArray(b.bills)?b.bills:[];
+  await sql\`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills,updated_at) VALUES(\${h.id},\${JSON.stringify(patients)}::jsonb,\${JSON.stringify(doctors)}::jsonb,\${JSON.stringify(appointments)}::jsonb,\${JSON.stringify(bills)}::jsonb,now()) ON CONFLICT(hospital_id) DO UPDATE SET patients=EXCLUDED.patients,doctors=EXCLUDED.doctors,appointments=EXCLUDED.appointments,bills=EXCLUDED.bills,updated_at=now()\`;
+  return send(res,200,{ok:true});
+ }
+ if(req.method==='POST'&&a==='hms-logout'){
+  const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(t)await sql\`DELETE FROM hms_sessions WHERE token=\${t}\`;hmsCookie(res,'',0);return send(res,200,{ok:true});
+ }
  return send(res,404,{error:'Unknown action'});
 }catch(e){console.error(e);return send(res,500,{error:'Server error'})}}
 function normalizeBusinessDataForAccount(b,items,bills){

@@ -50,6 +50,10 @@ async function hmsSetup(){
  await sql`CREATE TABLE IF NOT EXISTS hms_pros (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,pro_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,can_negotiate boolean NOT NULL DEFAULT false,max_discount numeric(12,2) NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,pro_id))`;
  await sql`CREATE TABLE IF NOT EXISTS hms_pro_sessions (token text PRIMARY KEY,pro_id text NOT NULL REFERENCES hms_pros(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_package_negotiations (id text PRIMARY KEY,hospital_id text NOT NULL,patient_opd text NOT NULL,patient_name text NOT NULL,standard_amount numeric(12,2) NOT NULL,final_amount numeric(12,2) NOT NULL,discount numeric(12,2) NOT NULL,reason text NOT NULL,pro_id text NOT NULL,pro_name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_users (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,login_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,login_id))`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_sessions (token text PRIMARY KEY,medical_id text NOT NULL REFERENCES hms_medical_users(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_stock (id text PRIMARY KEY,hospital_id text NOT NULL,medicine text NOT NULL,batch text NOT NULL DEFAULT '',expiry text NOT NULL DEFAULT '',quantity numeric(12,2) NOT NULL DEFAULT 0,unit_price numeric(12,2) NOT NULL DEFAULT 0,updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_medical_sales (id text PRIMARY KEY,hospital_id text NOT NULL,opd text NOT NULL,patient_name text NOT NULL,medicine text NOT NULL,quantity numeric(12,2) NOT NULL,amount numeric(12,2) NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
  await hmsSeedDemo();
 }
 async function hmsSeedDemo(){

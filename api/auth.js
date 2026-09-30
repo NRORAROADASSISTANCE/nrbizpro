@@ -8,11 +8,12 @@ async function registerDemoDevice(device){if(!device||device==='unknown')return 
 function pub(b,demoLimitInfo=null){if(!b)return null;return {id:b.id,userId:b.user_id,business:b.business,owner:b.owner,mobile:b.mobile,email:b.email,category:b.category,gst:b.gst,address:b.address||'',status:b.status,plan:b.plan,subscriptionEnds:b.subscription_ends,pendingPlan:b.pending_plan,pendingAmount:Number(b.pending_amount||0),lastPaymentId:b.last_payment_id,phoneVerified:!!b.phone_verified,emailVerified:!!b.email_verified,registrationFee:3500,demoPrintsUsed:demoLimitInfo?demoLimitInfo.used:Number(b.demo_prints_used||0),demoPrintsRemaining:demoLimitInfo?demoLimitInfo.remaining:Math.max(0,3-Number(b.demo_prints_used||0))}}
 
 async function hmsSetup(){
- await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS website_url text NOT NULL DEFAULT ''`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
  await sql`CREATE TABLE IF NOT EXISTS hms_sessions (token text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())\`;
 }
-function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||''})}
+function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||'',website:h.website_url||''})}
 function hmsCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
 async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(!t)return null;const r=await sql\`SELECT h.* FROM hms_sessions s JOIN hms_hospitals h ON h.id=s.hospital_id WHERE s.token=\${t} AND s.expires_at>now() LIMIT 1\`;return r.rows[0]||null}
 
@@ -76,14 +77,14 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(String(a||'').startsWith('hms-')) await hmsSetup();
  if(req.method==='POST'&&a==='hms-signup'){
   const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),password=String(x.password||'');
-  if(!hospital||!owner||!mobile||!email||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!address)return send(res,400,{error:'Please fill all hospital details. Login ID must be 4-40 characters and password must be at least 8 characters.'});
+  if(!hospital||!owner||!mobile||!email||!website||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!address)return send(res,400,{error:'Please fill all hospital details, including Hospital Website. Login ID must be 4-40 characters and password must be at least 8 characters.'});if(!/^https?:\/\/[^\s]+$/i.test(website))return send(res,400,{error:'Please enter a valid Hospital Website starting with http:// or https://.'});
   const ex=await sql\`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(\${userId}) OR lower(email)=lower(\${email}) OR mobile=\${mobile} LIMIT 1\`;
   if(ex.rowCount)return send(res,409,{error:'Hospital account already exists with this Login ID, email or mobile.'});
   const id=cryptoRandom(),h=await hashPassword(password);
   await sql\`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,password_hash) VALUES(\${id},\${hospital},\${owner},\${mobile},\${email},\${userId},\${address},\${h})\`;
   await sql\`INSERT INTO hms_data(hospital_id) VALUES(\${id})\`;
   const t=token();await sql\`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(\${t},\${id},now()+interval '30 days')`;hmsCookie(res,t);
-  return send(res,200,{user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address})});
+  return send(res,200,{user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address,website_url:website})});
  }
  if(req.method==='POST'&&a==='hms-login'){
   const id=String(req.body?.id||'').trim().toLowerCase(),password=String(req.body?.password||'');

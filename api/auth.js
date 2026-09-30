@@ -1,4 +1,4 @@
-import { sql,initDb,hashPassword,verifyPassword,token,cookie,clearCookie,sessionBusiness } from './db.js';
+import { sql,initDb,hashPassword,verifyPassword,token,cookie,clearCookie,sessionBusiness,ensureAdmin,sessionAdmin } from './db.js';
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.status(c).json(b)}
 const PLAN_FEES={year3:3500,year6:6000,lifetime:15000,test10:10};
 function clientIp(req){const h=req.headers||{};const forwarded=h['x-forwarded-for']||h['x-vercel-forwarded-for']||h['x-real-ip']||'';const ip=String(forwarded).split(',')[0].trim();return ip||'unknown'}
@@ -9,8 +9,14 @@ function pub(b,demoLimitInfo=null){if(!b)return null;return {id:b.id,userId:b.us
 
 
 async function hmsDoctorSetup(){
- await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,approval_status text NOT NULL DEFAULT 'approved',payment_status text NOT NULL DEFAULT 'paid',approval_note text NOT NULL DEFAULT '',approved_by text NOT NULL DEFAULT '',approved_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
  await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS website_url text NOT NULL DEFAULT ''`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approval_status text NOT NULL DEFAULT 'approved'`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS payment_status text NOT NULL DEFAULT 'paid'`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approval_note text NOT NULL DEFAULT ''`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approved_by text NOT NULL DEFAULT ''`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approved_at timestamptz`;
+ await sql`UPDATE hms_hospitals SET approval_status='approved',payment_status='paid' WHERE approval_status IS NULL OR approval_status=''`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctors (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,doctor_id text NOT NULL,name text NOT NULL,specialization text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,doctor_id))`;
  await sql`CREATE INDEX IF NOT EXISTS hms_doctors_hospital_idx ON hms_doctors(hospital_id)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())`;
@@ -30,7 +36,13 @@ async function hmsDoctorSession(req){const t=(await import('./db.js')).getCookie
 
 async function hmsSetup(){
  await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS website_url text NOT NULL DEFAULT ''`;
- await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approval_status text NOT NULL DEFAULT 'approved'`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS payment_status text NOT NULL DEFAULT 'paid'`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approval_note text NOT NULL DEFAULT ''`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approved_by text NOT NULL DEFAULT ''`;
+ await sql`ALTER TABLE hms_hospitals ADD COLUMN IF NOT EXISTS approved_at timestamptz`;
+ await sql`UPDATE hms_hospitals SET approval_status='approved',payment_status='paid' WHERE approval_status IS NULL OR approval_status=''`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_hospitals (id text PRIMARY KEY,hospital text NOT NULL,owner text NOT NULL,mobile text NOT NULL,email text NOT NULL,user_id text NOT NULL UNIQUE,address text NOT NULL DEFAULT '',website_url text NOT NULL DEFAULT '',password_hash text NOT NULL,approval_status text NOT NULL DEFAULT 'approved',payment_status text NOT NULL DEFAULT 'paid',approval_note text NOT NULL DEFAULT '',approved_by text NOT NULL DEFAULT '',approved_at timestamptz,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctors (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,doctor_id text NOT NULL,name text NOT NULL,specialization text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,doctor_id))`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctor_sessions (token text PRIMARY KEY,doctor_id text NOT NULL REFERENCES hms_doctors(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_sessions (token text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
@@ -174,15 +186,16 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   const ex=await sql`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(${userId}) OR lower(email)=lower(${email}) OR mobile=${mobile} LIMIT 1`;
   if(ex.rowCount)return send(res,409,{error:'Hospital account already exists with this Login ID, email or mobile.'});
   const id=token(),h=await hashPassword(password);
-  await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash) VALUES(${id},${hospital},${owner},${mobile},${email},${userId},${address},${website},${h})`;
+  await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash,approval_status,payment_status) VALUES(${id},${hospital},${owner},${mobile},${email},${userId},${address},${website},${h},'pending_review','pending')`;
   await sql`INSERT INTO hms_data(hospital_id) VALUES(${id})`;
-  const t=token();await sql`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(${t},${id},now()+interval '30 days')`;hmsCookie(res,t);
-  return send(res,200,{user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address,website_url:website})});
+  return send(res,200,{ok:true,pendingApproval:true,message:'Registration submitted. Company verification and approval is required before login.',user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address,website_url:website})});
  }
  if(req.method==='POST'&&a==='hms-login'){
   const id=String(req.body?.id||'').trim().toLowerCase(),password=String(req.body?.password||'');
   const r=await sql`SELECT * FROM hms_hospitals WHERE lower(user_id)=${id} OR mobile=${id} LIMIT 1`,h=r.rows[0];
   if(!h||!(await verifyPassword(password,h.password_hash)))return send(res,401,{error:'Invalid Hospital Login ID or password.'});
+  if(h.approval_status!=='approved')return send(res,403,{error:h.approval_status==='rejected'?'Hospital registration was rejected. Please contact NR HMS.':'Hospital registration is awaiting company verification and approval.',approvalStatus:h.approval_status});
+  if(h.payment_status!=='paid')return send(res,403,{error:'Hospital is approved, but payment is still pending.',paymentStatus:h.payment_status});
   const t=token();await sql`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(${t},${h.id},now()+interval '30 days')`;hmsCookie(res,t);
   return send(res,200,{user:hmsPub(h)});
  }
@@ -223,6 +236,28 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  }
  if(req.method==='GET'&&a==='hms-pro-list'){const p=await hmsProSession(req);if(!p)return send(res,401,{error:'PRO login required.'});const r=await sql`SELECT id,patient_opd AS "patientOpd",patient_name AS "patientName",standard_amount AS "standardAmount",final_amount AS "finalAmount",discount,reason,pro_name AS "negotiatedBy",created_at AS "createdAt" FROM hms_package_negotiations WHERE hospital_id=${p.hospital_id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{ok:true,items:r.rows})}
  if(req.method==='POST'&&a==='hms-pro-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_pro_session');if(t)await sql`DELETE FROM hms_pro_sessions WHERE token=${t}`;hmsProCookie(res,'',0);return send(res,200,{ok:true})}
+
+ if(req.method==='POST'&&a==='hms-owner-login'){
+  const email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');await ensureAdmin();
+  const r=await sql`SELECT * FROM admins WHERE lower(email)=${email} LIMIT 1`,adm=r.rows[0];
+  if(!adm||!(await verifyPassword(password,adm.password_hash)))return send(res,401,{error:'Invalid Company Owner login.'});
+  const t=token();await sql`INSERT INTO sessions(token,business_id,admin,expires_at) VALUES(${t},NULL,true,now()+interval '30 days')`;cookie(res,'nr_admin',t);return send(res,200,{ok:true,owner:{email:adm.email}});
+ }
+ if(req.method==='GET'&&a==='hms-owner-me'){const ok=await sessionAdmin(req);if(!ok)return send(res,401,{error:'Company Owner login required.'});return send(res,200,{ok:true})}
+ if(req.method==='GET'&&a==='hms-owner-hospitals'){if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const r=await sql`SELECT id,hospital,owner,mobile,email,user_id,address,website_url,approval_status AS "approvalStatus",payment_status AS "paymentStatus",approval_note AS "approvalNote",approved_by AS "approvedBy",approved_at AS "approvedAt",created_at AS "createdAt" FROM hms_hospitals ORDER BY created_at DESC LIMIT 500`;return send(res,200,{items:r.rows})}
+ if(req.method==='POST'&&a==='hms-owner-create'){
+  if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),website=String(x.website||'').trim(),password=String(x.password||'');if(!hospital||!owner||!mobile||!email||!address||!website||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!/^https?:\/\/[^\s]+$/i.test(website))return send(res,400,{error:'Please fill all hospital details. Website must start with http:// or https://.'});const ex=await sql`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(${userId}) OR lower(email)=lower(${email}) OR mobile=${mobile} LIMIT 1`;if(ex.rowCount)return send(res,409,{error:'Hospital already exists with this Login ID, email or mobile.'});const id=token(),ph=await hashPassword(password);await sql`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash,approval_status,payment_status,approval_note,approved_by,approved_at) VALUES(${id},${hospital},${owner},${mobile},${email},${userId},${address},${website},${ph},'approved','paid','Created and verified by Company Owner',${email},now())`;await sql`INSERT INTO hms_data(hospital_id) VALUES(${id})`;return send(res,200,{ok:true,message:'Hospital created and activated.'});
+ }
+ if(req.method==='POST'&&a==='hms-owner-approve'){
+  if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const id=String(req.body?.id||'').trim(),note=String(req.body?.note||'Verified by Company Owner').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});await sql`UPDATE hms_hospitals SET approval_status='approved',payment_status='pending',approval_note=${note},approved_by='Company Owner',approved_at=now(),updated_at=now() WHERE id=${id}`;return send(res,200,{ok:true,message:'Hospital approved. Payment is now pending.'});
+ }
+ if(req.method==='POST'&&a==='hms-owner-payment'){
+  if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const id=String(req.body?.id||'').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});await sql`UPDATE hms_hospitals SET payment_status='paid',approval_status='approved',updated_at=now() WHERE id=${id}`;return send(res,200,{ok:true,message:'Payment verified. Hospital can now login.'});
+ }
+ if(req.method==='POST'&&a==='hms-owner-reject'){
+  if(!(await sessionAdmin(req)))return send(res,401,{error:'Company Owner login required.'});const id=String(req.body?.id||'').trim(),note=String(req.body?.note||'').trim();if(!id||!note)return send(res,400,{error:'Hospital ID and rejection reason are required.'});await sql`UPDATE hms_hospitals SET approval_status='rejected',approval_note=${note},updated_at=now() WHERE id=${id}`;return send(res,200,{ok:true,message:'Hospital registration rejected.'});
+ }
+ if(req.method==='POST'&&a==='hms-owner-logout'){const t=(await import('./db.js')).getCookie(req,'nr_admin');if(t)await sql`DELETE FROM sessions WHERE token=${t}`;clearCookie(res,'nr_admin');return send(res,200,{ok:true})}
 
  if(req.method==='POST'&&a==='hms-medical-create'){
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital login required.'});

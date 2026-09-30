@@ -76,12 +76,12 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
 
  if(String(a||'').startsWith('hms-')) await hmsSetup();
  if(req.method==='POST'&&a==='hms-signup'){
-  const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),password=String(x.password||'');
+  const x=req.body||{},hospital=String(x.hospital||'').trim(),owner=String(x.owner||'').trim(),mobile=String(x.mobile||'').trim(),email=String(x.email||'').trim().toLowerCase(),userId=String(x.userId||'').trim().toLowerCase(),address=String(x.address||'').trim(),website=String(x.website||'').trim(),password=String(x.password||'');
   if(!hospital||!owner||!mobile||!email||!website||!/^[a-z0-9._-]{4,40}$/.test(userId)||password.length<8||!address)return send(res,400,{error:'Please fill all hospital details, including Hospital Website. Login ID must be 4-40 characters and password must be at least 8 characters.'});if(!/^https?:\/\/[^\s]+$/i.test(website))return send(res,400,{error:'Please enter a valid Hospital Website starting with http:// or https://.'});
   const ex=await sql\`SELECT id FROM hms_hospitals WHERE lower(user_id)=lower(\${userId}) OR lower(email)=lower(\${email}) OR mobile=\${mobile} LIMIT 1\`;
   if(ex.rowCount)return send(res,409,{error:'Hospital account already exists with this Login ID, email or mobile.'});
   const id=cryptoRandom(),h=await hashPassword(password);
-  await sql\`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,password_hash) VALUES(\${id},\${hospital},\${owner},\${mobile},\${email},\${userId},\${address},\${h})\`;
+  await sql\`INSERT INTO hms_hospitals(id,hospital,owner,mobile,email,user_id,address,website_url,password_hash) VALUES(\${id},\${hospital},\${owner},\${mobile},\${email},\${userId},\${address},\${website},\${h})\`;
   await sql\`INSERT INTO hms_data(hospital_id) VALUES(\${id})\`;
   const t=token();await sql\`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(\${t},\${id},now()+interval '30 days')`;hmsCookie(res,t);
   return send(res,200,{user:hmsPub({id,hospital,owner,mobile,email,user_id:userId,address,website_url:website})});

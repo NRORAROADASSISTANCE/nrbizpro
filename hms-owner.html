@@ -20,7 +20,7 @@
 .stat{background:rgba(255,255,255,.97);border:1px solid rgba(210,220,227,.95);border-radius:15px;padding:18px 20px;box-shadow:0 8px 22px rgba(30,49,62,.12)}.stat b{display:block;font-size:28px;line-height:1.1;color:#173653}.stat span{display:block;margin-top:6px;font-size:11px;color:#718394;font-weight:700}
 .tableCard{background:rgba(255,255,255,.98);border:1px solid rgba(210,220,227,.95);border-radius:17px;padding:20px;box-shadow:0 14px 32px rgba(30,49,62,.15);overflow:auto}
 .tableTitle{font-size:16px;font-weight:900;color:#173653;margin-bottom:14px}.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}.tbl th,.tbl td{padding:12px 10px;border-bottom:1px solid #e5ebef;text-align:left;white-space:nowrap}.tbl th{color:#526b7e;background:#f7fafc;font-size:10px;text-transform:uppercase;letter-spacing:.4px}.tbl tr:last-child td{border-bottom:0}.tbl tbody tr:hover td{background:#fbfdfe}.pill{display:inline-block;padding:5px 9px;border-radius:99px;font-size:9px;font-weight:800}.approved{background:#e6f7ed;color:#16803c}.pending{background:#fff5d8;color:#9a6b00}.rejected{background:#ffe9e9;color:#b42318}.paid{background:#e6f7ed;color:#16803c}.action{border:0;border-radius:7px;padding:7px 10px;font-size:10px;font-weight:800;cursor:pointer;margin-right:5px}.approve{background:#e7f3ff;color:#1261a0}.pay{background:#e7f7ed;color:#16803c}.reject{background:#ffe9e9;color:#b42318}
-@media(max-width:760px){.portal{padding:18px 12px}.stats{grid-template-columns:repeat(2,1fr);gap:10px}.portalHead{align-items:flex-start;padding:16px}.portalTitle{font-size:18px}.tableCard{padding:14px}}
+@media(max-width:760px){.portal{padding:18px 12px}.stats{grid-template-columns:repeat(2,1fr);gap:10px}.portalHead{align-items:flex-start;padding:16px}.portalTitle{font-size:18px}.tableCard{padding:14px}}.folderGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px}.folder{background:rgba(255,255,255,.98);border:1px solid rgba(210,220,227,.95);border-radius:17px;padding:20px;box-shadow:0 12px 28px rgba(30,49,62,.13);cursor:pointer;transition:transform .15s,box-shadow .15s}.folder:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(30,49,62,.18)}.folderIcon{font-size:34px;margin-bottom:12px}.folderName{font-size:14px;font-weight:900;color:#173653}.folderCount{font-size:26px;font-weight:900;color:#173653;margin-top:7px}.folderHint{font-size:10px;color:#718394;margin-top:3px}.detailsPanel{margin-top:16px}.detailsHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.hospitalCards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.hospitalCard{border:1px solid #e1e8ed;border-radius:13px;padding:16px;background:#fbfdfe}.hospitalName{font-size:16px;font-weight:900;color:#173653;margin-bottom:12px}.detailGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.detailItem{background:#fff;border:1px solid #e8edf1;border-radius:8px;padding:9px}.detailLabel{font-size:9px;color:#81909d;text-transform:uppercase;font-weight:800}.detailValue{font-size:11px;color:#29445b;font-weight:700;margin-top:3px;word-break:break-word}.cardActions{margin-top:13px}.emptyFolder{text-align:center;padding:35px;color:#718394;border:1px dashed #cfdbe3;border-radius:12px}@media(max-width:900px){.folderGrid{grid-template-columns:repeat(2,1fr)}.hospitalCards{grid-template-columns:1fr}}@media(max-width:760px){.folderGrid{grid-template-columns:1fr}.detailsHead{align-items:flex-start;flex-direction:column}.detailGrid{grid-template-columns:1fr}}
 </style></head><body><div class="office"></div><main class="wrap" id="loginWrap"><div class="logo"><div class="logoMark">HMS</div><div class="hms">NR HMS</div><div class="tag">Healthcare Management System</div></div><section class="card"><div class="title">Company Owner Portal</div><div class="sub">Secure hospital verification & management access</div><label class="field">Company Owner Email<input id="e" type="email" placeholder="admin@nrbizpro.in" autocomplete="username" spellcheck="false"></label><label class="field">Company Owner Password<input id="p" type="password" placeholder="Enter owner password" autocomplete="current-password"></label><button class="primary" id="b">Login as Company Owner</button><div id="m"></div><div class="hint">This is the permanent Company Owner login — not a hospital/demo login.</div></section></main>
 <section class="portal" id="portal">
   <div class="portalHead">
@@ -33,14 +33,11 @@
     <div class="stat"><b id="sApproved">0</b><span>Approved</span></div>
     <div class="stat"><b id="sPayment">0</b><span>Payment Pending</span></div>
   </div>
-  <div class="tableCard">
-    <div class="tableTitle">Hospital Registrations</div>
-    <div id="portalMsg"></div>
-    <table class="tbl">
-      <thead><tr><th>Hospital</th><th>Owner</th><th>Mobile</th><th>Email</th><th>Login ID</th><th>Approval</th><th>Payment</th><th>Registered</th><th>Actions</th></tr></thead>
-      <tbody id="hospitalRows"><tr><td colspan="9">Loading...</td></tr></tbody>
-    </table>
-  </div>
+  <div class="folderGrid" id="folderGrid"></div>
+  <section class="tableCard detailsPanel" id="detailsPanel" style="display:none">
+    <div class="detailsHead"><div><div class="tableTitle" id="detailsTitle">Hospital Details</div><div class="portalSub" id="detailsSub"></div></div><button class="logout" id="backFolders">← Back to Folders</button></div>
+    <div class="hospitalCards" id="hospitalCards"></div>
+  </section>
 </section>
 <script>const $=id=>document.getElementById(id);$('b').onclick=async()=>{const email=$('e').value.trim(),password=$('p').value;if(!email||!password){$('m').innerHTML='<div class="notice">Enter Company Owner email and password.</div>';return}$('b').disabled=true;$('b').textContent='Signing in...';try{const r=await fetch('/api/auth?action=hms-owner-login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',cache:'no-store',body:JSON.stringify({email,password})});const text=await r.text();let d={};try{d=JSON.parse(text)}catch{}if(!r.ok)throw Error(d.error||'Company Owner login failed.');$('m').innerHTML='<div style="color:#16803c;margin-top:12px;font-weight:700">Login successful. Opening owner portal...</div>';await loadPortal()}catch(e){$('m').innerHTML='<div class="notice">'+String(e.message).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))+'</div>'}finally{$('b').disabled=false;$('b').textContent='Login as Company Owner'}}
 const esc=v=>String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -59,14 +56,51 @@ async function loadPortal(){
   $('sPending').textContent=items.filter(x=>x.approvalStatus==='pending_review').length;
   $('sApproved').textContent=items.filter(x=>x.approvalStatus==='approved').length;
   $('sPayment').textContent=items.filter(x=>x.paymentStatus!=='paid').length;
-  $('hospitalRows').innerHTML=items.length?items.map(x=>{
-    const a=x.approvalStatus||'pending_review', p=x.paymentStatus||'pending';
+  window._hospitals=items;
+  renderFolders(items);
+}
+function folderData(items,key){
+  if(key==='pending')return items.filter(x=>x.approvalStatus==='pending_review');
+  if(key==='approved')return items.filter(x=>x.approvalStatus==='approved');
+  if(key==='payment')return items.filter(x=>x.paymentStatus!=='paid');
+  if(key==='rejected')return items.filter(x=>x.approvalStatus==='rejected');
+  return [];
+}
+function renderFolders(items){
+  const folders=[
+    ['pending','📁','Pending Hospitals',folderData(items,'pending'),'New registrations waiting for review'],
+    ['approved','📂','Approved Hospitals',folderData(items,'approved'),'Approved hospital accounts'],
+    ['payment','💳','Payment Pending',folderData(items,'payment'),'Approved hospitals awaiting payment'],
+    ['rejected','🗃️','Rejected Hospitals',folderData(items,'rejected'),'Registrations rejected by owner']
+  ];
+  $('folderGrid').innerHTML=folders.map(f=>'<div class="folder" onclick="openFolder(\''+f[0]+'\')"><div class="folderIcon">'+f[1]+'</div><div class="folderName">'+f[2]+'</div><div class="folderCount">'+f[3].length+'</div><div class="folderHint">'+f[4]+'</div></div>').join('');
+}
+function openFolder(key){
+  const items=folderData(window._hospitals||[],key);
+  const names={pending:'Pending Hospitals',approved:'Approved Hospitals',payment:'Payment Pending',rejected:'Rejected Hospitals'};
+  $('folderGrid').style.display='none';$('detailsPanel').style.display='block';
+  $('detailsTitle').textContent=names[key];
+  $('detailsSub').textContent=items.length+' hospital'+(items.length===1?'':'s')+' in this folder';
+  $('hospitalCards').innerHTML=items.length?items.map(x=>{
+    const a=x.approvalStatus||'pending_review',p=x.paymentStatus||'pending';
     const actions=(a!=='approved'?'<button class="action approve" onclick="approveHospital(\''+esc(x.id)+'\')">Approve</button>':'')+
       (p!=='paid'&&a==='approved'?'<button class="action pay" onclick="markPaid(\''+esc(x.id)+'\')">Mark Paid</button>':'')+
       (a!=='rejected'?'<button class="action reject" onclick="rejectHospital(\''+esc(x.id)+'\')">Reject</button>':'');
-    return '<tr><td><b>'+esc(x.hospital)+'</b></td><td>'+esc(x.owner)+'</td><td>'+esc(x.mobile)+'</td><td>'+esc(x.email)+'</td><td>'+esc(x.user_id)+'</td><td>'+pill(a==='pending_review'?'Pending Review':a,a==='approved'?'approved':a==='rejected'?'rejected':'pending')+'</td><td>'+pill(p,p==='paid'?'paid':'pending')+'</td><td>'+esc(x.createdAt?new Date(x.createdAt).toLocaleString(): '')+'</td><td>'+actions+'</td></tr>';
-  }).join(''):'<tr><td colspan="9">No hospital registrations yet.</td></tr>';
+    return '<div class="hospitalCard"><div class="hospitalName">'+esc(x.hospital)+'</div><div class="detailGrid">'+
+      '<div class="detailItem"><div class="detailLabel">Owner</div><div class="detailValue">'+esc(x.owner)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Mobile</div><div class="detailValue">'+esc(x.mobile)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Email</div><div class="detailValue">'+esc(x.email)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Login ID</div><div class="detailValue">'+esc(x.user_id)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Address</div><div class="detailValue">'+esc(x.address)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Website</div><div class="detailValue">'+esc(x.website_url)+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Approval</div><div class="detailValue">'+pill(a==='pending_review'?'Pending Review':a,a==='approved'?'approved':a==='rejected'?'rejected':'pending')+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Payment</div><div class="detailValue">'+pill(p,p==='paid'?'paid':'pending')+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Registered</div><div class="detailValue">'+esc(x.createdAt?new Date(x.createdAt).toLocaleString():'')+'</div></div>'+
+      '<div class="detailItem"><div class="detailLabel">Approval Note</div><div class="detailValue">'+esc(x.approvalNote||'—')+'</div></div>'+
+      '</div><div class="cardActions">'+actions+'</div></div>';
+  }).join(''):'<div class="emptyFolder">No hospitals in this folder.</div>';
 }
+$('backFolders').onclick=()=>{$('detailsPanel').style.display='none';$('folderGrid').style.display='grid'};
 async function ownerAction(action,id,body){
   const r=await fetch('/api/auth?action='+action,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',cache:'no-store',body:JSON.stringify(Object.assign({hospitalId:id},body||{}))});
   const t=await r.text();let d={};try{d=JSON.parse(t)}catch{}

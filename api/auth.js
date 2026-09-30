@@ -223,4 +223,3 @@ function normalizeBusinessDataForAccount(b,items,bills){
  const cleaned=safeBills.filter(x=>!(String(x?.invoice||'')==='INV-0001' && Math.abs(Number(x?.total||0)-44929.50)<0.01 && ownKey!=='ev'));
  return {items:safeItems,bills:cleaned};
 }
-function token(){return globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}

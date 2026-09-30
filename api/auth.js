@@ -14,6 +14,9 @@ async function hmsDoctorSetup(){
  await sql`CREATE TABLE IF NOT EXISTS hms_doctors (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,doctor_id text NOT NULL,name text NOT NULL,specialization text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,doctor_id))`;
  await sql`CREATE INDEX IF NOT EXISTS hms_doctors_hospital_idx ON hms_doctors(hospital_id)`;
  await sql`CREATE TABLE IF NOT EXISTS hms_data (hospital_id text PRIMARY KEY REFERENCES hms_hospitals(id) ON DELETE CASCADE,patients jsonb NOT NULL DEFAULT '[]',doctors jsonb NOT NULL DEFAULT '[]',appointments jsonb NOT NULL DEFAULT '[]',bills jsonb NOT NULL DEFAULT '[]',updated_at timestamptz NOT NULL DEFAULT now())`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_pros (id text PRIMARY KEY,hospital_id text NOT NULL REFERENCES hms_hospitals(id) ON DELETE CASCADE,pro_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,can_negotiate boolean NOT NULL DEFAULT false,max_discount numeric(12,2) NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,pro_id))`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_pro_sessions (token text PRIMARY KEY,pro_id text NOT NULL REFERENCES hms_pros(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
+ await sql`CREATE TABLE IF NOT EXISTS hms_package_negotiations (id text PRIMARY KEY,hospital_id text NOT NULL,patient_opd text NOT NULL,patient_name text NOT NULL,standard_amount numeric(12,2) NOT NULL,final_amount numeric(12,2) NOT NULL,discount numeric(12,2) NOT NULL,reason text NOT NULL,pro_id text NOT NULL,pro_name text NOT NULL,created_at timestamptz NOT NULL DEFAULT now())`;
  await sql`CREATE TABLE IF NOT EXISTS hms_doctor_sessions (token text PRIMARY KEY,doctor_id text NOT NULL REFERENCES hms_doctors(id) ON DELETE CASCADE,expires_at timestamptz NOT NULL)`;
  await hmsSeedDemo();
 }
@@ -39,6 +42,8 @@ async function hmsSeedDemo(){
 function hmsPub(h){return h&&({id:h.id,hospital:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,userId:h.user_id,address:h.address||'',website:h.website_url||''})}
 function hmsCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
 async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(!t)return null;const r=await sql`SELECT h.* FROM hms_sessions s JOIN hms_hospitals h ON h.id=s.hospital_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
+function hmsProCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_pro_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
+async function hmsProSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_pro_session');if(!t)return null;const r=await sql`SELECT p.* FROM hms_pro_sessions s JOIN hms_pros p ON p.id=s.pro_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
 
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
  
@@ -182,6 +187,32 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`INSERT INTO hms_data(hospital_id,patients,doctors,appointments,bills,updated_at) VALUES(${h.id},${JSON.stringify(patients)}::jsonb,${JSON.stringify(doctors)}::jsonb,${JSON.stringify(appointments)}::jsonb,${JSON.stringify(bills)}::jsonb,now()) ON CONFLICT(hospital_id) DO UPDATE SET patients=EXCLUDED.patients,doctors=EXCLUDED.doctors,appointments=EXCLUDED.appointments,bills=EXCLUDED.bills,updated_at=now()`;
   return send(res,200,{ok:true});
  }
+ if(req.method==='POST'&&a==='hms-pro-create'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital login required.'});
+  const x=req.body||{},proId=String(x.proId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),password=String(x.password||'');
+  if(!proId||!name||!mobile||password.length<8)return send(res,400,{error:'PRO ID, name, mobile and 8+ character password are required.'});
+  if(!/^[a-z0-9._-]{4,40}$/.test(proId))return send(res,400,{error:'PRO ID must be 4-40 characters.'});
+  const ph=await hashPassword(password);await sql`INSERT INTO hms_pros(id,hospital_id,pro_id,name,mobile,password_hash,can_negotiate,max_discount) VALUES(${token()},${h.id},${proId},${name},${mobile},${ph},${!!x.canNegotiate},${Number(x.maxDiscount||0)}) ON CONFLICT(hospital_id,pro_id) DO UPDATE SET name=EXCLUDED.name,mobile=EXCLUDED.mobile,password_hash=EXCLUDED.password_hash,can_negotiate=EXCLUDED.can_negotiate,max_discount=EXCLUDED.max_discount`;
+  return send(res,200,{ok:true});
+ }
+ if(req.method==='POST'&&a==='hms-pro-login'){
+  const hospitalId=String(req.body?.hospitalId||'').trim(),proId=String(req.body?.proId||'').trim().toLowerCase(),password=String(req.body?.password||'');
+  const r=await sql`SELECT * FROM hms_pros WHERE hospital_id=${hospitalId} AND lower(pro_id)=${proId} LIMIT 1`,p=r.rows[0];
+  if(!p||!(await verifyPassword(password,p.password_hash)))return send(res,401,{error:'Invalid PRO login details.'});
+  const t=token();await sql`INSERT INTO hms_pro_sessions(token,pro_id,expires_at) VALUES(${t},${p.id},now()+interval '30 days')`;hmsProCookie(res,t);return send(res,200,{ok:true,pro:{id:p.pro_id,name:p.name,hospitalId:p.hospital_id,canNegotiate:p.can_negotiate,maxDiscount:Number(p.max_discount)}});
+ }
+ if(req.method==='GET'&&a==='hms-pro-me'){const p=await hmsProSession(req);if(!p)return send(res,401,{error:'PRO login required.'});return send(res,200,{ok:true,pro:{id:p.pro_id,name:p.name,hospitalId:p.hospital_id,canNegotiate:p.can_negotiate,maxDiscount:Number(p.max_discount)}})}
+ if(req.method==='POST'&&a==='hms-pro-negotiate'){
+  const p=await hmsProSession(req);if(!p)return send(res,401,{error:'PRO login required.'});if(!p.can_negotiate)return send(res,403,{error:'Negotiated package permission is not enabled for this PRO.'});
+  const x=req.body||{},standard=Number(x.standardAmount),final=Number(x.finalAmount),discount=standard-final;
+  if(!x.patientOpd||!x.patientName||!x.reason||!Number.isFinite(standard)||!Number.isFinite(final)||final<=0||discount<0)return send(res,400,{error:'Patient, standard amount, final amount and reason are required.'});
+  if(Number(p.max_discount)>0&&discount>Number(p.max_discount))return send(res,403,{error:'Discount exceeds this PRO approval limit.'});
+  const id=token();await sql`INSERT INTO hms_package_negotiations(id,hospital_id,patient_opd,patient_name,standard_amount,final_amount,discount,reason,pro_id,pro_name) VALUES(${id},${p.hospital_id},${x.patientOpd},${x.patientName},${standard},${final},${discount},${String(x.reason).trim()},${p.pro_id},${p.name})`;
+  return send(res,200,{ok:true,negotiation:{id,patientOpd:x.patientOpd,patientName:x.patientName,standardAmount:standard,finalAmount:final,discount,reason:x.reason,negotiatedBy:p.name}});
+ }
+ if(req.method==='GET'&&a==='hms-pro-list'){const p=await hmsProSession(req);if(!p)return send(res,401,{error:'PRO login required.'});const r=await sql`SELECT id,patient_opd AS "patientOpd",patient_name AS "patientName",standard_amount AS "standardAmount",final_amount AS "finalAmount",discount,reason,pro_name AS "negotiatedBy",created_at AS "createdAt" FROM hms_package_negotiations WHERE hospital_id=${p.hospital_id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{ok:true,items:r.rows})}
+ if(req.method==='POST'&&a==='hms-pro-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_pro_session');if(t)await sql`DELETE FROM hms_pro_sessions WHERE token=${t}`;hmsProCookie(res,'',0);return send(res,200,{ok:true})}
+
  if(req.method==='POST'&&a==='hms-logout'){
   const t=(await import('./db.js')).getCookie(req,'nr_hms_session');if(t)await sql`DELETE FROM hms_sessions WHERE token=${t}`;hmsCookie(res,'',0);return send(res,200,{ok:true});
  }

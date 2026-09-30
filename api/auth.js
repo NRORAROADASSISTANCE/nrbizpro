@@ -78,6 +78,15 @@ async function hmsMedicalSession(req){const t=(await import('./db.js')).getCooki
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
  
  
+ if(req.method==='GET'&&a==='hms-hospital-search'){
+  const q=String(req.query?.q||'').trim();
+  const like='%'+q.replace(/[%_]/g,'\\ if(req.method==='GET'&&a==='hms-public-doctors'){')+'%';
+  const r=q
+    ? await sql`SELECT id,hospital,owner,mobile,email,address,website_url FROM hms_hospitals WHERE approval_status='approved' AND payment_status='paid' AND (hospital ILIKE ${like} ESCAPE '\\\\' OR address ILIKE ${like} ESCAPE '\\\\') ORDER BY hospital LIMIT 30`
+    : await sql`SELECT id,hospital,owner,mobile,email,address,website_url FROM hms_hospitals WHERE approval_status='approved' AND payment_status='paid' ORDER BY hospital LIMIT 30`;
+  return send(res,200,{hospitals:r.rows.map(h=>hmsPub(h))});
+ }
+
  if(req.method==='GET'&&a==='hms-public-doctors'){
   const id=String(req.query?.hospital||'').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});
   const r=await sql`SELECT doctors FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];return send(res,200,{doctors});

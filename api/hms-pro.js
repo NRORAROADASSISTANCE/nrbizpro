@@ -1,1 +1,2 @@
-export default async function handler(req,res){res.status(200).json({ok:true,service:"hms-pro"});}
+import {sql,initDb} from './db.js';
+export default async function handler(req,res){await initDb();await sql`CREATE TABLE IF NOT EXISTS hms_pros (id text PRIMARY KEY,hospital_id text NOT NULL,pro_id text NOT NULL,name text NOT NULL,mobile text NOT NULL,password_hash text NOT NULL,can_negotiate boolean NOT NULL DEFAULT false,max_discount numeric(12,2) NOT NULL DEFAULT 0,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(hospital_id,pro_id))`;await sql`CREATE TABLE IF NOT EXISTS hms_pro_sessions (token text PRIMARY KEY,pro_id text NOT NULL,expires_at timestamptz NOT NULL)`;res.status(200).json({ok:true})}

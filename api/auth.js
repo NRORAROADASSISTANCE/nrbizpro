@@ -19,6 +19,12 @@ async function hmsSession(req){const t=(await import('./db.js')).getCookie(req,'
 
 export default async function handler(req,res){await initDb();try{const a=req.body?.action||req.query?.action;
  
+ 
+ if(req.method==='GET'&&a==='hms-public-doctors'){
+  const id=String(req.query?.hospital||'').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});
+  const r=await sql\`SELECT doctors FROM hms_data WHERE hospital_id=\${id} LIMIT 1\`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];return send(res,200,{doctors});
+ }
+
  if(req.method==='GET'&&a==='hms-public'){
   const id=String(req.query?.hospital||'').trim();
   if(!id)return send(res,400,{error:'Hospital ID is required.'});

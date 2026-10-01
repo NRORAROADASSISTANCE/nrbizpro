@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { sql,initDb,hashPassword,verifyPassword,token,cookie,clearCookie,sessionBusiness,ensureAdmin,sessionAdmin,auditSecurity } from './db.js';
 async function accountSecurityLocked(businessId){const r=await sql`SELECT emergency_locked AS locked FROM account_security WHERE business_id=${businessId} LIMIT 1`;return !!r.rows[0]?.locked}
 function validMoney(v){const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=100000000}

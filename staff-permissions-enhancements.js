@@ -22,7 +22,7 @@
     const body=`<div class="nr-form-grid"><label>Staff Name<input id="nrStaffName" value="${esc(x.name||'')}" placeholder="Employee name"></label><label>Staff Password<input id="nrStaffPassword" type="password" placeholder="Minimum 8 characters"></label><label>Mobile<input id="nrStaffMobile" value="${esc(x.mobile||'')}" placeholder="Mobile number"></label><label>Role<select id="nrStaffRole"><option ${x.role==='Cashier'?'selected':''}>Cashier</option><option ${x.role==='Sales Staff'?'selected':''}>Sales Staff</option><option ${(!x.role||x.role==='Staff')?'selected':''}>Staff</option><option ${x.role==='Manager'?'selected':''}>Manager</option></select></label></div><h3>Module Permissions</h3><div class="nr-check-grid">${checks}</div><div class="modal-actions"><button class="secondary" id="nrCancelStaff">Cancel</button><button class="primary" id="nrSaveStaff">Save Staff</button></div>`;
     window.openModal?.(index>=0?'Edit Staff Permissions':'Add Staff',body);
     document.getElementById('nrCancelStaff')?.addEventListener('click',()=>{window.closeModal?.();setTimeout(openStaff,80)});
-    document.getElementById('nrSaveStaff')?.addEventListener('click',()=>{
+    document.getElementById('nrSaveStaff')?.addEventListener('click',async()=>{
       const name=document.getElementById('nrStaffName')?.value.trim();if(!name)return alert('Enter staff name.');
       const item={id:x.id||('staff-'+Date.now()),name,mobile:document.getElementById('nrStaffMobile')?.value.trim()||'',role:document.getElementById('nrStaffRole')?.value||'Staff',permissions:{}};
       document.querySelectorAll('[data-perm]').forEach(c=>item.permissions[c.dataset.perm]=c.checked);

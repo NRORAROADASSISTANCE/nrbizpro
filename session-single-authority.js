@@ -62,7 +62,7 @@
     try{await fetch('/api/auth?action=logout',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},cache:'no-store',body:'{}'});}catch{}
     try{
       Object.keys(localStorage).forEach(k=>{
-        if(/^nr-bizpro-(session|last-auth-user|explicit-logout)/.test(k)||k==='nr-bizpro-users-v1')localStorage.removeItem(k);
+        if(/^nr-bizpro-(session|last-auth-user|explicit-logout|users-v1)/.test(k)||k==='nr-bizpro-session-v2')localStorage.removeItem(k);
       });
       localStorage.setItem(EXPLICIT,'1');
       sessionStorage.clear();

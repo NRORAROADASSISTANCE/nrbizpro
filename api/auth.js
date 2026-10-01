@@ -245,6 +245,7 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
   }
   const prevBillKeys=new Set((Array.isArray(prev.bills)?prev.bills:[]).map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(Boolean));const newInvoiceKeys=[...new Set(bills.map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(k=>k&&!prevBillKeys.has(k)))];for(const k of newInvoiceKeys){const q=await sql\`INSERT INTO business_invoice_numbers(business_id,invoice_key) VALUES(\${b.id},\${k}) ON CONFLICT DO NOTHING RETURNING invoice_key\`;if(!q.rowCount)return send(res,409,{error:'Invoice/Bill number already exists: '+k,duplicateInvoice:true});}
   const backupId=token();
+  await sql`DELETE FROM business_invoice_numbers WHERE business_id=${b.id} AND NOT EXISTS (SELECT 1 FROM business_data bd WHERE bd.business_id=${b.id} AND EXISTS (SELECT 1 FROM jsonb_array_elements(bd.bills) bill WHERE lower(trim(COALESCE(bill->>'invoiceNo',bill->>'billNo',bill->>'invoiceNumber',bill->>'billNumber',''))) = business_invoice_numbers.invoice_key))`;
   const saved=await sql`WITH old AS (
       SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} AND version=${expectedVersion}
     ), upd AS (

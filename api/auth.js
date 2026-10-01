@@ -248,10 +248,10 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
  if(req.method==='GET'&&a==='session-list'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   const r=await sql`SELECT token,role,staff_id AS "staffId",client_ip AS "clientIp",user_agent AS "userAgent",created_at AS "createdAt",last_seen_at AS "lastSeenAt",expires_at AS "expiresAt" FROM sessions WHERE business_id=${b.id} AND expires_at>now() ORDER BY last_seen_at DESC LIMIT 100`;
-  return send(res,200,{items:r.rows.map(x=>({...x,token:undefined,current:x.token===req.cookies?.nr_session}))});
+  return send(res,200,{items:r.rows.map(x=>({role:x.role,staffId:x.staffId,clientIp:x.clientIp,userAgent:x.userAgent,createdAt:x.createdAt,lastSeenAt:x.lastSeenAt,expiresAt:x.expiresAt,tokenHint:x.token.slice(-16),current:x.token===req.cookies?.nr_session}))});
  }
  if(req.method==='POST'&&a==='session-revoke'){
-  const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});const tokenId=String(req.body?.token||'').trim();if(!tokenId)return send(res,400,{error:'Session token is required.'});
+  const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});const hint=String(req.body?.tokenHint||'').trim();if(!/^[A-Za-z0-9_-]{16}$/.test(hint))return send(res,400,{error:'Valid session identifier is required.'});const found=await sql`SELECT token FROM sessions WHERE business_id=${b.id} AND token LIKE ${'%'+hint} LIMIT 1`;if(!found.rowCount)return send(res,404,{error:'Session not found.'});const tokenId=found.rows[0].token;
   if(tokenId===req.cookies?.nr_session)return send(res,400,{error:'Use logout for the current session.'});
   const r=await sql`DELETE FROM sessions WHERE token=${tokenId} AND business_id=${b.id} RETURNING role,staff_id`;if(!r.rowCount)return send(res,404,{error:'Session not found.'});await auditSecurity({businessId:b.id,actor:b.user_id,action:'session_revoked',details:'Revoked '+r.rows[0].role+' session',clientIp:clientIp(req)});return send(res,200,{ok:true});
  }

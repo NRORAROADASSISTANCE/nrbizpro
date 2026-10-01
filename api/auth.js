@@ -3,6 +3,7 @@ async function accountSecurityLocked(businessId){const r=await sql`SELECT emerge
 function strongPassword(p){const s=String(p||'');return s.length>=10&&s.length<=128&&/[A-Z]/.test(s)&&/[a-z]/.test(s)&&/[0-9]/.test(s)&&/[^A-Za-z0-9]/.test(s)}
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('Permissions-Policy','camera=(),microphone=(),geolocation=()');res.setHeader('Content-Security-Policy',"default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");res.status(c).json(b)}
 const PLAN_FEES={year3:3500,year6:6000,lifetime:15000,test10:10};
+function sameOrigin(req){const origin=String(req.headers?.origin||'').trim();if(!origin)return true;try{return new URL(origin).host===String(req.headers?.host||'').trim()}catch{return false}}
 function safeRequest(req){const m=String(req.method||'GET').toUpperCase();const ct=String(req.headers?.['content-type']||'');if(m==='POST'&&ct&&!/^application\/json(?:;|$)/i.test(ct))return false;const len=Number(req.headers?.['content-length']||0);return !len||len<=1024*1024}\nfunction clientIp(req){const h=req.headers||{};const forwarded=h['x-forwarded-for']||h['x-vercel-forwarded-for']||h['x-real-ip']||'';const ip=String(forwarded).split(',')[0].trim();return ip||'unknown'}
 function securityKey(req,id){return String(id||'').trim().toLowerCase()+'|'+clientIp(req)}
 async function loginBlocked(req,id){const k=securityKey(req,id);const r=await sql`SELECT failed_attempts,locked_until FROM login_security WHERE login_key=${k} LIMIT 1`;const until=r.rows[0]?.locked_until;if(until&&new Date(until)>new Date())return {blocked:true,minutes:Math.max(1,Math.ceil((new Date(until)-Date.now())/60000))};return {blocked:false}}
@@ -120,7 +121,7 @@ async function hmsProSession(req){const t=(await import('./db.js')).getCookie(re
 function hmsMedicalCookie(res,t,maxAge=2592000){res.setHeader('Set-Cookie',['nr_hms_medical_session='+t+'; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age='+maxAge])}
 async function hmsMedicalSession(req){const t=(await import('./db.js')).getCookie(req,'nr_hms_medical_session');if(!t)return null;const r=await sql`SELECT m.* FROM hms_medical_sessions s JOIN hms_medical_users m ON m.id=s.medical_id WHERE s.token=${t} AND s.expires_at>now() LIMIT 1`;return r.rows[0]||null}
 
-export default async function handler(req,res){if(!safeRequest(req))return send(res,415,{error:'Unsupported request format or size.'});await initDb();try{const a=req.body?.action||req.query?.action;
+export default async function handler(req,res){if(!safeRequest(req))return send(res,415,{error:'Unsupported request format or size.'});if(['POST','PUT','PATCH','DELETE'].includes(String(req.method||'').toUpperCase())&&!sameOrigin(req))return send(res,403,{error:'Cross-origin request blocked.'});await initDb();try{const a=req.body?.action||req.query?.action;
  
  
  if(req.method==='GET'&&a==='hms-hospital-search'){

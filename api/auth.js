@@ -230,6 +230,22 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`DELETE FROM business_data_backups WHERE business_id=${b.id} AND id NOT IN (SELECT id FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 20)`;
   return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:Number(saved.rows[0].version),updatedAt:saved.rows[0].updated_at});
  }
+ if(req.method==='POST'&&a==='approval-request'){
+  const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
+  if(String(b.role).toLowerCase()==='owner')return send(res,400,{error:'Owner actions do not require an approval request.'});
+  const action=String(req.body?.action||'').trim(),payload=req.body?.payload&&typeof req.body.payload==='object'?req.body.payload:{};
+  if(!action)return send(res,400,{error:'Approval action is required.'});
+  const id=token();await sql`INSERT INTO security_approvals(id,business_id,requested_by,action,payload) VALUES(${id},${b.id},${b.staff_id||b.user_id},${action},${JSON.stringify(payload)}::jsonb)`;await auditSecurity({businessId:b.id,actor:b.staff_id||b.user_id,action:'approval_requested',details:action,clientIp:clientIp(req)});return send(res,200,{ok:true,approvalId:id,status:'pending'});
+ }
+ if(req.method==='GET'&&a==='approval-list'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can review approvals.'});
+  const r=await sql`SELECT id,requested_by AS "requestedBy",action,payload,status,approved_by AS "approvedBy",created_at AS "createdAt",approved_at AS "approvedAt" FROM security_approvals WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{items:r.rows});
+ }
+ if(req.method==='POST'&&a==='approval-action'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can approve or reject actions.'});
+  const id=String(req.body?.id||'').trim(),decision=String(req.body?.decision||'').trim().toLowerCase();if(!id||!['approved','rejected'].includes(decision))return send(res,400,{error:'Approval ID and valid decision are required.'});
+  const r=await sql`UPDATE security_approvals SET status=${decision},approved_by=${b.user_id},approved_at=now() WHERE id=${id} AND business_id=${b.id} AND status='pending' RETURNING action`;if(!r.rowCount)return send(res,404,{error:'Pending approval not found or already processed.'});await auditSecurity({businessId:b.id,actor:b.user_id,action:'approval_'+decision,details:r.rows[0].action,clientIp:clientIp(req)});return send(res,200,{ok:true,status:decision});
+ }
  if(req.method==='POST'&&a==='staff-login'){
   const businessId=String(req.body?.businessId||'').trim().toLowerCase(),loginId=String(req.body?.loginId||'').trim().toLowerCase(),password=String(req.body?.password||'');
   if(!businessId||!loginId||!password)return send(res,400,{error:'Business Login ID, Staff Login ID and password are required.'});

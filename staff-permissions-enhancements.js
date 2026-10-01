@@ -34,7 +34,7 @@
     const side=host.querySelector('[data-nr="staff"]');if(side&&!side.dataset.staffReady){side.dataset.staffReady='1';side.onclick=()=>{window.NRCustomerDashboard.open('staff');setTimeout(render,30);setTimeout(render,180)};}
     if(host.querySelector('.nr-side.active')?.dataset.nr==='staff'){
       const p=settings();const box=host.querySelector('.nr-perms');
-      if(box){box.innerHTML=`<div><b>Owner</b><small>Full business access</small></div><div><b>Staff</b><small>${p.staff.length} staff profile${p.staff.length===1?'':'s'} configured</small></div><button class="nr-primary" id="nrManageStaff">Manage Staff & Permissions</button><div><b>Security</b><small>Approved Business Profile changes remain Admin-only.</small></div>`;box.style.gridTemplateColumns='1fr 1fr';document.getElementById('nrManageStaff')?.addEventListener('click',openStaff);}
+      if(box){box.innerHTML=`<div><b>Owner</b><small>Full business access</small></div><div><b>Staff</b><small>${p.staff.length} staff profile${p.staff.length===1?'':'s'} configured</small></div><button class="nr-primary" id="nrManageStaff">Manage Staff & Permissions</button><button class="nr-primary" id="nrApprovalCenter">CEO Approval Center</button><div><b>Security</b><small>Approved Business Profile changes remain Admin-only.</small></div>`;box.style.gridTemplateColumns='1fr 1fr';document.getElementById('nrManageStaff')?.addEventListener('click',openStaff);document.getElementById('nrApprovalCenter')?.addEventListener('click',openApprovalCenter);}
     }
   }
   function boot(){const api=window.NRCustomerDashboard;if(!api||api.__staffEnhanced)return;const old=api.open;api.open=function(id){old(id);setTimeout(enforce,30);setTimeout(enforce,180)};api.__staffEnhanced=true;enforce();}

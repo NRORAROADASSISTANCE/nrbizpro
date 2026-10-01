@@ -60,22 +60,48 @@
     await loadConfig();
     await loadSdk();
     if (!window.initSendOTP) throw new Error('MSG91 OTP SDK is unavailable.');
+
     return new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
       const configuration = {
         widgetId: WIDGET_ID,
         tokenAuth: widgetToken,
         identifier,
         exposeMethods: true,
         captchaRenderId: captchaId || '',
-        success: resolve,
-        failure: (error) => resolve({ type: 'error', error })
+        success: (data) => finish(data || { type: 'ready' }),
+        failure: (error) => finish({ type: 'error', error })
       };
+
       try {
         window.initSendOTP(configuration);
-        resolve({ type: 'ready' });
       } catch (e) {
-        resolve({ type: 'error', error: e });
+        finish({ type: 'error', error: e });
+        return;
       }
+
+      // MSG91 can expose the custom-UI methods asynchronously after
+      // initSendOTP() returns. Wait until the methods are actually ready.
+      const started = Date.now();
+      const waitForMethods = () => {
+        if (typeof window.sendOtp === 'function' &&
+            typeof window.verifyOtp === 'function') {
+          finish({ type: 'ready' });
+          return;
+        }
+        if (Date.now() - started >= 8000) {
+          finish({ type: 'error', error: new Error('MSG91 OTP methods are not ready. Please refresh and try again.') });
+          return;
+        }
+        setTimeout(waitForMethods, 100);
+      };
+      waitForMethods();
     });
   }
 

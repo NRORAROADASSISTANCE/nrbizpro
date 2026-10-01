@@ -293,8 +293,9 @@
   document.head.appendChild(style);
 
   window.addEventListener('authReady', () => {
-    if (location.hash === '#signup' || new URLSearchParams(location.search).get('auth') === 'signup') {
-      window.renderAuth('signup');
-    }
+    const wantsSignup = location.hash === '#signup' ||
+      new URLSearchParams(location.search).get('auth') === 'signup' ||
+      !!document.getElementById('suBusiness');
+    if (wantsSignup) window.renderAuth('signup');
   });
 })();

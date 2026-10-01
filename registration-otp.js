@@ -6,106 +6,7 @@
 (function () {
   'use strict';
 
-  const WIDGET_ID = '366a61647a4a37333039353351';
-  const SDK_URL = 'https://verify.msg91.com/otp-provider.js';
-  let widgetToken = '';
-  let sdkPromise = null;
-  const otpState = {
-    mobile: { sent: false, verified: false, accessToken: '', reqId: '', identifier: '' },
-    email: { sent: false, verified: false, accessToken: '', reqId: '', identifier: '' }
-  };
-
-  const originalRenderAuth = window.renderAuth;
-  window.__NROriginalRenderAuth = originalRenderAuth;
-
-  function esc(v) {
-    return String(v ?? '').replace(/[&<>"]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[m]));
-  }
-
-  async function api(path, opts = {}) {
-    const r = await fetch(path, {
-      credentials: 'include',
-      cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-      ...opts
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || 'Request failed');
-    return j;
-  }
-
-  async function loadConfig() {
-    if (widgetToken) return;
-    const d = await api('/api/auth?action=otp-config');
-    if (!d.widgetId || !d.widgetToken) throw new Error('MSG91 OTP is not configured yet.');
-    if (d.widgetId !== WIDGET_ID) throw new Error('MSG91 Widget ID mismatch.');
-    widgetToken = d.widgetToken;
-  }
-
-  function loadSdk() {
-    if (window.initSendOTP) return Promise.resolve();
-    if (sdkPromise) return sdkPromise;
-    sdkPromise = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.type = 'text/javascript';
-      s.src = SDK_URL;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error('MSG91 OTP SDK could not load.'));
-      document.head.appendChild(s);
-    });
-    return sdkPromise;
-  }
-
-  async function initWidget(identifier, captchaId) {
-    await loadConfig();
-    await loadSdk();
-    if (!window.initSendOTP) throw new Error('MSG91 OTP SDK is unavailable.');
-
-    return new Promise((resolve) => {
-      let settled = false;
-      const finish = (value) => {
-        if (settled) return;
-        settled = true;
-        resolve(value);
-      };
-
-      const configuration = {
-        widgetId: WIDGET_ID,
-        tokenAuth: widgetToken,
-        identifier,
-        exposeMethods: true,
-        captchaRenderId: captchaId || '',
-        success: (data) => finish(data || { type: 'ready' }),
-        failure: (error) => finish({ type: 'error', error })
-      };
-
-      try {
-        window.initSendOTP(configuration);
-      } catch (e) {
-        finish({ type: 'error', error: e });
-        return;
-      }
-
-      // MSG91 can expose the custom-UI methods asynchronously after
-      // initSendOTP() returns. Wait until the methods are actually ready.
-      const started = Date.now();
-      const waitForMethods = () => {
-        if (typeof window.sendOtp === 'function' &&
-            typeof window.verifyOtp === 'function') {
-          finish({ type: 'ready' });
-          return;
-        }
-        if (Date.now() - started >= 8000) {
-          finish({ type: 'error', error: new Error('MSG91 OTP methods are not ready. Please refresh and try again.') });
-          return;
-        }
-        setTimeout(waitForMethods, 100);
-      };
-      waitForMethods();
-    });
-  }
-
-  function normalizeMobile(v) {
+  async function sendOtpApi(kind, identifier) {\n    return api('/api/auth?action=otp-send', { method:'POST', body:JSON.stringify({kind, identifier}) });\n  }\n\n  async function verifyOtpApi(kind, reqId, otp) {\n    return api('/api/auth?action=otp-verify', { method:'POST', body:JSON.stringify({kind, reqId, otp}) });\n  }\n\n  function normalizeMobile(v) {
     const digits = String(v || '').replace(/\D/g, '');
     if (digits.length === 10) return '91' + digits;
     if (digits.length === 12 && digits.startsWith('91')) return digits;
@@ -148,7 +49,6 @@
               <input id="mobileOtp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP">
               <button type="button" class="primary nr-otp-verify" id="verifyMobileOtp">Verify</button>
             </div>
-            <div id="mobileCaptcha" class="nr-otp-captcha"></div>
             <small id="mobileOtpStatus" class="nr-otp-status"></small>
           </label>
           <label>Email
@@ -158,7 +58,6 @@
               <input id="emailOtp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP">
               <button type="button" class="primary nr-otp-verify" id="verifyEmailOtp">Verify</button>
             </div>
-            <div id="emailCaptcha" class="nr-otp-captcha"></div>
             <small id="emailOtpStatus" class="nr-otp-status"></small>
           </label>
           <label>Business Category<input id="suCategory" required placeholder="Garage / Retail / Service..."></label>
@@ -191,74 +90,27 @@
 
   async function sendOtpFor(kind, identifier) {
     const btn = document.getElementById(kind === 'mobile' ? 'sendMobileOtp' : 'sendEmailOtp');
-    const captchaId = kind + 'Captcha';
     if (!identifier || (kind === 'mobile' && identifier.length !== 12) || (kind === 'email' && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(identifier))) {
-      setOtpUi(kind, kind === 'mobile' ? 'Enter a valid 10-digit mobile number.' : 'Enter a valid email address.', false);
-      return;
+      setOtpUi(kind, kind === 'mobile' ? 'Enter a valid 10-digit mobile number.' : 'Enter a valid email address.', false); return;
     }
-    btn.disabled = true;
-    btn.textContent = 'Sending...';
+    btn.disabled=true; btn.textContent='Sending...';
     try {
-      await initWidget(identifier, captchaId);
-      const result = await new Promise((resolve) => {
-        try {
-          window.sendOtp(identifier,
-            data => resolve(data || { type:'success' }),
-            error => resolve({ type:'error', error })
-          );
-        } catch (e) { resolve({ type:'error', error:e }); }
-      });
-      if (String(result?.type || '').toLowerCase() === 'error' || result?.error) {
-        throw new Error(result?.error?.message || result?.error || 'Could not send OTP.');
-      }
-      otpState[kind].sent = true;
-      otpState[kind].identifier = identifier;
-      otpState[kind].reqId = result?.message || result?.reqId || result?.['reqId'] || '';
-      const immediateToken = result?.['access-token'] || result?.accessToken;
-      if (immediateToken) {
-        otpState[kind].accessToken = immediateToken;
-        otpState[kind].verified = true;
-        setOtpUi(kind, 'Verified automatically.', true);
-      } else {
-        document.getElementById(kind + 'OtpBox').style.display = 'flex';
-        setOtpUi(kind, 'OTP sent. Enter the 6-digit OTP.', false);
-      }
-    } catch (e) {
-      setOtpUi(kind, e.message || 'OTP could not be sent.', false);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = otpState[kind].verified ? 'Verified' : 'Resend OTP';
-    }
+      const d=await sendOtpApi(kind,identifier);
+      if(!d.reqId) throw new Error('MSG91 did not return a request ID.');
+      otpState[kind].sent=true; otpState[kind].verified=false; otpState[kind].accessToken=''; otpState[kind].identifier=identifier; otpState[kind].reqId=d.reqId;
+      document.getElementById(kind+'OtpBox').style.display='flex'; setOtpUi(kind,'OTP sent. Enter the 6-digit OTP.',false);
+    } catch(e){ setOtpUi(kind,e.message||'OTP could not be sent.',false); }
+    finally{btn.disabled=false;btn.textContent=otpState[kind].verified?'Verified':'Resend OTP';}
   }
 
   async function verifyOtpFor(kind, otp) {
-    const s = otpState[kind];
-    if (!s.sent || !s.identifier) { setOtpUi(kind, 'Send OTP first.', false); return; }
-    if (!/^\\d{4,8}$/.test(otp)) { setOtpUi(kind, 'Enter the OTP received.', false); return; }
-    const btn = document.getElementById(kind === 'mobile' ? 'verifyMobileOtp' : 'verifyEmailOtp');
-    btn.disabled = true; btn.textContent = 'Verifying...';
-    try {
-      const result = await new Promise((resolve) => {
-        try {
-          window.verifyOtp(otp,
-            data => resolve(data || {}),
-            error => resolve({ type:'error', error }),
-            s.reqId || undefined
-          );
-        } catch (e) { resolve({ type:'error', error:e }); }
-      });
-      if (String(result?.type || '').toLowerCase() === 'error' || result?.error) throw new Error(result?.error?.message || result?.error || 'OTP verification failed.');
-      const accessToken = result?.['access-token'] || result?.accessToken || result?.message;
-      if (!accessToken) throw new Error('MSG91 did not return an access token.');
-      s.accessToken = accessToken;
-      s.verified = true;
-      setOtpUi(kind, 'OTP verified successfully.', true);
-    } catch (e) {
-      s.verified = false; s.accessToken = '';
-      setOtpUi(kind, e.message || 'OTP verification failed.', false);
-    } finally {
-      btn.disabled = false; btn.textContent = 'Verify';
-    }
+    const s=otpState[kind];
+    if(!s.sent||!s.reqId){setOtpUi(kind,'Send OTP first.',false);return;}
+    if(!/^\\d{4,8}$/.test(otp)){setOtpUi(kind,'Enter the OTP received.',false);return;}
+    const btn=document.getElementById(kind==='mobile'?'verifyMobileOtp':'verifyEmailOtp'); btn.disabled=true; btn.textContent='Verifying...';
+    try{const d=await verifyOtpApi(kind,s.reqId,otp); if(!d.accessToken)throw new Error('MSG91 did not return an access token.'); s.accessToken=d.accessToken;s.verified=true;setOtpUi(kind,'OTP verified successfully.',true);}
+    catch(e){s.verified=false;s.accessToken='';setOtpUi(kind,e.message||'OTP verification failed.',false);}
+    finally{btn.disabled=false;btn.textContent='Verify';}
   }
 
   window.__NRBuildOtpSignup = buildSignup;

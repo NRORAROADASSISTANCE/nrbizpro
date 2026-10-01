@@ -148,22 +148,23 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
 
  if(req.method==='GET'&&a==='hms-public-doctors'){
   const id=String(req.query?.hospital||'').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});
-  const r=await sql`SELECT doctors FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];return send(res,200,{doctors});
+  const h=await sql`SELECT id FROM hms_hospitals WHERE id=${id} AND approval_status='approved' AND payment_status='paid' LIMIT 1`;if(!h.rowCount)return send(res,404,{error:'Hospital not available.'});
+  const r=await sql`SELECT doctors FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];const publicDoctors=doctors.map(d=>({id:d.id||d.doctorId||'',name:d.name||d.doctorName||'',specialization:d.specialization||d.speciality||''}));return send(res,200,{doctors:publicDoctors});
  }
 
  if(req.method==='GET'&&a==='hms-public'){
   const id=String(req.query?.hospital||'').trim();
   if(!id)return send(res,400,{error:'Hospital ID is required.'});
-  const r=await sql`SELECT id,hospital,owner,mobile,email,address,website_url FROM hms_hospitals WHERE id=${id} LIMIT 1`;
+  const r=await sql`SELECT id,hospital,address,website_url FROM hms_hospitals WHERE id=${id} AND approval_status='approved' AND payment_status='paid' LIMIT 1`;
   const h=r.rows[0]; if(!h)return send(res,404,{error:'Hospital not found.'});
-  return send(res,200,{hospital:{id:h.id,name:h.hospital,owner:h.owner,mobile:h.mobile,email:h.email,address:h.address,website:h.website_url}});
+  return send(res,200,{hospital:{id:h.id,name:h.hospital,address:h.address,website:h.website_url}});
  }
 
 
  if(req.method==='POST'&&a==='hms-public-appointment'){
   const x=req.body||{},id=String(x.hospitalId||'').trim(),patient=String(x.patient||'').trim(),mobile=String(x.mobile||'').trim(),date=String(x.date||'').trim(),doctor=String(x.doctor||'').trim(),service=String(x.service||'').trim(),note=String(x.note||'').trim();
   if(!id||!patient||!mobile||!date||!doctor||!service)return send(res,400,{error:'Please fill patient name, mobile, date, doctor and service.'});
-  const h=await sql`SELECT id FROM hms_hospitals WHERE id=${id} LIMIT 1`;if(!h.rowCount)return send(res,404,{error:'Hospital not found.'});
+  const h=await sql`SELECT id FROM hms_hospitals WHERE id=${id} AND approval_status='approved' AND payment_status='paid' LIMIT 1`;if(!h.rowCount)return send(res,404,{error:'Hospital not available.'});
   const r=await sql`SELECT appointments FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const list=Array.isArray(r.rows[0]?.appointments)?r.rows[0].appointments:[];
   const appointment={id:token(),date,patient,mobile,doctor,status:'Requested',service,note,source:'Hospital Website',createdAt:new Date().toISOString()};
   list.push(appointment);

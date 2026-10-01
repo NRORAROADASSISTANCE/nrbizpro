@@ -197,7 +197,13 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   const incomingItems=Array.isArray(body.items)?body.items:[],incomingBills=Array.isArray(body.bills)?body.bills:[];
   const cleanIncoming=normalizeBusinessDataForAccount(b,incomingItems,incomingBills);
   let items=cleanIncoming.items,bills=cleanIncoming.bills;
-  const staffRole=String(b.role||'owner').toLowerCase(),p=b.permissions||{};if(staffRole==='staff'){const old=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;const prev=old.rows[0]||{};if(p.products===false&&p.inventory===false)items=Array.isArray(prev.items)?prev.items:[];if(p.billing===false&&p.sales===false)bills=Array.isArray(prev.bills)?prev.bills:[];
+  const staffRole=String(b.role||'owner').toLowerCase(),p=b.permissions||{};if(staffRole==='staff'){
+    const can=(module,action)=>p[module+'_'+action]===true || (p[module]===true && ['view','create','edit'].includes(action));
+    const denied=[];
+    if(!can('products','view')&&!can('inventory','view'))denied.push('products');
+    if(!can('billing','view')&&!can('sales','view'))denied.push('billing');
+    if(!can('customers','view'))denied.push('customers');
+    if(denied.length){} const old=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;const prev=old.rows[0]||{};if(p.products===false&&p.inventory===false)items=Array.isArray(prev.items)?prev.items:[];if(p.billing===false&&p.sales===false)bills=Array.isArray(prev.bills)?prev.bills:[];
     const arr=(v)=>Array.isArray(v)?v:[]; const key=(x)=>String(x?.id??x?.productId??x?.invoiceNo??x?.billNo??x?.sku??''); const map=(v)=>new Map(arr(v).map(x=>[key(x),x]).filter(([k])=>k));
     const pm=map(prev.items), nm=map(items), bm=map(prev.bills), nb=map(bills); let sensitive=[];
     for(const [k] of pm) if(!nm.has(k)) sensitive.push({type:'product_delete',id:k});

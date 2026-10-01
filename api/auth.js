@@ -245,6 +245,12 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`DELETE FROM business_data_backups WHERE business_id=${b.id} AND id NOT IN (SELECT id FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 20)`;
   return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:Number(saved.rows[0].version),updatedAt:saved.rows[0].updated_at});
  }
+ if(req.method==='GET'&&a==='security-audit'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view security audit logs.'});
+  const limit=Math.min(500,Math.max(1,Number(req.query?.limit||200)));const action=String(req.query?.action||'').trim();
+  const r=action?await sql`SELECT id,actor,action,details,client_ip AS "clientIp",created_at AS "createdAt" FROM security_audit WHERE business_id=${b.id} AND action=${action} ORDER BY created_at DESC LIMIT ${limit}`:await sql`SELECT id,actor,action,details,client_ip AS "clientIp",created_at AS "createdAt" FROM security_audit WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT ${limit}`;
+  return send(res,200,{items:r.rows});
+ }
  if(req.method==='POST'&&a==='secure-financial-action'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   const action=String(req.body?.action||'').trim().toLowerCase(),amount=Number(req.body?.amount);

@@ -330,6 +330,10 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
   const current=await sql`SELECT version FROM business_data WHERE business_id=${b.id} LIMIT 1`;const cv=current.rowCount?Number(current.rows[0].version||0):0;
   const bk=await sql`SELECT items,bills,customers,settings,state FROM business_data_backups WHERE id=${id} AND business_id=${b.id} LIMIT 1`;if(!bk.rowCount)return send(res,404,{error:'Backup not found.'});
   const x=bk.rows[0],newVersion=cv+1;
+  // Always snapshot the live state before a restore, so an accidental restore is reversible.
+  const preRestoreId=token();
+  const live=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;
+  if(live.rowCount){const l=live.rows[0];await sql`INSERT INTO business_data_backups(id,business_id,items,bills,customers,settings,state) VALUES(${preRestoreId},${b.id},${JSON.stringify(l.items||[])}::jsonb,${JSON.stringify(l.bills||[])}::jsonb,${JSON.stringify(l.customers||[])}::jsonb,${JSON.stringify(l.settings||{})}::jsonb,${JSON.stringify(l.state||{})}::jsonb)`;}
   const saved=await sql`UPDATE business_data SET items=${JSON.stringify(x.items||[])}::jsonb,bills=${JSON.stringify(x.bills||[])}::jsonb,customers=${JSON.stringify(x.customers||[])}::jsonb,settings=${JSON.stringify(x.settings||{})}::jsonb,state=${JSON.stringify(x.state||{})}::jsonb,version=${newVersion},updated_at=now() WHERE business_id=${b.id} RETURNING version`;
   await auditSecurity({businessId:b.id,actor:b.user_id,action:'backup_restored',details:'Restored backup '+id+' to version '+newVersion,clientIp:clientIp(req)});return send(res,200,{ok:true,version:Number(saved.rows[0].version)});
  }

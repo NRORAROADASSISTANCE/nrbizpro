@@ -140,7 +140,7 @@
           <label>GSTIN <span>(optional)</span><input id="suGst"></label>
           <label>Business Address<input id="suAddress" required></label>
         </div>
-        <label>Password<input id="suPassword" required minlength="8" type="password"></label>
+        <label>Password<div style="position:relative"><input id="suPassword" required minlength="8" type="password" style="padding-right:46px"><button type="button" id="toggleSuPassword" aria-label="Show password" title="Show password" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;font-size:18px;padding:4px">👁️</button></div></label>
         <button id="continuePlansBtn" class="primary auth-btn" disabled>Continue to Plans</button>
       </form>
       <p class="auth-switch">Already registered? <button onclick="renderAuth('login')">Login</button></p>
@@ -156,6 +156,7 @@
     document.getElementById('sendMobileOtp').onclick = () => sendOtpFor('mobile', normalizeMobile(mobile.value));
     document.getElementById('verifyMobileOtp').onclick = () => verifyOtpFor('mobile', document.getElementById('mobileOtp').value.trim());
     document.getElementById('sendEmailOtp').onclick = () => sendOtpFor('email', normalizeEmail(email.value));
+    document.getElementById('toggleSuPassword').onclick = () => { const p=document.getElementById('suPassword'); const b=document.getElementById('toggleSuPassword'); if(p.type==='password'){p.type='text';b.textContent='🙈';b.setAttribute('aria-label','Hide password');b.title='Hide password';}else{p.type='password';b.textContent='👁️';b.setAttribute('aria-label','Show password');b.title='Show password';} };
     document.getElementById('verifyEmailOtp').onclick = () => verifyOtpFor('email', document.getElementById('emailOtp').value.trim());
 
     mobile.addEventListener('input', () => { if (otpState.mobile.verified) { otpState.mobile.verified=false; otpState.mobile.accessToken=''; setOtpUi('mobile','Mobile changed — verify again.',false); } });

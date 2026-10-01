@@ -43,3 +43,8 @@
   window.NRBizProStaff={open:openStaff,openForm:openStaffForm};
   window.addEventListener('load',()=>{loadCss();setTimeout(boot,2300);setTimeout(boot,4200)});window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);
 })();
+
+// Secure Owner Approval Center: server-backed queue for sensitive staff actions.
+window.requestNRSecureApproval=async function(action,payload={}){const r=await fetch('/api/auth?action=approval-request',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action,payload})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Approval request failed.');return d};
+window.loadNRSecureApprovals=async function(){const r=await fetch('/api/auth?action=approval-list',{credentials:'include',cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Approval list failed.');return d.items||[]};
+window.decideNRSecureApproval=async function(id,decision){const r=await fetch('/api/auth?action=approval-action',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({id,decision})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Approval action failed.');return d};

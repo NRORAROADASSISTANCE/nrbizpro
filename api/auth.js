@@ -245,6 +245,19 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`DELETE FROM business_data_backups WHERE business_id=${b.id} AND id NOT IN (SELECT id FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 20)`;
   return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:Number(saved.rows[0].version),updatedAt:saved.rows[0].updated_at});
  }
+ if(req.method==='POST'&&a==='secure-financial-action'){
+  const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
+  const action=String(req.body?.action||'').trim().toLowerCase(),amount=Number(req.body?.amount);
+  const allowed=['payment_create','payment_edit','refund','outstanding_adjust','discount_override'];
+  if(!allowed.includes(action))return send(res,400,{error:'Unsupported financial action.'});
+  if(!Number.isFinite(amount)||amount<0)return send(res,400,{error:'Valid amount is required.'});
+  const staff=String(b.role).toLowerCase()==='staff',p=b.permissions||{},module=action==='payment_create'||action==='payment_edit'?'payments':'billing';
+  const canApprove=p[module+'_approve']===true;
+  if(staff&&!canApprove){
+    const id=token();const payload={...req.body,amount};await sql`INSERT INTO security_approvals(id,business_id,requested_by,action,payload) VALUES(${id},${b.id},${b.staff_id||b.user_id},${action},${JSON.stringify(payload)}::jsonb)`;await auditSecurity({businessId:b.id,actor:b.staff_id||b.user_id,action:'financial_approval_requested',details:action+' amount='+amount,clientIp:clientIp(req)});return send(res,403,{error:'CEO/Owner approval required for this financial action.',approvalRequired:true,approvalId:id});
+  }
+  await auditSecurity({businessId:b.id,actor:b.user_id,action:'financial_action',details:action+' amount='+amount,clientIp:clientIp(req)});return send(res,200,{ok:true,approved:true,action});
+ }
  if(req.method==='POST'&&a==='approval-request'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   if(String(b.role).toLowerCase()==='owner')return send(res,400,{error:'Owner actions do not require an approval request.'});

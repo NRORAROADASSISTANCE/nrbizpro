@@ -322,7 +322,8 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
   const action=String(req.body?.action||'').trim().toLowerCase(),amount=Number(req.body?.amount);
   const allowed=['payment_create','payment_edit','refund','outstanding_adjust','discount_override'];
   if(!allowed.includes(action))return send(res,400,{error:'Unsupported financial action.'});
-  if(!Number.isFinite(amount)||amount<0)return send(res,400,{error:'Valid amount is required.'});\n  const idem=await claimIdempotency(req,b.id);if(!idem.key)return send(res,400,{error:'Idempotency-Key is required for financial actions.'});if(idem.existing){if(idem.existing.pending)return send(res,409,{error:'Duplicate financial request is already being processed.'});return send(res,200,idem.existing);}
+  if(!Number.isFinite(amount)||amount<0)return send(res,400,{error:'Valid amount is required.'});
+  const idem=await claimIdempotency(req,b.id);if(!idem.key)return send(res,400,{error:'Idempotency-Key is required for financial actions.'});if(idem.existing){if(idem.existing.pending)return send(res,409,{error:'Duplicate financial request is already being processed.'});return send(res,200,idem.existing);}
   const staff=String(b.role).toLowerCase()==='staff',p=b.permissions||{},module=action==='payment_create'||action==='payment_edit'?'payments':'billing';
   const canApprove=p[module+'_approve']===true;
   if(staff&&!canApprove){

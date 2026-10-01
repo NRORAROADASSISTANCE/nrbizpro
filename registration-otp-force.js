@@ -8,7 +8,7 @@
       const email=document.getElementById('suEmail');
       const hasOtp=document.getElementById('sendMobileOtp') && document.getElementById('sendEmailOtp');
       if(form && mobile && email && !hasOtp && typeof window.renderAuth==='function'){
-        window.renderAuth('signup');
+        window.__NRBuildOtpSignup?.();
       }
     }catch(e){ console.error('NR OTP signup render:',e); }
   }

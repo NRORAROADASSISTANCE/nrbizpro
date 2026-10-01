@@ -272,6 +272,17 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
   ]);
   return send(res,200,{ok:true,generatedAt:new Date().toISOString(),sessions:sessions.rows[0].count,alerts:{total:alerts.rows[0].total,open:alerts.rows[0].open},lockouts:locks.rows[0].count,logins24h:{failed:logins.rows[0].failed,success:logins.rows[0].success},audit24h:audit.rows[0].count,pendingApprovals:approvals.rows[0].count,lastBackup:backups.rows[0]?.createdAt||null});
  }
+ if(req.method==='POST'&&a==='staff-session-policy'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can change staff session policy.'});
+  const n=Number(req.body?.maxStaffSessions);if(!Number.isInteger(n)||n<1||n>10)return send(res,400,{error:'Staff session limit must be between 1 and 10.'});
+  await sql`INSERT INTO account_security(business_id,max_staff_sessions,updated_at) VALUES(${b.id},${n},now()) ON CONFLICT(business_id) DO UPDATE SET max_staff_sessions=${n},updated_at=now()`;
+  await auditSecurity({businessId:b.id,actor:b.user_id,action:'staff_session_policy_changed',details:'Maximum concurrent staff sessions: '+n,clientIp:clientIp(req)});
+  return send(res,200,{ok:true,maxStaffSessions:n});
+ }
+ if(req.method==='GET'&&a==='staff-session-policy'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view staff session policy.'});
+  const r=await sql`SELECT max_staff_sessions AS "maxStaffSessions" FROM account_security WHERE business_id=${b.id} LIMIT 1`;return send(res,200,{maxStaffSessions:Number(r.rows[0]?.maxStaffSessions||3)});
+ }
  if(req.method==='GET'&&a==='session-list'){
   const b=await sessionBusiness(req);if(!b)return send(res,401,{error:'Please log in to continue.'});
   const r=await sql`SELECT session_id AS "sessionId",token,role,staff_id AS "staffId",client_ip AS "clientIp",user_agent AS "userAgent",created_at AS "createdAt",last_seen_at AS "lastSeenAt",expires_at AS "expiresAt" FROM sessions WHERE business_id=${b.id} AND expires_at>now() ORDER BY last_seen_at DESC LIMIT 100`;
@@ -356,6 +367,7 @@ const r=await sql`UPDATE security_approvals SET status=${decision},approved_by=$
   const br=await sql`SELECT * FROM businesses WHERE lower(user_id)=${businessId} LIMIT 1`;if(!br.rowCount)return send(res,401,{error:'Business Login ID not found.'});
   const sr=await sql`SELECT * FROM business_staff WHERE business_id=${br.rows[0].id} AND lower(login_id)=${loginId} AND active=true LIMIT 1`;const s=sr.rows[0];
   if(!s||!(await verifyPassword(password,s.password_hash))){await logLoginEvent({businessId:br.rows[0].id,loginId,loginType:'staff',outcome:'failed',req});await auditSecurity({businessId:br.rows[0].id,actor:loginId,action:'staff_login_failed',details:'Invalid staff credentials',clientIp:clientIp(req)});return send(res,401,{error:'Invalid Staff Login details.'})}
+  const limitR=await sql`SELECT max_staff_sessions FROM account_security WHERE business_id=${br.rows[0].id} LIMIT 1`;const maxSessions=Math.min(10,Math.max(1,Number(limitR.rows[0]?.max_staff_sessions||3)));const activeR=await sql`SELECT token FROM sessions WHERE business_id=${br.rows[0].id} AND staff_id=${s.id} AND expires_at>now() ORDER BY last_seen_at ASC`;if(activeR.rowCount>=maxSessions){const revokeCount=activeR.rowCount-maxSessions+1;for(const row of activeR.rows.slice(0,revokeCount))await sql`DELETE FROM sessions WHERE token=${row.token}`;}
   const t=token();await sql`INSERT INTO sessions(token,session_id,business_id,admin,role,staff_id,permissions,expires_at,last_seen_at,client_ip,user_agent) VALUES(${t},left(md5(${t}),24),${br.rows[0].id},false,'staff',${s.id},${JSON.stringify(s.permissions||{})}::jsonb,now()+interval '30 days',now(),${clientIp(req)},${String(req.headers?.['user-agent']||'').slice(0,500)})`;cookie(res,'nr_session',t);await logLoginEvent({businessId:br.rows[0].id,loginId:s.login_id,loginType:'staff',outcome:'success',req});await assessLoginRisk(br.rows[0].id,s.login_id,t,req);await auditSecurity({businessId:br.rows[0].id,actor:s.login_id,action:'staff_login_success',details:'Staff login successful',clientIp:clientIp(req)});
   return send(res,200,{user:{...pub(br.rows[0]),role:'staff',staffId:s.id,staffName:s.name,staffRole:s.role,permissions:s.permissions||{}}});
  }

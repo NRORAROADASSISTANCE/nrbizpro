@@ -245,6 +245,19 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`DELETE FROM business_data_backups WHERE business_id=${b.id} AND id NOT IN (SELECT id FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 20)`;
   return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:Number(saved.rows[0].version),updatedAt:saved.rows[0].updated_at});
  }
+ if(req.method==='GET'&&a==='backup-list'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view backups.'});
+  const r=await sql`SELECT id,created_at AS "createdAt",jsonb_array_length(items) AS "items",jsonb_array_length(bills) AS "bills",jsonb_array_length(customers) AS "customers" FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 50`;return send(res,200,{items:r.rows});
+ }
+ if(req.method==='POST'&&a==='backup-restore'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can restore backups.'});
+  const id=String(req.body?.id||'').trim();if(!id)return send(res,400,{error:'Backup ID is required.'});
+  const current=await sql`SELECT version FROM business_data WHERE business_id=${b.id} LIMIT 1`;const cv=current.rowCount?Number(current.rows[0].version||0):0;
+  const bk=await sql`SELECT items,bills,customers,settings,state FROM business_data_backups WHERE id=${id} AND business_id=${b.id} LIMIT 1`;if(!bk.rowCount)return send(res,404,{error:'Backup not found.'});
+  const x=bk.rows[0],newVersion=cv+1;
+  const saved=await sql`UPDATE business_data SET items=${JSON.stringify(x.items||[])}::jsonb,bills=${JSON.stringify(x.bills||[])}::jsonb,customers=${JSON.stringify(x.customers||[])}::jsonb,settings=${JSON.stringify(x.settings||{})}::jsonb,state=${JSON.stringify(x.state||{})}::jsonb,version=${newVersion},updated_at=now() WHERE business_id=${b.id} RETURNING version`;
+  await auditSecurity({businessId:b.id,actor:b.user_id,action:'backup_restored',details:'Restored backup '+id+' to version '+newVersion,clientIp:clientIp(req)});return send(res,200,{ok:true,version:Number(saved.rows[0].version)});
+ }
  if(req.method==='GET'&&a==='security-audit'){
   const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view security audit logs.'});
   const limit=Math.min(500,Math.max(1,Number(req.query?.limit||200)));const action=String(req.query?.action||'').trim();

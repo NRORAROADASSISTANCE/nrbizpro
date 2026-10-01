@@ -197,7 +197,14 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   const incomingItems=Array.isArray(body.items)?body.items:[],incomingBills=Array.isArray(body.bills)?body.bills:[];
   const cleanIncoming=normalizeBusinessDataForAccount(b,incomingItems,incomingBills);
   let items=cleanIncoming.items,bills=cleanIncoming.bills;
-  const staffRole=String(b.role||'owner').toLowerCase(),p=b.permissions||{};if(staffRole==='staff'){const old=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;const prev=old.rows[0]||{};if(p.products===false&&p.inventory===false)items=Array.isArray(prev.items)?prev.items:[];if(p.billing===false&&p.sales===false)bills=Array.isArray(prev.bills)?prev.bills:[]}
+  const staffRole=String(b.role||'owner').toLowerCase(),p=b.permissions||{};if(staffRole==='staff'){const old=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;const prev=old.rows[0]||{};if(p.products===false&&p.inventory===false)items=Array.isArray(prev.items)?prev.items:[];if(p.billing===false&&p.sales===false)bills=Array.isArray(prev.bills)?prev.bills:[];
+    const arr=(v)=>Array.isArray(v)?v:[]; const key=(x)=>String(x?.id??x?.productId??x?.invoiceNo??x?.billNo??x?.sku??''); const map=(v)=>new Map(arr(v).map(x=>[key(x),x]).filter(([k])=>k));
+    const pm=map(prev.items), nm=map(items), bm=map(prev.bills), nb=map(bills); let sensitive=[];
+    for(const [k] of pm) if(!nm.has(k)) sensitive.push({type:'product_delete',id:k});
+    for(const [k] of bm) if(!nb.has(k)) sensitive.push({type:'bill_delete',id:k});
+    for(const [k,x] of pm){const y=nm.get(k);if(y&&JSON.stringify(x?.price??x?.sellingPrice??x?.salePrice??null)!==JSON.stringify(y?.price??y?.sellingPrice??y?.salePrice??null))sensitive.push({type:'price_change',id:k});}
+    const prevSettings=JSON.stringify(prev.settings||{}),newSettings=JSON.stringify(settings||{}); if(prevSettings!==newSettings)sensitive.push({type:'business_settings_change'});
+    if(sensitive.length){const approvalId=token();const approvalPayload={items,bills,customers,settings,state,expectedVersion,changes:sensitive.slice(0,50)};await sql`INSERT INTO security_approvals(id,business_id,requested_by,action,payload) VALUES(${approvalId},${b.id},${b.staff_id||b.user_id},'sensitive_business_data_change',${JSON.stringify(approvalPayload)}::jsonb)`;await auditSecurity({businessId:b.id,actor:b.staff_id||b.user_id,action:'approval_requested',details:`Sensitive changes: ${sensitive.map(x=>x.type).join(',')}`,clientIp:clientIp(req)});return send(res,403,{error:'Sensitive changes require Owner/CEO approval.',approvalRequired:true,approvalId,changes:sensitive});}}
   const customers=Array.isArray(body.customers)?body.customers:[];
   const settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{};
   const state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings};

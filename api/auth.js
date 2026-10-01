@@ -188,15 +188,16 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`ALTER TABLE business_data ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 0`;
   if(req.method==='GET'){
     const r=await sql`SELECT items,bills,customers,settings,state,version,updated_at FROM business_data WHERE business_id=${b.id} LIMIT 1`;
-    if(!r.rowCount)return send(res,200,{ok:true,exists:false,businessId:b.id,items:[],bills:[],customers:[],settings:{},state:{},version:0,updatedAt:null});
+    if(!r.rowCount)return send(res,200,{ok:true,exists:false,businessId:b.id,role:b.role,permissions:b.permissions,items:[],bills:[],customers:[],settings:{},state:{},version:0,updatedAt:null});
     const x=r.rows[0];
     const clean=normalizeBusinessDataForAccount(b,x.items,x.bills);
-    return send(res,200,{ok:true,exists:true,businessId:b.id,items:clean.items,bills:clean.bills,customers:Array.isArray(x.customers)?x.customers:[],settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:x.state&&typeof x.state==='object'?x.state:{},version:Number(x.version||0),updatedAt:x.updated_at});
+    const p=b.permissions||{},staff=String(b.role).toLowerCase()==='staff';const outItems=staff&&p.products===false&&p.inventory===false?[]:clean.items;const outBills=staff&&p.billing===false&&p.sales===false?[]:clean.bills;const outCustomers=staff&&p.customers===false?[]:(Array.isArray(x.customers)?x.customers:[]);const outState=x.state&&typeof x.state==='object'?{...x.state,items:outItems,bills:outBills,customers:outCustomers}:{items:outItems,bills:outBills,customers:outCustomers};return send(res,200,{ok:true,exists:true,businessId:b.id,role:b.role,permissions:p,items:outItems,bills:outBills,customers:outCustomers,settings:x.settings&&typeof x.settings==='object'?x.settings:{},state:outState,version:Number(x.version||0),updatedAt:x.updated_at});
   }
   const body=req.body||{};
   const incomingItems=Array.isArray(body.items)?body.items:[],incomingBills=Array.isArray(body.bills)?body.bills:[];
   const cleanIncoming=normalizeBusinessDataForAccount(b,incomingItems,incomingBills);
-  const items=cleanIncoming.items,bills=cleanIncoming.bills;
+  let items=cleanIncoming.items,bills=cleanIncoming.bills;
+  const staffRole=String(b.role||'owner').toLowerCase(),p=b.permissions||{};if(staffRole==='staff'){const old=await sql`SELECT items,bills,customers,settings,state FROM business_data WHERE business_id=${b.id} LIMIT 1`;const prev=old.rows[0]||{};if(p.products===false&&p.inventory===false)items=Array.isArray(prev.items)?prev.items:[];if(p.billing===false&&p.sales===false)bills=Array.isArray(prev.bills)?prev.bills:[]}
   const customers=Array.isArray(body.customers)?body.customers:[];
   const settings=body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)?body.settings:{};
   const state=body.state&&typeof body.state==='object'&&!Array.isArray(body.state)?body.state:{items,bills,customers,settings};
@@ -229,6 +230,27 @@ export default async function handler(req,res){await initDb();try{const a=req.bo
   await sql`DELETE FROM business_data_backups WHERE business_id=${b.id} AND id NOT IN (SELECT id FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 20)`;
   return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:Number(saved.rows[0].version),updatedAt:saved.rows[0].updated_at});
  }
+ if(req.method==='POST'&&a==='staff-login'){
+  const businessId=String(req.body?.businessId||'').trim().toLowerCase(),loginId=String(req.body?.loginId||'').trim().toLowerCase(),password=String(req.body?.password||'');
+  if(!businessId||!loginId||!password)return send(res,400,{error:'Business Login ID, Staff Login ID and password are required.'});
+  const br=await sql`SELECT * FROM businesses WHERE lower(user_id)=${businessId} LIMIT 1`;if(!br.rowCount)return send(res,401,{error:'Business Login ID not found.'});
+  const sr=await sql`SELECT * FROM business_staff WHERE business_id=${br.rows[0].id} AND lower(login_id)=${loginId} AND active=true LIMIT 1`;const s=sr.rows[0];
+  if(!s||!(await verifyPassword(password,s.password_hash))){await auditSecurity({businessId:br.rows[0].id,actor:loginId,action:'staff_login_failed',details:'Invalid staff credentials',clientIp:clientIp(req)});return send(res,401,{error:'Invalid Staff Login details.'})}
+  const t=token();await sql`INSERT INTO sessions(token,business_id,admin,role,staff_id,permissions,expires_at,last_seen_at,client_ip,user_agent) VALUES(${t},${br.rows[0].id},false,'staff',${s.id},${JSON.stringify(s.permissions||{})}::jsonb,now()+interval '30 days',now(),${clientIp(req)},${String(req.headers?.['user-agent']||'').slice(0,500)})`;cookie(res,'nr_session',t);await auditSecurity({businessId:br.rows[0].id,actor:s.login_id,action:'staff_login_success',details:'Staff login successful',clientIp:clientIp(req)});
+  return send(res,200,{user:{...pub(br.rows[0]),role:'staff',staffId:s.id,staffName:s.name,staffRole:s.role,permissions:s.permissions||{}}});
+ }
+ if(req.method==='POST'&&a==='staff-create'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can manage staff.'});
+  const x=req.body||{},loginId=String(x.loginId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),role=String(x.role||'Staff').trim(),password=String(x.password||'');
+  if(!/^[a-z0-9._-]{4,40}$/.test(loginId)||!name||password.length<8)return send(res,400,{error:'Staff Login ID, name and 8+ character password are required.'});
+  const permissions=x.permissions&&typeof x.permissions==='object'&&!Array.isArray(x.permissions)?x.permissions:{};
+  const ph=await hashPassword(password);const id=token();
+  try{await sql`INSERT INTO business_staff(id,business_id,login_id,name,mobile,role,password_hash,permissions) VALUES(${id},${b.id},${loginId},${name},${mobile},${role},${ph},${JSON.stringify(permissions)}::jsonb)`;await auditSecurity({businessId:b.id,actor:b.user_id,action:'staff_created',details:'Created staff '+loginId,clientIp:clientIp(req)});return send(res,200,{ok:true,id,loginId,name,role,permissions})}catch(e){if(String(e?.code)==='23505')return send(res,409,{error:'Staff Login ID already exists for this business.'});throw e}
+ }
+ if(req.method==='POST'&&a==='staff-update'){
+  const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can manage staff.'});
+  const x=req.body||{},id=String(x.id||'').trim();if(!id)return send(res,400,{error:'Staff ID is required.'});const permissions=x.permissions&&typeof x.permissions==='object'&&!Array.isArray(x.permissions)?x.permissions:{};const role=String(x.role||'Staff').trim(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim();if(!name)return send(res,400,{error:'Staff name is required.'});await sql`UPDATE business_staff SET name=${name},mobile=${mobile},role=${role},permissions=${JSON.stringify(permissions)}::jsonb,active=COALESCE(${x.active===false?false:true},true),updated_at=now() WHERE id=${id} AND business_id=${b.id}`;return send(res,200,{ok:true})}
+ if(req.method==='GET'&&a==='staff-list'){const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view staff.'});const r=await sql`SELECT id,login_id AS "loginId",name,mobile,role,permissions,active,created_at AS "createdAt",updated_at AS "updatedAt" FROM business_staff WHERE business_id=${b.id} ORDER BY created_at DESC`;return send(res,200,{items:r.rows})}
  if(req.method==='POST'&&a==='demo-start'){const r=await sql`SELECT * FROM businesses WHERE id='demo-nrbizpro' LIMIT 1`;const b=r.rows[0];if(!b)return send(res,404,{error:'Demo is not configured.'});const device=clientDevice(req);const reg=await registerDemoDevice(device);if(!reg.ok)return send(res,409,{error:'This demo company already has the maximum 2 registered PCs/devices. The same company can use only 2 PCs for the demo.',demoDevicesLimit:2});const lim=await demoLimit(req);if(lim.remaining<=0)return send(res,409,{error:'Try Demo limit finished for this company/device. The 3 free billing prints have already been used. Clearing history or returning tomorrow will not reset the limit.',demoPrintsUsed:lim.used,demoPrintsRemaining:0,demoDevicesLimit:2});const t=token();await sql`INSERT INTO sessions(token,business_id,expires_at) VALUES(${t},${b.id},now()+interval '30 days')`;cookie(res,'nr_session',t);return send(res,200,{ok:true,demo:true,user:pub(b,lim),demoDevicesLimit:2})}
  if(req.method==='POST'&&a==='demo-print'){const b=await sessionBusiness(req);if(!b||b.id!=='demo-nrbizpro')return send(res,401,{error:'Demo session required.'});const reg=await registerDemoDevice(clientDevice(req));if(!reg.ok)return send(res,409,{error:'This demo company already has the maximum 2 registered PCs/devices.',demoDevicesLimit:2});const lim=await demoLimit(req,true);if(!lim.allowed)return send(res,409,{error:'Demo billing print trial is finished for this company. Only 3 free prints are allowed in total across its maximum 2 PCs/devices. History/browser changes and next-day access do not reset it.',used:3,remaining:0,demoDevicesLimit:2});return send(res,200,{ok:true,used:lim.used,remaining:lim.remaining,demoDevicesLimit:2})}
  if(req.method==='POST'&&a==='otp-send'){

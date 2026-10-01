@@ -53,16 +53,6 @@
       const d=await r.json(); if(myGeneration!==authGeneration)return;
       if(!r.ok){
         if(d.paymentRequired&&d.user){saveServerUser(d);return window.renderAuth?.('plans','Membership payment is required before using NR BizPro.')}
-        try{
-          const users=JSON.parse(localStorage.getItem('nr-bizpro-users-v1')||'[]');
-          const legacy=users.find(u=>((u.user_id||u.loginId||u.mobile||'').toString().toLowerCase()===id.toLowerCase()||String(u.mobile||'')===id)&&u.password===password);
-          if(legacy){
-            const userId=(legacy.user_id||legacy.loginId||String(legacy.email||'').split('@')[0]||legacy.business||'legacy').toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,40);
-            const sr=await fetch('/api/auth?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({action:'signup',business:legacy.business||'Legacy Business',owner:legacy.owner||'Owner',userId,mobile:legacy.mobile||'',email:legacy.email||'',category:legacy.category||'General Business',gst:legacy.gst||'',address:legacy.address||'Not provided',password})});
-            const sd=await sr.json().catch(()=>({}));
-            if(sr.ok&&sd.user){saveServerUser(sd);return window.renderAuth?.('plans','Your older browser-only account has been connected to the secure business database. Please choose a membership plan to activate it.')}
-          }
-        }catch{}
         return window.renderAuth?.('login',d.error||'Invalid login details.')
       }
       clearDemoState();

@@ -234,6 +234,8 @@
     }
   }
 
+  window.__NRBuildOtpSignup = buildSignup;
+
   window.renderAuth = function(mode = 'login', message = '') {
     if (mode !== 'signup') return originalRenderAuth(mode, message);
     buildSignup(message);

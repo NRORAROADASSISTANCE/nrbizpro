@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {sql,initDb,sessionBusiness} from './db.js';
+import {sql,initDb,sessionBusiness} from '../lib/db.js';
 function send(res,code,body){res.setHeader('Content-Type','application/json');res.status(code).json(body)}
 export default async function handler(req,res){
  if(req.method!=='POST')return send(res,405,{error:'Method not allowed'});

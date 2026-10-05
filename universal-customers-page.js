@@ -67,14 +67,14 @@
    document.querySelectorAll('[data-customer-view]').forEach(btn=>btn.addEventListener('click',()=>openView(btn.dataset.customerView)));\n   document.querySelectorAll('[data-customer-view]').forEach(btn=>{const l=document.createElement('button');l.type='button';l.className='secondary';l.textContent='Ledger';l.style.marginLeft='5px';l.onclick=()=>openLedger(btn.dataset.customerView);btn.parentElement.appendChild(l);});
  }
  function openAdd(){
-   window.openModal?.('Add Customer','<div class="modal-grid"><label class="field">Customer Name *<input id="ncName" required></label><label class="field">Mobile Number *<input id="ncMobile" required inputmode="numeric"></label><label class="field">Email<input id="ncEmail" type="email"></label><label class="field">GSTIN<input id="ncGst"></label><label class="field wide">Address<textarea id="ncAddress" rows="3"></textarea></label></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="ncSave">Save Customer</button></div>');
+   window.openModal?.('Add Customer','<div class="modal-grid"><label class="field">Customer Name *<input id="ncName" required></label><label class="field">Mobile Number *<input id="ncMobile" required inputmode="numeric"></label><label class="field">Email<input id="ncEmail" type="email"></label><label class="field">GSTIN<input id="ncGst"></label><label class="field">Opening Balance<input id="ncOpening" type="number" min="0" step="0.01" value="0"></label><label class="field wide">Address<textarea id="ncAddress" rows="3"></textarea></label></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="ncSave">Save Customer</button></div>');
    document.getElementById('ncSave').onclick=()=>{
-     const name=document.getElementById('ncName').value.trim(),mobile=document.getElementById('ncMobile').value.trim(),email=document.getElementById('ncEmail').value.trim(),gst=document.getElementById('ncGst').value.trim(),address=document.getElementById('ncAddress').value.trim();
+     const name=document.getElementById('ncName').value.trim(),mobile=document.getElementById('ncMobile').value.trim(),email=document.getElementById('ncEmail').value.trim(),gst=document.getElementById('ncGst').value.trim(),openingBalance=Math.max(0,Number(document.getElementById('ncOpening').value||0)||0),address=document.getElementById('ncAddress').value.trim();
      if(!name||!mobile)return alert('Customer Name and Mobile Number are required.');
      S().customers=S().customers||[];
      const existing=S().customers.find(c=>String(c.mobile||'').trim()===mobile);
-     if(existing){existing.name=name;existing.email=email;existing.gst=gst;existing.address=address;save();closeModal();render();alert('Existing customer updated successfully.');return;}
-     S().customers.push({id:crypto.randomUUID(),name,mobile,email,gst,address,bills:0,total:0,createdAt:new Date().toISOString()});
+     if(existing){existing.name=name;existing.email=email;existing.gst=gst;existing.address=address;existing.openingBalance=openingBalance;save();closeModal();render();alert('Existing customer updated successfully.');return;}
+     S().customers.push({id:crypto.randomUUID(),name,mobile,email,gst,address,openingBalance,bills:0,total:0,createdAt:new Date().toISOString()});
      save();closeModal();render();alert('Customer saved to cloud successfully.');
    };
  }

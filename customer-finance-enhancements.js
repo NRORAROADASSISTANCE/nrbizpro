@@ -9,11 +9,12 @@
   const due=b=>Math.max(0,Number(b?.dueAmount??b?.balance??(amount(b)-paid(b)))||0);
   const label=b=>b?.invoiceNo??b?.invoiceNumber??b?.billNo??b?.number??b?.id??'Bill';
   const customer=b=>b?.customerName??b?.customer??b?.partyName??'Walk-in Customer';
-  const save=()=>{try{window.save?.();}catch(e){}}
+  const save=()=>{try{window.save?.();window.NRBizProCloudQueueSave?.()}catch(e){}};
+  const payments=()=>{if(!Array.isArray(S().customerPayments))S().customerPayments=[];return S().customerPayments};
   function render(){
     const host=document.getElementById('customerManagement');if(!host)return;
     const active=host.querySelector('.nr-side.active');if(!active||active.dataset.nr!=='payments')return;
-    const bs=bills(), total=bs.reduce((x,b)=>x+amount(b),0), collected=bs.reduce((x,b)=>x+paid(b),0), outstanding=bs.reduce((x,b)=>x+due(b),0);
+    const bs=bills(), total=bs.reduce((x,b)=>x+amount(b),0), collected=bs.reduce((x,b)=>x+paid(b),0), outstanding=bs.reduce((x,b)=>x+due(b),0), history=payments().slice().reverse();
     const cards=host.querySelectorAll('.nr-cards>div');
     if(cards[0])cards[0].innerHTML='<span>Receivables</span><b>'+money(outstanding)+'</b>';
     if(cards[1])cards[1].innerHTML='<span>Payables</span><b>₹0</b>';
@@ -24,6 +25,7 @@
       '<div class="nr-table"><table><thead><tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Action</th></tr></thead><tbody>'+
       (bs.length?bs.map((b,i)=>'<tr><td>'+esc(label(b))+'</td><td>'+esc(customer(b))+'</td><td>'+money(amount(b))+'</td><td>'+money(paid(b))+'</td><td><b>'+money(due(b))+'</b></td><td><button type="button" data-pay-index="'+i+'">Record Payment</button></td></tr>').join(''):'<tr><td colspan="6" class="empty">No invoices yet.</td></tr>')+
       '</tbody></table></div>';
+    box.innerHTML += '<div class="nr-head" style="margin-top:22px"><div><h3>Payment History</h3><p>Saved customer payment transactions.</p></div></div><div class="nr-table"><table><thead><tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Amount</th><th>Method</th></tr></thead><tbody>'+(history.length?history.map(function(p){return '<tr><td>'+esc(String(p.date||'').slice(0,10))+'</td><td>'+esc(p.invoice||'—')+'</td><td>'+esc(p.customer||'—')+'</td><td>'+money(p.amount)+'</td><td>'+esc(p.method||'—')+'</td></tr>';}).join(''):'<tr><td colspan="5" class="empty">No payment history yet.</td></tr>')+'</tbody></table></div>';
     if(old)old.replaceWith(box);else{const tables=host.querySelector('.nr-table');(tables?.parentElement||host.querySelector('.nr-content')||host).appendChild(box)}
     box.querySelectorAll('[data-pay-index]').forEach(btn=>btn.onclick=()=>openPayment(Number(btn.dataset.payIndex)));
   }
@@ -35,6 +37,7 @@
     document.getElementById('nrSavePayment').onclick=()=>{
       const p=Math.min(d,Math.max(0,Number(document.getElementById('nrPayAmount').value)||0));if(!p)return alert('Enter payment amount.');
       const oldPaid=paid(b);b.paidAmount=oldPaid+p;b.amountPaid=b.paidAmount;b.paymentMethod=document.getElementById('nrPayMethod').value;b.paymentDate=new Date().toISOString();b.paymentStatus=b.paidAmount>=amount(b)?'Paid':'Partial';
+      payments().push({id:'CPAY-'+Date.now(),date:new Date().toISOString(),invoice:label(b),invoiceId:b.id||'',customer:customer(b),customerMobile:b.mobile||b.customerMobile||'',amount:p,method:b.paymentMethod,businessId:window.currentUser?.id||''});
       save();window.closeModal?.();render();alert('Payment recorded successfully.');
     };
   }

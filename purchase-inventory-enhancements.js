@@ -47,15 +47,36 @@ function openSupplierLedger(supplier){
   const body=rows.map(r=>{bal+=r.de-r.cr;return '<tr><td>'+esc(String(r.d||'').slice(0,10))+'</td><td>'+esc(r.t)+'</td><td>'+esc(r.r||'—')+'</td><td>'+money(r.de)+'</td><td>'+money(r.cr)+'</td><td>'+money(bal)+'</td></tr>'}).join('');
   window.openModal?.('Supplier Ledger','<div class="nr-cards"><div><span>Opening</span><b>'+money(opening)+'</b></div><div><span>Purchases</span><b>'+money(total)+'</b></div><div><span>Paid</span><b>'+money(paid)+'</b></div><div><span>Closing Due</span><b>'+money(due)+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Particular</th><th>Reference</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>'+body+'</tbody></table></div>');
 }
+function addSupplierDashboardButton(){
+  const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]');
+  if(!host||host.querySelector('[data-open-supplier-dashboard]'))return;
+  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Supplier Dashboard';b.dataset.openSupplierDashboard='1';b.style.margin='10px 6px 10px 0';b.onclick=openSupplierDashboard;
+  const master=host.querySelector('[data-open-supplier-master]');if(master)master.after(b);else host.prepend(b);
+}
 function addSupplierMasterButton(){
   const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]');
   if(!host||host.querySelector('[data-open-supplier-master]'))return;
   const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Supplier Master';b.dataset.openSupplierMaster='1';b.style.margin='10px 0';b.onclick=openSupplierMaster;host.prepend(b);
 }
 function boot(){
-  setTimeout(addSupplierLedgerButtons,300);setTimeout(addSupplierMasterButton,350);if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
+  setTimeout(addSupplierLedgerButtons,300);setTimeout(addSupplierMasterButton,350);setTimeout(addSupplierDashboardButton,400);if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
   window.addEventListener('load',()=>{setTimeout(boot,2200);setTimeout(boot,4000)});window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);
 
+function openSupplierDashboard(){
+  state().suppliers=Array.isArray(state().suppliers)?state().suppliers:[];
+  const suppliers=state().suppliers;
+  const rows=suppliers.map(s=>{
+    const name=String(s.name||'').trim();
+    const ps=purchases().filter(p=>String(p.supplier||'').trim().toLowerCase()===name.toLowerCase());
+    const total=ps.reduce((a,p)=>a+Number(p.total||0),0);
+    const paid=ps.reduce((a,p)=>a+Number(p.paidAmount||0),0)+supplierPayments().filter(p=>String(p.supplier||'').trim().toLowerCase()===name.toLowerCase()).reduce((a,p)=>a+Number(p.amount||0),0);
+    const opening=Number(s.openingBalance||0),due=Math.max(0,opening+total-paid);
+    return {name,opening,total,paid,due};
+  });
+  const html='<div class="nr-cards"><div><span>Total Suppliers</span><b>'+rows.length+'</b></div><div><span>Purchases</span><b>'+money(rows.reduce((a,r)=>a+r.total,0))+'</b></div><div><span>Paid</span><b>'+money(rows.reduce((a,r)=>a+r.paid,0))+'</b></div><div><span>Outstanding</span><b>'+money(rows.reduce((a,r)=>a+r.due,0))+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Opening</th><th>Purchases</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((r,i)=>'<tr><td>'+esc(r.name)+'</td><td>'+money(r.opening)+'</td><td>'+money(r.total)+'</td><td>'+money(r.paid)+'</td><td><b>'+money(r.due)+'</b></td><td><button type="button" data-sdash="'+i+'">Ledger</button></td></tr>').join(''):'<tr><td colspan="6">No suppliers found.</td></tr>')+'</tbody></table></div>';
+  window.openModal?.('Supplier Financial Dashboard',html);
+  document.querySelectorAll('[data-sdash]').forEach(b=>b.onclick=()=>openSupplierLedger(rows[Number(b.dataset.sdash)]?.name));
+}
 function openSupplierMaster(){
   state().suppliers=Array.isArray(state().suppliers)?state().suppliers:[];
   const rows=state().suppliers;

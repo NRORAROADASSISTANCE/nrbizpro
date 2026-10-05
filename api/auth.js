@@ -601,6 +601,16 @@ if(req.method==='POST'&&a==='otp-verify'){
   const arow=await hmsAccountSession(req);if(!arow)return send(res,401,{error:'Account login required.'});
   const r=await sql`SELECT registration_transactions FROM hms_data WHERE hospital_id=${arow.hospital_id} LIMIT 1`;return send(res,200,{items:Array.isArray(r.rows[0]?.registration_transactions)?r.rows[0].registration_transactions:[]});
  }
+ if(req.method==='GET'&&a==='hms-account-transactions'){
+  const arow=await hmsAccountSession(req);if(!arow)return send(res,401,{error:'Account login required.'});
+  const r=await sql`SELECT bills,registration_transactions FROM hms_data WHERE hospital_id=${arow.hospital_id} LIMIT 1`;
+  const bills=Array.isArray(r.rows[0]?.bills)?r.rows[0].bills:[],regs=Array.isArray(r.rows[0]?.registration_transactions)?r.rows[0].registration_transactions:[];
+  const items=[
+   ...regs.map(x=>({transactionNo:x.transactionNo||x.receiptNo||('REG-'+Date.now()),source:'Registration',department:x.department||'Registration',patient:x.patient||'',opdNumber:x.opdNumber||'',amount:Number(x.amount||0),paymentMode:x.paymentMode||'Not recorded',date:x.createdAt||x.date||''})),
+   ...bills.map(x=>({transactionNo:x.invoice||x.transactionNo||'',source:'Hospital Billing',department:x.department||x.service||'General',patient:x.patient||'',opdNumber:x.opdNumber||'',amount:Number(x.amount||0),paymentMode:x.paymentMode||'Not recorded',date:x.createdAt||x.date||x.billDate||''}))
+  ];
+  return send(res,200,{items});
+ }
  if(req.method==='GET'&&a==='hms-account-cmrf'){
   const arow=await hmsAccountSession(req);if(!arow)return send(res,401,{error:'Account login required.'});
   const r=await sql`SELECT cmrf FROM hms_data WHERE hospital_id=${arow.hospital_id} LIMIT 1`;return send(res,200,{items:Array.isArray(r.rows[0]?.cmrf)?r.rows[0].cmrf:[]});

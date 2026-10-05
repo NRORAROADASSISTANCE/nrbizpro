@@ -23,6 +23,28 @@
     if(host.querySelector('.nr-side.active')?.dataset.nr==='purchases'){const hist=supplierPayments().slice().reverse();const wrap=host.querySelector('.nr-table');if(wrap){const h=document.createElement('div');h.className='nr-table';h.innerHTML='<h3 style="margin-top:22px">Supplier Payment History</h3><table><thead><tr><th>Date</th><th>Supplier</th><th>Amount</th><th>Method</th><th>Receipt</th></tr></thead><tbody>'+(hist.length?hist.map((p,i)=>'<tr><td>'+esc(String(p.date||'').slice(0,10))+'</td><td>'+esc(p.supplier||'—')+'</td><td>'+money(p.amount)+'</td><td>'+esc(p.method||'—')+'</td><td><button type="button" data-supplier-receipt="'+i+'">Receipt</button></td></tr>').join(''):'<tr><td colspan="5" class="empty">No supplier payments yet.</td></tr>')+'</tbody></table>';wrap.parentElement.appendChild(h);h.querySelectorAll('[data-supplier-receipt]').forEach(btn=>btn.onclick=()=>{const p=hist[Number(btn.dataset.supplierReceipt)];const w=window.open('','_blank','width=700,height=800');if(!w)return;w.document.write('<html><head><title>Supplier Payment Receipt</title><style>body{font-family:Arial;padding:32px;color:#172033}table{width:100%;border-collapse:collapse}td{padding:12px;border-bottom:1px solid #eee}.amt{font-size:24px;font-weight:800}</style></head><body><h1>NR BizPro</h1><h2>Supplier Payment Receipt</h2><table><tr><td>Supplier</td><td><b>'+esc(p.supplier)+'</b></td></tr><tr><td>Date</td><td>'+esc(String(p.date||'').slice(0,10))+'</td></tr><tr><td>Amount Paid</td><td class="amt">'+money(p.amount)+'</td></tr><tr><td>Payment Method</td><td>'+esc(p.method||'—')+'</td></tr><tr><td>Purchase</td><td>'+esc(p.purchaseId||'—')+'</td></tr></table><p>Thank you.</p><script>window.print()<\/script></body></html>');w.document.close();});}}
     if(host.querySelector('.nr-side.active')?.dataset.nr==='inventory')host.querySelectorAll('.nr-table tbody tr').forEach(r=>{if(r.dataset.stockEnhanced)return;r.dataset.stockEnhanced='1';const c=r.cells[1];if(!c)return;const n=Number(c.textContent||0);if(n<=0)c.textContent='0 — Out of Stock';else if(n<=5)c.textContent=n+' — Low Stock';});
   }
-  function boot(){if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
+  function openSupplierLedger(supplier){
+  const s=String(supplier||'').trim(); if(!s)return;
+  const ps=purchases().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase());
+  const paid=ps.reduce((a,p)=>a+Number(p.paidAmount||0),0)+supplierPayments().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase()).reduce((a,p)=>a+Number(p.amount||0),0);
+  const total=ps.reduce((a,p)=>a+Number(p.total||0),0),due=Math.max(0,total-paid);
+  const rows=[...ps.map(p=>({d:p.date,t:'Purchase',r:p.id,de:Number(p.total||0),cr:0})),...supplierPayments().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase()).map(p=>({d:p.date,t:'Payment',r:p.purchaseId||p.id,de:0,cr:Number(p.amount||0)}))].sort((a,b)=>String(a.d).localeCompare(String(b.d)));
+  let bal=0;
+  const body=rows.map(r=>{bal+=r.de-r.cr;return '<tr><td>'+esc(String(r.d||'').slice(0,10))+'</td><td>'+esc(r.t)+'</td><td>'+esc(r.r||'—')+'</td><td>'+money(r.de)+'</td><td>'+money(r.cr)+'</td><td>'+money(bal)+'</td></tr>'}).join('');
+  window.openModal?.('Supplier Ledger','<div class="nr-cards"><div><span>Purchases</span><b>'+money(total)+'</b></div><div><span>Paid</span><b>'+money(paid)+'</b></div><div><span>Closing Due</span><b>'+money(due)+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Particular</th><th>Reference</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>'+body+'</tbody></table></div>');
+}
+function boot(){
+  setTimeout(addSupplierLedgerButtons,300);if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
   window.addEventListener('load',()=>{setTimeout(boot,2200);setTimeout(boot,4000)});window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);
+
+function addSupplierLedgerButtons(){
+  const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]')||document.body;
+  if(!host||host.dataset.supplierLedgerReady)return;
+  const names=[...new Set(purchases().map(p=>String(p.supplier||'').trim()).filter(Boolean))];
+  if(!names.length)return;
+  const box=document.createElement('div');box.dataset.supplierLedgerReady='1';box.style.cssText='margin:20px 0;padding:16px;border:1px solid #ddd;border-radius:12px';
+  box.innerHTML='<b>Supplier Ledger</b> <select id="nrSupplierLedger"><option value="">Select Supplier</option>'+names.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>';
+  box.querySelector('select').onchange=e=>openSupplierLedger(e.target.value);
+  host.appendChild(box);
+}
 })();

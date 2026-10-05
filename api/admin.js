@@ -1,4 +1,4 @@
-import {sql,initDb,ensureAdmin,hashPassword,verifyPassword,token,cookie,clearCookie,sessionAdmin} from './db.js';
+import {sql,initDb,ensureAdmin,hashPassword,verifyPassword,token,cookie,clearCookie,sessionAdmin} from '../lib/db.js';
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.status(c).json(b)}
 function addDays(days){const d=new Date();d.setDate(d.getDate()+days);return d.toISOString()}
 function normalizeUserId(v){return String(v||'').trim().toLowerCase()}

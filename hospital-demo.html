@@ -1,103 +1,76 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hospital Website Demo | NR HMS</title>
-<meta name="description" content="NR HMS customer hospital website demo">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NR HMS | Signature Hospital Website Demo</title>
+<meta name="description" content="NR HMS premium hospital website customer demo">
 <style>
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#10233f;background:#f7faff}
-a{text-decoration:none;color:inherit}.top{position:sticky;top:0;z-index:20;background:rgba(7,27,51,.96);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
-.nav{max-width:1200px;margin:auto;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:10px;font-weight:900}.logo{width:42px;height:42px;border-radius:12px;background:#fff;color:#1167f5;display:grid;place-items:center;font-weight:1000}.brand small{display:block;color:#a9bed8;font-size:11px;font-weight:600}.links{display:flex;gap:22px;font-size:14px;font-weight:750}.links a:hover{color:#8fc0ff}.cta{background:#1769f6;color:#fff;padding:11px 16px;border-radius:10px;font-weight:850;border:1px solid #4e8cff}
-.hero{background:radial-gradient(circle at 85% 20%,rgba(70,151,255,.35),transparent 30%),linear-gradient(120deg,#071b33,#0d3d7a 58%,#1769f6);color:#fff;padding:78px 22px 70px}.hero-inner{max-width:1200px;margin:auto;display:grid;grid-template-columns:1.35fr .65fr;gap:40px;align-items:center}.eyebrow{display:inline-block;padding:7px 11px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.08);font-size:12px;font-weight:800;letter-spacing:.4px}.hero h1{font-size:clamp(38px,5vw,64px);line-height:1.02;margin:18px 0 14px;letter-spacing:-2px}.hero p{font-size:18px;line-height:1.7;color:#dbe9fb;max-width:720px}.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.btn{display:inline-block;padding:13px 18px;border-radius:11px;font-weight:850}.btn.primary{background:#fff;color:#1164e8}.btn.outline{border:1px solid rgba(255,255,255,.35);color:#fff}.hero-card{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(12px);border-radius:22px;padding:24px}.hero-card h3{margin:0 0 8px}.hero-card p{font-size:14px;margin:0 0 16px}.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.quick div{background:rgba(255,255,255,.1);padding:14px;border-radius:13px}.quick strong{display:block;font-size:18px}.quick span{font-size:12px;color:#c9dbf2}
-.wrap{max-width:1200px;margin:auto;padding:72px 22px}.section-head{text-align:center;max-width:720px;margin:0 auto 32px}.section-head h2{font-size:34px;margin:0 0 10px}.muted{color:#6d7d93;line-height:1.7}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:#fff;border:1px solid #e1e9f4;border-radius:18px;padding:24px;box-shadow:0 10px 30px rgba(17,51,92,.06)}.icon{width:44px;height:44px;border-radius:12px;background:#eaf3ff;color:#1264f5;display:grid;place-items:center;font-size:21px;margin-bottom:14px}.card h3{margin:0 0 8px}.card p{margin:0}.doctor{display:flex;gap:15px;align-items:center}.avatar{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#dcecff,#a9cdfb);display:grid;place-items:center;font-weight:900;color:#1769f6}.tag{display:inline-block;margin-top:10px;padding:6px 9px;background:#eef5ff;color:#1769f6;border-radius:8px;font-size:12px;font-weight:800}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:-30px;position:relative}.stat{background:#fff;border:1px solid #e1e9f4;border-radius:16px;padding:18px;text-align:center;box-shadow:0 10px 30px rgba(17,51,92,.08)}.stat strong{font-size:27px;display:block}.stat span{font-size:12px;color:#74849a}
-.booking{background:#edf5ff}.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field label{display:block;font-size:12px;font-weight:800;color:#50637b}.field input,.field select,.field textarea{width:100%;margin-top:6px;padding:12px;border:1px solid #cad7e7;border-radius:10px;background:#fff;font:inherit}.field textarea{min-height:105px;resize:vertical}.full{grid-column:1/-1}.submit{border:0;background:#1264f5;color:#fff;padding:13px 18px;border-radius:10px;font-weight:850;cursor:pointer}.notice{margin-top:14px;padding:12px;border-radius:10px;background:#eaf8ef;color:#1a6b3d;font-weight:700}
-.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.contact-item{display:flex;gap:14px;align-items:flex-start}.contact-item .icon{flex:none}.footer{background:#071b33;color:#c5d5e8;padding:35px 22px;text-align:center}.footer b{color:#fff}
-@media(max-width:850px){.hero-inner,.contact-grid{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.links{display:none}}
-@media(max-width:560px){.grid,.form{grid-template-columns:1fr}.full{grid-column:auto}.hero{padding-top:55px}.wrap{padding:52px 16px}.stats{margin:0 16px;margin-top:-15px}.nav{padding:10px 14px}.hero-inner{gap:25px}}
+:root{--ink:#f7f2e8;--muted:#b9b3a8;--gold:#d7b46a;--gold2:#f1d99a;--bg:#080a0d;--panel:#101419;--line:rgba(215,180,106,.24)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif}a{text-decoration:none;color:inherit}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 80% 15%,rgba(215,180,106,.10),transparent 25%),radial-gradient(circle at 15% 70%,rgba(49,76,110,.10),transparent 28%);z-index:-1}
+.top{position:sticky;top:0;z-index:30;background:rgba(8,10,13,.90);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.nav{max-width:1280px;margin:auto;padding:15px 28px;display:flex;align-items:center;justify-content:space-between;gap:22px}.brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.3px}.mark{width:42px;height:42px;border:1px solid rgba(215,180,106,.55);border-radius:13px;display:grid;place-items:center;color:var(--gold2);font-weight:1000;background:linear-gradient(145deg,#181b20,#090b0e);box-shadow:0 0 28px rgba(215,180,106,.10)}.brand small{display:block;color:#888d95;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;margin-top:3px}.links{display:flex;gap:26px;font-size:13px;color:#d2cec6}.links a:hover{color:var(--gold2)}.cta{padding:11px 17px;border:1px solid var(--gold);border-radius:9px;color:#17130b;background:linear-gradient(135deg,var(--gold2),var(--gold));font-weight:900}
+.hero{min-height:650px;display:grid;place-items:center;position:relative;overflow:hidden;background:radial-gradient(circle at 72% 32%,rgba(215,180,106,.18),transparent 25%),linear-gradient(115deg,#07090b 0%,#0d1116 52%,#15120d 100%)}.hero:after{content:"";position:absolute;width:620px;height:620px;border:1px solid rgba(215,180,106,.15);border-radius:50%;right:-190px;top:20px;box-shadow:0 0 0 70px rgba(215,180,106,.025),0 0 0 140px rgba(215,180,106,.018)}.hero-inner{width:min(1280px,100%);padding:80px 28px;display:grid;grid-template-columns:1.15fr .85fr;gap:65px;align-items:center;position:relative;z-index:2}.eyebrow{font-size:11px;letter-spacing:2.5px;color:var(--gold2);font-weight:850}.hero h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(48px,6vw,82px);line-height:.98;letter-spacing:-2px;margin:20px 0}.hero h1 em{color:var(--gold2);font-style:normal}.hero p{color:#bdb9b1;line-height:1.8;font-size:17px;max-width:680px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.btn{padding:14px 20px;border-radius:9px;font-weight:850}.btn.gold{color:#17130b;background:linear-gradient(135deg,var(--gold2),var(--gold))}.btn.ghost{border:1px solid rgba(255,255,255,.18);color:#f2eee7}.showcase{background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025));border:1px solid rgba(215,180,106,.28);border-radius:24px;padding:28px;box-shadow:0 35px 100px rgba(0,0,0,.45);backdrop-filter:blur(15px)}.showcase .mini{font-size:10px;letter-spacing:2px;color:#8f938f;text-transform:uppercase}.showcase h3{font-family:Georgia,serif;font-size:31px;font-weight:500;margin:9px 0}.showcase p{font-size:13px;color:#aaa79f}.goldline{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:22px 0}.features{display:grid;grid-template-columns:1fr 1fr;gap:10px}.features div{padding:15px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(0,0,0,.18)}.features b{display:block;color:var(--gold2);font-size:17px}.features span{font-size:11px;color:#8f949b}
+.wrap{max-width:1280px;margin:auto;padding:90px 28px}.head{text-align:center;max-width:760px;margin:0 auto 42px}.head .eyebrow{display:block;margin-bottom:10px}.head h2{font-family:Georgia,serif;font-weight:500;font-size:43px;margin:0 0 13px}.head p{color:var(--muted);line-height:1.75}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:linear-gradient(145deg,#11161b,#0c0f13);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:27px;box-shadow:0 20px 55px rgba(0,0,0,.22)}.card:hover{border-color:rgba(215,180,106,.34);transform:translateY(-2px);transition:.2s}.icon{width:46px;height:46px;border-radius:12px;border:1px solid rgba(215,180,106,.28);display:grid;place-items:center;color:var(--gold2);font-size:21px;margin-bottom:18px}.card h3{font-family:Georgia,serif;font-size:23px;font-weight:500;margin:0 0 9px}.card p{color:#9d9b96;line-height:1.7;margin:0}.tag{display:inline-block;margin-top:17px;color:var(--gold2);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid rgba(215,180,106,.35);padding-bottom:5px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(215,180,106,.18);border:1px solid rgba(215,180,106,.18)}.metric{background:#0d1014;padding:25px;text-align:center}.metric strong{font-family:Georgia,serif;font-size:31px;color:var(--gold2);font-weight:500;display:block}.metric span{font-size:10px;color:#858a91;letter-spacing:1.3px;text-transform:uppercase}
+.doctor{display:flex;gap:16px;align-items:center}.avatar{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(215,180,106,.35);color:var(--gold2);background:linear-gradient(145deg,#1c1e21,#090b0d);font-family:Georgia,serif;font-size:18px}
+.booking{background:linear-gradient(120deg,#0b0e12,#17130d);border-top:1px solid rgba(215,180,106,.12);border-bottom:1px solid rgba(215,180,106,.12)}.form{display:grid;grid-template-columns:1fr 1fr;gap:15px}.field label{display:block;color:#a7a39b;font-size:11px;letter-spacing:.5px;font-weight:800}.field input,.field select,.field textarea{width:100%;margin-top:7px;padding:13px;border:1px solid rgba(255,255,255,.11);border-radius:9px;background:#090c10;color:#f2eee7;font:inherit;outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}.field textarea{min-height:110px;resize:vertical}.full{grid-column:1/-1}.submit{border:0;padding:14px 20px;border-radius:9px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#16120a;font-weight:900;cursor:pointer}.notice{display:none;margin-top:14px;padding:13px;border:1px solid rgba(215,180,106,.25);border-radius:9px;color:#e8d29a;background:rgba(215,180,106,.06)}
+.contact{display:grid;grid-template-columns:1fr 1fr;gap:18px}.contact .card{min-height:150px}.footer{padding:45px 28px;text-align:center;background:#050608;border-top:1px solid rgba(215,180,106,.18);color:#777b82}.footer b{color:var(--gold2);font-family:Georgia,serif;font-size:18px}.footer small{display:block;margin-top:7px}
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr}.links{display:none}.grid{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:1fr 1fr}.contact{grid-template-columns:1fr}}
+@media(max-width:600px){.grid,.form{grid-template-columns:1fr}.full{grid-column:auto}.hero-inner{padding:65px 18px}.wrap{padding:65px 18px}.nav{padding:11px 15px}.hero h1{font-size:49px}.hero p{font-size:15px}.showcase{padding:21px}.head h2{font-size:35px}}
 </style>
 </head>
 <body>
-<header class="top">
-<div class="nav">
-<a class="brand" href="#"><span class="logo">NR</span><span>Sunrise Multispeciality Hospital<small>Powered by NR HMS</small></span></a>
-<nav class="links"><a href="#about">About</a><a href="#services">Services</a><a href="#doctors">Doctors</a><a href="#booking">Appointments</a><a href="#contact">Contact</a></nav>
+<header class="top"><div class="nav">
+<a class="brand" href="#"><span class="mark">NR</span><span>NR HMS <small>Signature Healthcare Experience</small></span></a>
+<nav class="links"><a href="#about">About</a><a href="#services">Services</a><a href="#doctors">Specialists</a><a href="#booking">Appointments</a><a href="#contact">Contact</a></nav>
 <a class="cta" href="#booking">Book Appointment</a>
-</div>
-</header>
+</div></header>
 
-<section class="hero">
-<div class="hero-inner">
-<div>
-<span class="eyebrow">24×7 CARE • DIGITAL HOSPITAL EXPERIENCE</span>
-<h1>Better care starts with a better hospital website.</h1>
-<p>A premium, mobile-friendly hospital website connected with NR HMS. Patients can discover services, view doctors, request appointments and contact the hospital from one place.</p>
-<div class="actions"><a class="btn primary" href="#booking">Book an Appointment</a><a class="btn outline" href="#services">Explore Services</a></div>
-</div>
-<div class="hero-card">
-<h3>Patient-first experience</h3><p>Designed for hospitals that want a professional public website with an integrated management system.</p>
-<div class="quick"><div><strong>24×7</strong><span>Emergency support</span></div><div><strong>Online</strong><span>Appointment requests</span></div><div><strong>Secure</strong><span>NR HMS workflow</span></div><div><strong>Mobile</strong><span>Responsive design</span></div></div>
-</div>
-</div>
-</section>
+<section class="hero"><div class="hero-inner">
+<div><span class="eyebrow">NR HMS • PREMIUM HOSPITAL WEBSITE DEMO</span>
+<h1>Care, elevated to an <em>experience.</em></h1>
+<p>A luxury digital experience created for modern hospitals. Sophisticated branding, clear patient journeys and a powerful appointment experience — connected to NR HMS.</p>
+<div class="actions"><a class="btn gold" href="#booking">Request an Appointment</a><a class="btn ghost" href="#services">Explore Care</a></div></div>
+<div class="showcase"><span class="mini">Signature care platform</span><h3>Designed for trust.<br>Built for modern care.</h3><p>This is a reusable NR HMS customer website template. Each hospital can replace the demo content with its own identity, services, doctors, contact details and appointment workflow.</p><div class="goldline"></div><div class="features"><div><b>24×7</b><span>Patient support</span></div><div><b>Secure</b><span>HMS connected</span></div><div><b>Online</b><span>Appointments</span></div><div><b>Mobile</b><span>First experience</span></div></div></div>
+</div></section>
 
-<div class="stats">
-<div class="stat"><strong>25+</strong><span>Specialists</span></div><div class="stat"><strong>12</strong><span>Departments</span></div><div class="stat"><strong>24×7</strong><span>Emergency</span></div><div class="stat"><strong>10K+</strong><span>Patients served</span></div>
-</div>
+<div class="wrap" style="padding-top:0;padding-bottom:0"><div class="metrics"><div class="metric"><strong>25+</strong><span>Specialists</span></div><div class="metric"><strong>12</strong><span>Departments</span></div><div class="metric"><strong>24×7</strong><span>Emergency</span></div><div class="metric"><strong>10K+</strong><span>Patient journeys</span></div></div></div>
 
-<section class="wrap" id="about">
-<div class="section-head"><h2>About Our Hospital</h2><p class="muted">A sample customer website for demonstration. The hospital name, logo, doctors, departments, contact details and content can be customized for each NR HMS customer.</p></div>
-<div class="card"><p class="muted">Sunrise Multispeciality Hospital is a demo profile showing how an NR HMS customer can present its services online. The public website can be connected to the hospital's own HMS account so appointment requests and hospital information stay within the customer's workspace.</p></div>
-</section>
+<section class="wrap" id="about"><div class="head"><span class="eyebrow">THE EXPERIENCE</span><h2>Healthcare, presented with confidence.</h2><p>A premium customer-facing website should feel calm, credible and effortless. This NR HMS demo uses a restrained luxury direction rather than a generic hospital template.</p></div><div class="card"><p>Hospital identity, logo, doctors, departments, facilities, testimonials, contact information and appointment rules can all become customer-specific. The demo intentionally uses generic content so it does not represent or copy any existing hospital.</p></div></section>
 
-<section class="wrap" id="services">
-<div class="section-head"><h2>Our Services</h2><p class="muted">Professional service cards that can be changed by each hospital.</p></div>
+<section class="wrap" id="services"><div class="head"><span class="eyebrow">OUR EXPERTISE</span><h2>Signature medical services.</h2><p>Elegant service presentation that can be customized for every NR HMS customer.</p></div>
 <div class="grid">
-<div class="card"><div class="icon">🩺</div><h3>Outpatient Care</h3><p class="muted">OPD consultations, specialist appointments and follow-up care.</p><span class="tag">Book OPD</span></div>
-<div class="card"><div class="icon">🏥</div><h3>Inpatient Care</h3><p class="muted">Admission, ward, room and bed management through NR HMS.</p><span class="tag">IPD Enquiry</span></div>
-<div class="card"><div class="icon">🧪</div><h3>Diagnostics</h3><p class="muted">Laboratory, imaging and diagnostic service information.</p><span class="tag">View Tests</span></div>
-<div class="card"><div class="icon">💊</div><h3>Pharmacy</h3><p class="muted">Hospital pharmacy information and prescription workflow.</p><span class="tag">Pharmacy</span></div>
-<div class="card"><div class="icon">🚑</div><h3>Emergency</h3><p class="muted">Prominent emergency contact and hospital location information.</p><span class="tag">24×7</span></div>
-<div class="card"><div class="icon">👩‍⚕️</div><h3>Specialist Care</h3><p class="muted">Departments and specialist profiles presented clearly for patients.</p><span class="tag">Meet Doctors</span></div>
-</div>
-</section>
+<div class="card"><div class="icon">✦</div><h3>Specialist Consultations</h3><p>Appointments with specialist departments and focused clinical teams.</p><span class="tag">Consultation</span></div>
+<div class="card"><div class="icon">＋</div><h3>Inpatient Care</h3><p>Admission, rooms, beds, clinical workflow and patient coordination through NR HMS.</p><span class="tag">IPD Care</span></div>
+<div class="card"><div class="icon">◇</div><h3>Diagnostics</h3><p>Laboratory, imaging, scans and diagnostic reports presented in a clear patient journey.</p><span class="tag">Diagnostics</span></div>
+<div class="card"><div class="icon">⌁</div><h3>Pharmacy</h3><p>Prescription and pharmacy information designed around the patient's needs.</p><span class="tag">Pharmacy</span></div>
+<div class="card"><div class="icon">✚</div><h3>Emergency Care</h3><p>High-visibility emergency contact and location information for urgent situations.</p><span class="tag">24×7 Support</span></div>
+<div class="card"><div class="icon">◈</div><h3>Preventive Wellness</h3><p>Health packages, screening programs and wellness services can be featured here.</p><span class="tag">Wellness</span></div>
+</div></section>
 
-<section class="wrap" id="doctors">
-<div class="section-head"><h2>Our Doctors</h2><p class="muted">Sample profiles. Each hospital can manage its real doctors from NR HMS.</p></div>
+<section class="wrap" id="doctors"><div class="head"><span class="eyebrow">CLINICAL TEAM</span><h2>Meet the specialists.</h2><p>Demo profiles only. Customer hospitals will manage their real doctors from NR HMS.</p></div>
 <div class="grid">
-<div class="card doctor"><div class="avatar">DR</div><div><h3>Dr. Ananya Rao</h3><p class="muted">Consultant Physician</p><span class="tag">10+ Years</span></div></div>
-<div class="card doctor"><div class="avatar">DR</div><div><h3>Dr. Kiran Kumar</h3><p class="muted">Orthopaedics</p><span class="tag">12+ Years</span></div></div>
-<div class="card doctor"><div class="avatar">DR</div><div><h3>Dr. Meera Shah</h3><p class="muted">Paediatrics</p><span class="tag">8+ Years</span></div></div>
-</div>
-</section>
+<div class="card doctor"><div class="avatar">DR</div><div><h3>Senior Consultant</h3><p>General Medicine</p><span class="tag">Specialist Profile</span></div></div>
+<div class="card doctor"><div class="avatar">DR</div><div><h3>Consultant Specialist</h3><p>Orthopaedics</p><span class="tag">Specialist Profile</span></div></div>
+<div class="card doctor"><div class="avatar">DR</div><div><h3>Consultant Specialist</h3><p>Paediatrics</p><span class="tag">Specialist Profile</span></div></div>
+</div></section>
 
-<section class="wrap booking" id="booking">
-<div class="section-head"><h2>Request an Appointment</h2><p class="muted">This demo form shows the patient-facing flow. In the customer version, the request can be sent to the hospital's NR HMS account.</p></div>
-<div class="card">
-<form class="form" id="appointmentForm">
+<section class="wrap booking" id="booking"><div class="head"><span class="eyebrow">APPOINTMENT DESK</span><h2>Begin your care journey.</h2><p>In the customer version, this request can be connected directly to the hospital's NR HMS account.</p></div>
+<div class="card"><form class="form" id="appointmentForm">
 <div class="field"><label>Patient Name<input id="patientName" required></label></div>
 <div class="field"><label>Mobile Number<input id="mobile" required></label></div>
 <div class="field"><label>Preferred Date<input id="date" type="date" required></label></div>
 <div class="field"><label>Department<select id="department"><option>General Medicine</option><option>Orthopaedics</option><option>Paediatrics</option><option>Diagnostics</option></select></label></div>
-<div class="field full"><label>Message / Reason<textarea id="message" placeholder="Tell us briefly how we can help"></textarea></label></div>
+<div class="field full"><label>Message / Reason<textarea id="message" placeholder="How may we assist you?"></textarea></label></div>
 <div class="full"><button class="submit" type="submit">Send Appointment Request</button></div>
-</form>
-<div id="notice" class="notice" style="display:none"></div>
-</div>
-</section>
+</form><div id="notice" class="notice"></div></div></section>
 
-<section class="wrap" id="contact">
-<div class="section-head"><h2>Contact & Location</h2><p class="muted">Customer-specific contact information can be configured from the hospital profile.</p></div>
-<div class="contact-grid">
-<div class="card"><div class="contact-item"><div class="icon">📞</div><div><h3>Emergency & Appointments</h3><p class="muted">+91 90000 00000<br>24×7 emergency desk</p></div></div></div>
-<div class="card"><div class="contact-item"><div class="icon">📍</div><div><h3>Hospital Address</h3><p class="muted">123 Healthcare Avenue, Hyderabad, Telangana<br>Directions can be connected to Google Maps.</p></div></div></div>
-</div>
-</section>
+<section class="wrap" id="contact"><div class="head"><span class="eyebrow">CONTACT</span><h2>Always within reach.</h2><p>Customer-specific phone, address, maps and WhatsApp can be configured from the hospital profile.</p></div>
+<div class="contact"><div class="card"><h3>Emergency & Appointments</h3><p>Customer phone number<br>24×7 emergency desk</p></div><div class="card"><h3>Hospital Location</h3><p>Customer hospital address<br>Google Maps directions can be connected.</p></div></div></section>
 
-<footer class="footer"><b>NR HMS</b> • Customer Hospital Website Demo<br><small>Hospital website + appointment experience + HMS integration</small></footer>
+<footer class="footer"><b>NR HMS</b><small>Signature Hospital Website • Premium Customer Demo</small></footer>
 <script>
-document.getElementById('appointmentForm').addEventListener('submit',e=>{e.preventDefault();const n=document.getElementById('patientName').value.trim();document.getElementById('notice').style.display='block';document.getElementById('notice').textContent='Thank you '+n+'. This demo appointment request has been captured. In the customer version it will be routed to the hospital NR HMS account.';e.target.reset()});
+document.getElementById('appointmentForm').addEventListener('submit',e=>{e.preventDefault();const n=document.getElementById('patientName').value.trim();const box=document.getElementById('notice');box.style.display='block';box.textContent='Thank you '+n+'. This is a demo request. The customer version will route the appointment into the hospital NR HMS workspace.';e.target.reset()});
 </script>
-</body>
-</html>
+</body></html>

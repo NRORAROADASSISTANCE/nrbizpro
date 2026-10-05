@@ -47,10 +47,38 @@ function openSupplierLedger(supplier){
   const body=rows.map(r=>{bal+=r.de-r.cr;return '<tr><td>'+esc(String(r.d||'').slice(0,10))+'</td><td>'+esc(r.t)+'</td><td>'+esc(r.r||'—')+'</td><td>'+money(r.de)+'</td><td>'+money(r.cr)+'</td><td>'+money(bal)+'</td></tr>'}).join('');
   window.openModal?.('Supplier Ledger','<div class="nr-cards"><div><span>Opening</span><b>'+money(opening)+'</b></div><div><span>Purchases</span><b>'+money(total)+'</b></div><div><span>Paid</span><b>'+money(paid)+'</b></div><div><span>Closing Due</span><b>'+money(due)+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Particular</th><th>Reference</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead><tbody>'+body+'</tbody></table></div>');
 }
+function addSupplierMasterButton(){
+  const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]');
+  if(!host||host.querySelector('[data-open-supplier-master]'))return;
+  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Supplier Master';b.dataset.openSupplierMaster='1';b.style.margin='10px 0';b.onclick=openSupplierMaster;host.prepend(b);
+}
 function boot(){
-  setTimeout(addSupplierLedgerButtons,300);if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
+  setTimeout(addSupplierLedgerButtons,300);setTimeout(addSupplierMasterButton,350);if(!window.NRCustomerDashboard||window.NRCustomerDashboard.__purchaseEnhanced)return;const api=window.NRCustomerDashboard,old=api.open;api.open=function(id){old(id);setTimeout(enhance,20);setTimeout(enhance,150)};api.__purchaseEnhanced=true;enhance();}
   window.addEventListener('load',()=>{setTimeout(boot,2200);setTimeout(boot,4000)});window.addEventListener('authReady',boot);window.addEventListener('loginSuccess',boot);
 
+function openSupplierMaster(){
+  state().suppliers=Array.isArray(state().suppliers)?state().suppliers:[];
+  const rows=state().suppliers;
+  const html='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px"><b>Supplier Master</b><button type="button" class="primary" id="nrAddSupplier">+ Add Supplier</button></div><div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Mobile</th><th>GSTIN</th><th>Opening</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((s,i)=>'<tr><td>'+esc(s.name||'—')+'</td><td>'+esc(s.mobile||'—')+'</td><td>'+esc(s.gstin||'—')+'</td><td>'+money(s.openingBalance||0)+'</td><td><button type="button" data-sedit="'+i+'">Edit</button> <button type="button" data-sledger="'+i+'">Ledger</button></td></tr>').join(''):'<tr><td colspan="5">No suppliers added yet.</td></tr>')+'</tbody></table></div>';
+  window.openModal?.('Supplier Master',html);
+  const add=document.getElementById('nrAddSupplier'); if(add)add.onclick=()=>supplierForm();
+  document.querySelectorAll('[data-sedit]').forEach(b=>b.onclick=()=>supplierForm(rows[Number(b.dataset.sedit)],Number(b.dataset.sedit)));
+  document.querySelectorAll('[data-sledger]').forEach(b=>b.onclick=()=>openSupplierLedger(rows[Number(b.dataset.sledger)]?.name));
+}
+function supplierForm(existing,index){
+  const s=existing||{};
+  window.openModal?.(existing?'Edit Supplier':'Add Supplier','<div class="modal-grid"><label class="field">Supplier Name *<input id="nsName" value="'+esc(s.name||'')+'"></label><label class="field">Mobile<input id="nsMobile" inputmode="numeric" value="'+esc(s.mobile||'')+'"></label><label class="field">GSTIN<input id="nsGst" value="'+esc(s.gstin||'')+'"></label><label class="field">Opening Balance<input id="nsOpening" type="number" min="0" step="0.01" value="'+Number(s.openingBalance||0)+'"></label><label class="field wide">Address<textarea id="nsAddress" rows="3">'+esc(s.address||'')+'</textarea></label></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="nsSave">Save Supplier</button></div>');
+  document.getElementById('nsSave').onclick=()=>{
+    const name=document.getElementById('nsName').value.trim(),mobile=document.getElementById('nsMobile').value.trim(),gstin=document.getElementById('nsGst').value.trim(),address=document.getElementById('nsAddress').value.trim(),openingBalance=Math.max(0,Number(document.getElementById('nsOpening').value||0)||0);
+    if(!name)return alert('Supplier Name is required.');
+    state().suppliers=Array.isArray(state().suppliers)?state().suppliers:[];
+    const dup=state().suppliers.find((x,i)=>i!==index&&String(x.name||'').trim().toLowerCase()===name.toLowerCase());
+    if(dup)return alert('Supplier already exists.');
+    const obj={id:s.id||'SUP-'+Date.now(),name,mobile,gstin,address,openingBalance,updatedAt:new Date().toISOString()};
+    if(index>=0)state().suppliers[index]=obj; else state().suppliers.push(obj);
+    save();closeModal();openSupplierMaster();
+  };
+}
 function addSupplierLedgerButtons(){
   const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]')||document.body;
   if(!host||host.dataset.supplierLedgerReady)return;

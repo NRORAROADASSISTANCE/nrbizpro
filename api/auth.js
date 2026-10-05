@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { sql,initDb,hashPassword,verifyPassword,token,cookie,clearCookie,sessionBusiness,ensureAdmin,sessionAdmin,auditSecurity,withStaffSessionLock } from './db.js';
+import { sql,initDb,hashPassword,verifyPassword,token,cookie,clearCookie,sessionBusiness,ensureAdmin,sessionAdmin,auditSecurity,withStaffSessionLock } from '../lib/db.js';
 async function accountSecurityLocked(businessId){const r=await sql`SELECT emergency_locked AS locked FROM account_security WHERE business_id=${businessId} LIMIT 1`;return !!r.rows[0]?.locked}
 function validMoney(v){const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=100000000}
 async function getIdempotent(req,businessId){const key=String(req.headers?.['idempotency-key']||req.body?.idempotencyKey||'').trim().slice(0,128);if(!key)return null;const r=await sql`SELECT response FROM idempotency_keys WHERE business_id=${businessId} AND key=${key} LIMIT 1`;return r.rows[0]?.response||null}

@@ -153,7 +153,7 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
  if(req.method==='GET'&&a==='hms-public-doctors'){
   const id=String(req.query?.hospital||'').trim();if(!id)return send(res,400,{error:'Hospital ID is required.'});
   const h=await sql`SELECT id FROM hms_hospitals WHERE id=${id} AND approval_status='approved' AND payment_status='paid' LIMIT 1`;if(!h.rowCount)return send(res,404,{error:'Hospital not available.'});
-  const r=await sql`SELECT doctors FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];const publicDoctors=doctors.map(d=>({id:d.id||d.doctorId||'',name:d.name||d.doctorName||'',department:d.department||'',specialization:d.specialization||d.speciality||''}));return send(res,200,{doctors:publicDoctors});
+  const r=await sql`SELECT doctors FROM hms_data WHERE hospital_id=${id} LIMIT 1`;const doctors=Array.isArray(r.rows[0]?.doctors)?r.rows[0].doctors:[];const publicDoctors=doctors.map(d=>({id:d.id||d.doctorId||'',name:d.name||d.doctorName||'',department:d.department||'',specialization:d.specialization||d.speciality||'',qualification:d.qualification||'',experience:d.experience||'',registrationNo:d.registrationNo||'',consultationFee:d.consultationFee||'',languages:d.languages||'',availability:d.availability||'',bio:d.bio||'',photo:d.photo||''}));return send(res,200,{doctors:publicDoctors});
  }
 
  if(req.method==='GET'&&a==='hms-public-departments'){

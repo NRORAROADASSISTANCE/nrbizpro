@@ -32,13 +32,22 @@
     document.getElementById('nrBackReports').onclick=function(){if(window.NRCustomerDashboard)window.NRCustomerDashboard.open('reports');};
     document.getElementById('nrApplyReport').onclick=function(){render(document.getElementById('nrReportType').value,document.getElementById('nrReportFrom').value,document.getElementById('nrReportTo').value);};
   }
+  function openDashboardSummary(){
+    var host=document.getElementById('customerManagement');if(!host)return;
+    var today=new Date().toISOString().slice(0,10),bs=bills().filter(function(x){return dateKey(x)===today;}),ps=list('purchases').filter(function(x){return dateKey(x)===today;}),es=list('expenses').filter(function(x){return dateKey(x)===today;}),its=list('items');
+    var sales=bs.reduce(function(a,b){return a+amount(b);},0),col=bs.reduce(function(a,b){return a+paid(b);},0),pur=ps.reduce(function(a,p){return a+Number(p.total||(Number(p.quantity||p.qty||0)*Number(p.rate||p.purchaseRate||0))||0);},0),exp=es.reduce(function(a,e){return a+Number(e.amount||0);},0),low=its.filter(function(i){var q=Number(i.stock||i.qty||i.quantity||0);return q>0&&q<=5;}).length,out=its.filter(function(i){return Number(i.stock||i.qty||i.quantity||0)<=0;}).length;
+    var cogs=0;bs.forEach(function(b){var lines=Array.isArray(b.items)?b.items:Array.isArray(b.lines)?b.lines:Array.isArray(b.cart)?b.cart:[];lines.forEach(function(l){var it=l.item||l.product||getState().items?.find(function(x){return x.id===l.id||x.id===l.itemId||x.name===l.name;}),q=Number(l.qty||l.quantity||1),cost=Number(l.cost||it?.cost||it?.purchasePrice||0);cogs+=q*cost;});});
+    var gross=sales-cogs,net=gross-exp;
+    host.innerHTML='<div class="nr-head"><div><h3>Business Dashboard</h3><p>Live summary for '+today+'.</p></div></div><div class="nr-cards"><div><span>Today Sales</span><b>'+money(sales)+'</b></div><div><span>Collections</span><b>'+money(col)+'</b></div><div><span>Purchases</span><b>'+money(pur)+'</b></div><div><span>Expenses</span><b>'+money(exp)+'</b></div><div><span>Gross Profit</span><b>'+money(gross)+'</b></div><div><span>Net Profit</span><b>'+money(net)+'</b></div><div><span>Low Stock</span><b>'+low+'</b></div><div><span>Out of Stock</span><b>'+out+'</b></div></div><div class="nr-report-grid"><button id="nrDashSales"><b>Sales Report</b><span>Open →</span></button><button id="nrDashStock"><b>Stock Report</b><span>Open →</span></button><button id="nrDashPL"><b>Profit & Loss</b><span>Open →</span></button></div>';
+    document.getElementById('nrDashSales').onclick=function(){render('sales',today,today);};document.getElementById('nrDashStock').onclick=function(){render('stock',today,today);};document.getElementById('nrDashPL').onclick=function(){render('pl',today,today);};
+  }
   function openReports(){
     var host=document.getElementById('customerManagement');if(!host)return;
     var cards=[['sales','Sales Report'],['purchases','Purchase Report'],['pl','Profit & Loss'],['customers','Customer Outstanding'],['supplier','Supplier Outstanding'],['stock','Stock Report'],['expenses','Expense Report'],['collection','Collection Report']];
     host.innerHTML='<div class="nr-head"><div><h3>Reports</h3><p>Business reports based on stored records.</p></div></div><div class="nr-report-grid">'+cards.map(function(c){return '<button data-report="'+c[0]+'"><b>'+c[1]+'</b><span>Open report →</span></button>';}).join('')+'</div>';
     host.querySelectorAll('[data-report]').forEach(function(b){b.onclick=function(){var d=new Date().toISOString().slice(0,10);render(b.dataset.report,d,d);};});
   }
-  function boot(){var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}old(id);};api.__reportsEnhanced=true;}
+  function boot(){var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}
   window.NRBizProReports={open:openReports,render:render};
   window.addEventListener('load',function(){setTimeout(boot,500);});
   window.addEventListener('authReady',boot);

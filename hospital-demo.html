@@ -56,14 +56,17 @@
 <div class="card doctor"><div class="avatar">DR</div><div><h3>Consultant Specialist</h3><p>Paediatrics</p><span class="tag">Specialist Profile</span></div></div>
 </div></section>
 
-<section class="wrap booking" id="booking"><div class="head"><span class="eyebrow">APPOINTMENT DESK</span><h2>Start your care journey.</h2><p>In the customer version, appointment requests can be routed directly to the hospital's NR HMS workspace.</p></div>
+<section class="wrap booking" id="booking"><div class="head"><span class="eyebrow">ONLINE APPOINTMENT</span><h2>Book your appointment.</h2><p>Select your location, speciality and doctor, then choose a convenient date and time.</p></div>
 <div class="card"><form class="form" id="appointmentForm">
+<div class="field"><label>Location<select id="location" required><option value="">Select Location</option><option>Hospital Main Branch</option></select></label></div>
+<div class="field"><label>Speciality<select id="speciality" required><option value="">Select Speciality</option><option>General Medicine</option><option>Orthopaedics</option><option>Paediatrics</option><option>Diagnostics</option></select></label></div>
+<div class="field"><label>Doctor<select id="doctor" required><option value="">Select Doctor</option><option>Senior Consultant — General Medicine</option><option>Consultant Specialist — Orthopaedics</option><option>Consultant Specialist — Paediatrics</option></select></label></div>
+<div class="field"><label>Appointment Date<input id="date" type="date" required></label></div>
+<div class="field"><label>Preferred Time<select id="time" required><option value="">Select Time</option><option>09:00 AM</option><option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>04:00 PM</option><option>05:00 PM</option><option>06:00 PM</option></select></label></div>
 <div class="field"><label>Patient Name<input id="patientName" required></label></div>
-<div class="field"><label>Mobile Number<input id="mobile" required></label></div>
-<div class="field"><label>Preferred Date<input id="date" type="date" required></label></div>
-<div class="field"><label>Department<select id="department"><option>General Medicine</option><option>Orthopaedics</option><option>Paediatrics</option><option>Diagnostics</option></select></label></div>
-<div class="field full"><label>Message / Reason<textarea id="message" placeholder="How may we assist you?"></textarea></label></div>
-<div class="full"><button class="submit" type="submit">Send Appointment Request</button></div>
+<div class="field"><label>Mobile Number<input id="mobile" type="tel" required></label></div>
+<div class="field full"><label>Reason / Message<textarea id="message" placeholder="How may we assist you?"></textarea></label></div>
+<div class="full"><button class="submit" type="submit">Search & Book Appointment</button></div>
 </form><div id="notice" class="notice"></div></div></section>
 
 <section class="wrap" id="contact"><div class="head"><span class="eyebrow">CONTACT & LOCATION</span><h2>Always within reach.</h2><p>Customer-specific phone, address, maps and WhatsApp can be configured from the hospital profile.</p></div>
@@ -71,6 +74,6 @@
 
 <footer class="footer"><b>NR HMS</b><small>Premium Hospital Website • Customer Demo</small></footer>
 <script>
-document.getElementById('appointmentForm').addEventListener('submit',e=>{e.preventDefault();const n=document.getElementById('patientName').value.trim();const box=document.getElementById('notice');box.style.display='block';box.textContent='Thank you '+n+'. This is a demo request. The customer version will route the appointment into the hospital NR HMS workspace.';e.target.reset()});
+document.getElementById('appointmentForm').addEventListener('submit',e=>{e.preventDefault();const n=document.getElementById('patientName').value.trim();const doctor=document.getElementById('doctor').value;const date=document.getElementById('date').value;const time=document.getElementById('time').value;const box=document.getElementById('notice');box.style.display='block';box.textContent='Appointment request ready for '+n+' with '+doctor+' on '+date+' at '+time+'. In the customer version, this will continue to OTP verification and then enter the hospital NR HMS appointment dashboard.';});
 </script>
 </body></html>

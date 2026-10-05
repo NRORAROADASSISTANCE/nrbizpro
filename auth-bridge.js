@@ -148,7 +148,7 @@
     document.getElementById('plLogin').onclick=()=>openAuth('login');
     document.getElementById('plWebApp').onclick=()=>openAuth('login');
     document.getElementById('plHms').onclick=()=>{location.href='/hms.html'};
-    document.getElementById('plSignup').onclick=()=>openAuth('signup');
+    document.getElementById('plSignup').onclick=()=>openAuth('signup');\n    document.getElementById('plSignupBottom').onclick=()=>openAuth('signup');\n    document.getElementById('plLoginBottom').onclick=()=>openAuth('login');
   }
   function setupPublicLayer(){
     clearDemoState();

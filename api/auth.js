@@ -580,6 +580,28 @@ if(req.method==='POST'&&a==='otp-verify'){
  if(req.method==='GET'&&a==='hms-medical-sales'){const m=await hmsMedicalSession(req);if(!m)return send(res,401,{error:'Medical login required.'});const r=await sql`SELECT id,opd,patient_name AS "patientName",medicine,quantity,amount,created_at AS "createdAt" FROM hms_medical_sales WHERE hospital_id=${m.hospital_id} ORDER BY created_at DESC LIMIT 200`;return send(res,200,{items:r.rows})}
  if(req.method==='POST'&&a==='hms-medical-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_medical_session');if(t)await sql`DELETE FROM hms_medical_sessions WHERE token=${t}`;hmsMedicalCookie(res,'',0);return send(res,200,{ok:true})}
 
+ if(req.method==='POST'&&a==='hms-office-login'){
+  const hospitalId=String(req.body?.hospitalId||'').trim(),loginId=String(req.body?.loginId||'').trim().toLowerCase(),password=String(req.body?.password||'');
+  if(!hospitalId||!loginId||!password)return send(res,400,{error:'Hospital ID, Login ID and password are required.'});
+  const hr=await sql`SELECT * FROM hms_hospitals WHERE id=${hospitalId} AND approval_status='approved' AND payment_status='paid' LIMIT 1`,h=hr.rows[0];
+  if(!h)return send(res,401,{error:'Hospital not found or not active.'});
+  if((String(h.user_id||'').toLowerCase()===loginId||String(h.mobile||'')===loginId)&&await verifyPassword(password,h.password_hash)){
+    const t=token();await sql`INSERT INTO hms_sessions(token,hospital_id,expires_at) VALUES(${t},${h.id},now()+interval '30 days')`;hmsCookie(res,t);
+    return send(res,200,{ok:true,role:'admin',redirect:'/hms.html',user:hmsPub(h)});
+  }
+  const ar=await sql`SELECT * FROM hms_account_users WHERE hospital_id=${h.id} AND lower(login_id)=${loginId} AND active=true LIMIT 1`,auser=ar.rows[0];
+  if(auser&&await verifyPassword(password,auser.password_hash)){
+    const t=token();await sql`INSERT INTO hms_account_sessions(token,account_id,expires_at) VALUES(${t},${auser.id},now()+interval '30 days')`;hmsAccountCookie(res,t);
+    const role=String(auser.department||'Accounts').toLowerCase().includes('account')?'accountant':'staff';
+    return send(res,200,{ok:true,role,redirect:role==='accountant'?'/hms-account.html':'/hms-staff.html',user:{id:auser.id,hospitalId:h.id,hospital:h.hospital,name:auser.name,loginId:auser.login_id,department:auser.department}});
+  }
+  const dr=await sql`SELECT * FROM hms_doctors WHERE hospital_id=${h.id} AND lower(doctor_id)=${loginId} LIMIT 1`,doc=dr.rows[0];
+  if(doc&&await verifyPassword(password,doc.password_hash)){
+    const t=token();await sql`INSERT INTO hms_doctor_sessions(token,doctor_id,expires_at) VALUES(${t},${doc.id},now()+interval '30 days')`;hmsDoctorCookie(res,t);
+    return send(res,200,{ok:true,role:'doctor',redirect:'/doctor-login.html',user:hmsDoctorPub(doc)});
+  }
+  return send(res,401,{error:'Invalid Login ID or password.'});
+ }
  if(req.method==='POST'&&a==='hms-account-login'){
   const loginId=String(req.body?.loginId||'').trim().toLowerCase(),password=String(req.body?.password||'');
   const hospitalId=String(req.body?.hospitalId||'').trim();

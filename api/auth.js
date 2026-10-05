@@ -552,7 +552,7 @@ if(req.method==='POST'&&a==='otp-verify'){
 
  if(req.method==='POST'&&a==='hms-medical-create'){
   const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital login required.'});
-  const x=req.body||{},loginId=String(x.loginId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),password=String(x.password||'');
+  const x=req.body||{},loginId=String(x.loginId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),password=String(x.password||''),department=String(x.department||'Accounts').trim()||'Accounts';
   if(!/^[a-z0-9._-]{4,40}$/.test(loginId)||!name||!mobile||password.length<8)return send(res,400,{error:'Medical Login ID, name, mobile and 8+ character password are required.'});
   const ph=await hashPassword(password);await sql`INSERT INTO hms_medical_users(id,hospital_id,login_id,name,mobile,password_hash) VALUES(${token()},${h.id},${loginId},${name},${mobile},${ph}) ON CONFLICT(hospital_id,login_id) DO UPDATE SET name=EXCLUDED.name,mobile=EXCLUDED.mobile,password_hash=EXCLUDED.password_hash`;return send(res,200,{ok:true});
  }
@@ -617,7 +617,7 @@ if(req.method==='POST'&&a==='otp-verify'){
   const x=req.body||{},loginId=String(x.loginId||'').trim().toLowerCase(),name=String(x.name||'').trim(),mobile=String(x.mobile||'').trim(),password=String(x.password||'');
   if(!loginId||!name||password.length<8)return send(res,400,{error:'Account login ID, name and password (minimum 8 characters) are required.'});
   const ex=await sql`SELECT 1 FROM hms_account_users WHERE hospital_id=${h.id} AND lower(login_id)=${loginId} LIMIT 1`;if(ex.rowCount)return send(res,409,{error:'This Account Login ID already exists.'});
-  const hash=await hashPassword(password),id=token();await sql`INSERT INTO hms_account_users(id,hospital_id,login_id,name,mobile,password_hash) VALUES(${id},${h.id},${loginId},${name},${mobile},${hash})`;return send(res,200,{ok:true,id,loginId,name});
+  const hash=await hashPassword(password),id=token();await sql`INSERT INTO hms_account_users(id,hospital_id,login_id,name,mobile,password_hash,department) VALUES(${id},${h.id},${loginId},${name},${mobile},${hash},${department})`;return send(res,200,{ok:true,id,loginId,name});
  }
  if(req.method==='GET'&&a==='hms-account-registration-transactions'){
   const arow=await hmsAccountSession(req);if(!arow)return send(res,401,{error:'Account login required.'});

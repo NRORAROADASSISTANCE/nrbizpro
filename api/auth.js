@@ -604,7 +604,19 @@ if(req.method==='POST'&&a==='otp-verify'){
  if(req.method==='PUT'&&a==='hms-account-cmrf'){
   const arow=await hmsAccountSession(req);if(!arow)return send(res,401,{error:'Account login required.'});
   const items=Array.isArray(req.body?.items)?req.body.items:[];if(items.length>5000)return send(res,400,{error:'Too many CMRF records.'});
+  const oldr=await sql`SELECT cmrf FROM hms_data WHERE hospital_id=${arow.hospital_id} LIMIT 1`,oldItems=Array.isArray(oldr.rows[0]?.cmrf)?oldr.rows[0].cmrf:[],oldMap=new Map(oldItems.map(x=>[String(x.caseNo||''),x]));
+  for(const x of items){const prev=oldMap.get(String(x.caseNo||''));if(prev&&['Approved','Rejected'].includes(String(prev.status||'')))return send(res,403,{error:'Approved or rejected CMRF cases are locked.'});if(['Approved','Rejected'].includes(String(x.status||'')))return send(res,403,{error:'Account Department cannot approve or reject CMRF cases. Submit for Hospital Admin approval.'});if(prev&&prev.status==='Submitted'&&x.status==='Draft')return send(res,403,{error:'Submitted CMRF cases cannot be moved back to Draft.'});}
   await sql`UPDATE hms_data SET cmrf=${JSON.stringify(items)}::jsonb,updated_at=now() WHERE hospital_id=${arow.hospital_id}`;return send(res,200,{ok:true});
+ }
+ if(req.method==='GET'&&a==='hms-admin-cmrf'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital admin login required.'});
+  const r=await sql`SELECT cmrf FROM hms_data WHERE hospital_id=${h.id} LIMIT 1`;return send(res,200,{items:Array.isArray(r.rows[0]?.cmrf)?r.rows[0].cmrf:[]});
+ }
+ if(req.method==='PUT'&&a==='hms-admin-cmrf'){
+  const h=await hmsSession(req);if(!h)return send(res,401,{error:'Hospital admin login required.'});
+  const caseNo=String(req.body?.caseNo||'').trim(),decision=String(req.body?.decision||'').trim(),note=String(req.body?.note||'').trim();if(!caseNo||!['Approved','Rejected','Send Back'].includes(decision))return send(res,400,{error:'Case number and valid decision are required.'});
+  const r=await sql`SELECT cmrf FROM hms_data WHERE hospital_id=${h.id} LIMIT 1`,items=Array.isArray(r.rows[0]?.cmrf)?r.rows[0].cmrf:[],i=items.findIndex(x=>String(x.caseNo||'')===caseNo);if(i<0)return send(res,404,{error:'CMRF case not found.'});
+  const now=new Date().toISOString();items[i]={...items[i],status:decision==='Send Back'?'Draft':decision,approvalNote:note,approvedBy:h.login_id||h.name||'Hospital Admin',approvedAt:decision==='Send Back'?null:now,updatedAt:now};await sql`UPDATE hms_data SET cmrf=${JSON.stringify(items)}::jsonb,updated_at=now() WHERE hospital_id=${h.id}`;return send(res,200,{ok:true,item:items[i]});
  }
  if(req.method==='POST'&&a==='hms-account-logout'){const t=(await import('./db.js')).getCookie(req,'nr_hms_account_session');if(t)await sql`DELETE FROM hms_account_sessions WHERE token=${t}`;hmsAccountCookie(res,'',0);return send(res,200,{ok:true});}
  if(req.method==='POST'&&a==='hms-logout'){

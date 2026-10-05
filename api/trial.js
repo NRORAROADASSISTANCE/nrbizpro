@@ -1,4 +1,4 @@
-import { sql, initDb, sessionBusiness } from './db.js';
+import { sql, initDb, sessionBusiness } from '../lib/db.js';
 function send(res,c,b){res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.status(c).json(b)}
 export default async function handler(req,res){
   await initDb();

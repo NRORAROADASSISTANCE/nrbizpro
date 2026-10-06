@@ -258,7 +258,7 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
     await sql`INSERT INTO business_data(business_id,items,bills,customers,settings,state,version,updated_at) VALUES(${b.id},${JSON.stringify(items)}::jsonb,${JSON.stringify(bills)}::jsonb,${JSON.stringify(customers)}::jsonb,${JSON.stringify(safeSettings)}::jsonb,${JSON.stringify(safeState)}::jsonb,1,now())`;
     return send(res,200,{ok:true,items:items.length,bills:bills.length,customers:customers.length,version:1,updatedAt:new Date().toISOString()});
   }
-  const prevBillKeys=new Set((Array.isArray(prev.bills)?prev.bills:[]).map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(Boolean));const newInvoiceKeys=[...new Set(bills.map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(k=>k&&!prevBillKeys.has(k)))];for(const k of newInvoiceKeys){const q=await sql\`INSERT INTO business_invoice_numbers(business_id,invoice_key) VALUES(\${b.id},\${k}) ON CONFLICT DO NOTHING RETURNING invoice_key\`;if(!q.rowCount)return send(res,409,{error:'Invoice/Bill number already exists: '+k,duplicateInvoice:true});}
+  const prevBillKeys=new Set((Array.isArray(prev.bills)?prev.bills:[]).map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(Boolean));const newInvoiceKeys=[...new Set(bills.map(x=>String(x?.invoiceNo??x?.billNo??x?.invoiceNumber??x?.billNumber??'').trim().toLowerCase()).filter(k=>k&&!prevBillKeys.has(k)))];for(const k of newInvoiceKeys){const q=await sql`INSERT INTO business_invoice_numbers(business_id,invoice_key) VALUES(${b.id},${k}) ON CONFLICT DO NOTHING RETURNING invoice_key`;if(!q.rowCount)return send(res,409,{error:'Invoice/Bill number already exists: '+k,duplicateInvoice:true});}
   const backupId=token();
   await sql`DELETE FROM business_invoice_numbers WHERE business_id=${b.id} AND NOT EXISTS (SELECT 1 FROM business_data bd WHERE bd.business_id=${b.id} AND EXISTS (SELECT 1 FROM jsonb_array_elements(bd.bills) bill WHERE lower(trim(COALESCE(bill->>'invoiceNo',bill->>'billNo',bill->>'invoiceNumber',bill->>'billNumber',''))) = business_invoice_numbers.invoice_key))`;
   const saved=await sql`WITH old AS (
@@ -283,13 +283,13 @@ export default async function handler(req,res){if(!safeRequest(req))return send(
  if(req.method==='GET'&&a==='security-command-center'){
   const b=await sessionBusiness(req);if(!b||String(b.role).toLowerCase()!=='owner')return send(res,403,{error:'Only the business owner can view the security command center.'});
   const [sec,sess,alerts,logins,audit,approvals,backups]=await Promise.all([
-   sql`SELECT emergency_locked AS "emergencyLocked",locked_at AS "lockedAt",password_changed_at AS "passwordChangedAt" FROM account_security WHERE business_id=\${b.id} LIMIT 1`,
-   sql`SELECT role,staff_id AS "staffId",client_ip AS "clientIp",user_agent AS "userAgent",last_seen_at AS "lastSeenAt",expires_at AS "expiresAt" FROM sessions WHERE business_id=\${b.id} AND expires_at>now() ORDER BY last_seen_at DESC LIMIT 100`,
-   sql`SELECT id,type,login_id AS "loginId",risk,status,ip,user_agent AS "userAgent",details,created_at AS "createdAt" FROM security_alerts WHERE business_id=\${b.id} AND status='open' ORDER BY created_at DESC LIMIT 25`,
-   sql`SELECT outcome,login_type AS "loginType",login_id AS "loginId",client_ip AS "clientIp",created_at AS "createdAt" FROM security_login_events WHERE business_id=\${b.id} AND created_at>now()-interval '24 hours' ORDER BY created_at DESC LIMIT 100`,
-   sql`SELECT actor,action,details,created_at AS "createdAt" FROM security_audit WHERE business_id=\${b.id} ORDER BY created_at DESC LIMIT 50`,
-   sql`SELECT count(*)::int AS count FROM security_approvals WHERE business_id=\${b.id} AND status='pending'`,
-   sql`SELECT created_at AS "createdAt" FROM business_data_backups WHERE business_id=\${b.id} ORDER BY created_at DESC LIMIT 1`
+   sql`SELECT emergency_locked AS "emergencyLocked",locked_at AS "lockedAt",password_changed_at AS "passwordChangedAt" FROM account_security WHERE business_id=${b.id} LIMIT 1`,
+   sql`SELECT role,staff_id AS "staffId",client_ip AS "clientIp",user_agent AS "userAgent",last_seen_at AS "lastSeenAt",expires_at AS "expiresAt" FROM sessions WHERE business_id=${b.id} AND expires_at>now() ORDER BY last_seen_at DESC LIMIT 100`,
+   sql`SELECT id,type,login_id AS "loginId",risk,status,ip,user_agent AS "userAgent",details,created_at AS "createdAt" FROM security_alerts WHERE business_id=${b.id} AND status='open' ORDER BY created_at DESC LIMIT 25`,
+   sql`SELECT outcome,login_type AS "loginType",login_id AS "loginId",client_ip AS "clientIp",created_at AS "createdAt" FROM security_login_events WHERE business_id=${b.id} AND created_at>now()-interval '24 hours' ORDER BY created_at DESC LIMIT 100`,
+   sql`SELECT actor,action,details,created_at AS "createdAt" FROM security_audit WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 50`,
+   sql`SELECT count(*)::int AS count FROM security_approvals WHERE business_id=${b.id} AND status='pending'`,
+   sql`SELECT created_at AS "createdAt" FROM business_data_backups WHERE business_id=${b.id} ORDER BY created_at DESC LIMIT 1`
   ]);
   const success=logins.rows.filter(x=>x.outcome==='success').length,failed=logins.rows.filter(x=>x.outcome==='failed').length;
   const risk=alerts.rows.reduce((n,x)=>n+Number(x.risk||0),0);

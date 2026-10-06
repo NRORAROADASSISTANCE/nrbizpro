@@ -30,6 +30,9 @@ async function loadServerData(){
  };
  state={...savedState,items:Array.isArray(d.items)?d.items:[],bills:Array.isArray(d.bills)?d.bills:[],
    customers:Array.isArray(d.customers)?d.customers:[],settings:safeSettings};
+ // Re-apply the authenticated account identity immediately after the server
+ // workspace is loaded so no previous account's UI/module can remain visible.
+ try{syncWorkspaceIdentity();window.NRBizProWelcomeBrand?.apply?.();window.NRBizProWorkspace?.refresh?.();}catch(e){console.warn('workspace identity refresh',e)}
  return state
 }
 function toggleLoginPassword(){const i=document.getElementById('loginPassword'),b=document.getElementById('toggleLoginPassword');if(!i)return;const show=i.type==='password';i.type=show?'text':'password';if(b){b.textContent=show?'🙈':'👁️';b.setAttribute('aria-label',show?'Hide password':'Show password');b.title=show?'Hide password':'Show password'}}

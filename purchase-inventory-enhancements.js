@@ -37,6 +37,22 @@ function ensureSupplierMaster(supplier,opening){
   if(!x){x={id:'SUP-'+Date.now(),name:String(supplier).trim(),openingBalance:Math.max(0,Number(opening)||0)};state().suppliers.push(x);}
   else if(Number(opening)>0)x.openingBalance=Number(opening);
 }
+function recordSupplierPayment(supplier){
+  const s=String(supplier||'').trim();if(!s)return;
+  const ps=purchases().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase());
+  const opening=supplierOpeningBalance(s);
+  const total=ps.reduce((a,p)=>a+Number(p.total||0),0);
+  const already=ps.reduce((a,p)=>a+Number(p.paidAmount||0),0)+supplierPayments().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase()).reduce((a,p)=>a+Number(p.amount||0),0);
+  const due=Math.max(0,opening+total-already);
+  if(due<=0)return alert('No outstanding amount for this supplier.');
+  window.openModal?.('Pay Supplier','<div class="modal-grid"><label class="field">Supplier<input id="nspSupplier" value="'+esc(s)+'" readonly></label><label class="field">Outstanding<input value="'+money(due)+'" readonly></label><label class="field">Payment Amount<input id="nspAmount" type="number" min="0.01" max="'+due+'" step="0.01" value="'+due+'"></label><label class="field">Payment Method<select id="nspMethod"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Other</option></select></label></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="nspSave">Record Payment</button></div>');
+  document.getElementById('nspSave').onclick=()=>{
+    const amount=Number(document.getElementById('nspAmount').value||0)||0,method=document.getElementById('nspMethod').value;
+    if(amount<=0||amount>due)return alert('Enter a valid payment amount.');
+    supplierPayments().push({id:'SPAY-'+Date.now(),date:new Date().toISOString(),supplier:s,amount,method,purchaseId:'',businessId:window.currentUser?.id||''});
+    save();closeModal();alert('Supplier payment recorded successfully.');
+  };
+}
 function openSupplierLedger(supplier){
   const s=String(supplier||'').trim(); if(!s)return;
   const ps=purchases().filter(p=>String(p.supplier||'').trim().toLowerCase()===s.toLowerCase());
@@ -73,8 +89,9 @@ function openSupplierDashboard(){
     const opening=Number(s.openingBalance||0),due=Math.max(0,opening+total-paid);
     return {name,opening,total,paid,due};
   });
-  const html='<div class="nr-cards"><div><span>Total Suppliers</span><b>'+rows.length+'</b></div><div><span>Purchases</span><b>'+money(rows.reduce((a,r)=>a+r.total,0))+'</b></div><div><span>Paid</span><b>'+money(rows.reduce((a,r)=>a+r.paid,0))+'</b></div><div><span>Outstanding</span><b>'+money(rows.reduce((a,r)=>a+r.due,0))+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Opening</th><th>Purchases</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((r,i)=>'<tr><td>'+esc(r.name)+'</td><td>'+money(r.opening)+'</td><td>'+money(r.total)+'</td><td>'+money(r.paid)+'</td><td><b>'+money(r.due)+'</b></td><td><button type="button" data-sdash="'+i+'">Ledger</button></td></tr>').join(''):'<tr><td colspan="6">No suppliers found.</td></tr>')+'</tbody></table></div>';
+  const html='<div class="nr-cards"><div><span>Total Suppliers</span><b>'+rows.length+'</b></div><div><span>Purchases</span><b>'+money(rows.reduce((a,r)=>a+r.total,0))+'</b></div><div><span>Paid</span><b>'+money(rows.reduce((a,r)=>a+r.paid,0))+'</b></div><div><span>Outstanding</span><b>'+money(rows.reduce((a,r)=>a+r.due,0))+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Opening</th><th>Purchases</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((r,i)=>'<tr><td>'+esc(r.name)+'</td><td>'+money(r.opening)+'</td><td>'+money(r.total)+'</td><td>'+money(r.paid)+'</td><td><b>'+money(r.due)+'</b></td><td><button type="button" data-sdash="'+i+'">Ledger</button> <button type="button" data-spay="'+i+'">Pay</button></td></tr>').join(''):'<tr><td colspan="6">No suppliers found.</td></tr>')+'</tbody></table></div>';
   window.openModal?.('Supplier Financial Dashboard',html);
+  document.querySelectorAll('[data-spay]').forEach(b=>b.onclick=()=>recordSupplierPayment(rows[Number(b.dataset.spay)]?.name));
   document.querySelectorAll('[data-sdash]').forEach(b=>b.onclick=()=>openSupplierLedger(rows[Number(b.dataset.sdash)]?.name));
 }
 function openSupplierMaster(){

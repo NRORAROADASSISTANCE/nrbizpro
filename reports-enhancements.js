@@ -75,10 +75,20 @@ function openReports(){
     host.innerHTML='<div class="nr-head"><div><h3>Reports</h3><p>Business reports based on stored records.</p></div></div><div class="nr-report-grid">'+cards.map(function(c){return '<button data-report="'+c[0]+'"><b>'+c[1]+'</b><span>Open report →</span></button>';}).join('')+'</div>';
     host.querySelectorAll('[data-report]').forEach(function(b){b.onclick=function(){var d=new Date().toISOString().slice(0,10);render(b.dataset.report,d,d);};});
   }
-  function addDayBookButton(){
+  function openCashBookSettings(){
+  const s=getState(),v=Number(s.cashBookOpeningBalance||0)||0;
+  window.openModal?.('Cash Book Settings','<div class="modal-grid"><label class="field">Opening Cash / Balance<input id="nrCashOpening" type="number" min="0" step="0.01" value="'+v+'"></label></div><p style="font-size:12px;opacity:.7">This opening balance is used for the Day Book / Cash Book closing balance calculation.</p><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="nrCashSave">Save Opening Balance</button></div>');
+  document.getElementById('nrCashSave').onclick=()=>{
+    const n=Math.max(0,Number(document.getElementById('nrCashOpening').value||0)||0);
+    s.cashBookOpeningBalance=n;
+    try{window.save?.();window.NRBizProCloudQueueSave?.()}catch(e){}
+    closeModal();alert('Cash Book opening balance saved successfully.');
+  };
+}
+function addDayBookButton(){
   const host=document.querySelector('#reports')||document.querySelector('[data-page="reports"]');
   if(!host||host.querySelector('[data-open-daybook]'))return;
-  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Day Book / Cash Book';b.dataset.openDaybook='1';b.style.margin='10px 0';b.onclick=openDayBook;host.prepend(b);
+  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Day Book / Cash Book';b.dataset.openDaybook='1';b.style.margin='10px 6px 10px 0';b.onclick=openDayBook;const sbtn=document.createElement('button');sbtn.type='button';sbtn.className='secondary';sbtn.textContent='Cash Book Settings';sbtn.onclick=openCashBookSettings;b.after(sbtn);host.prepend(b);
 }
 function boot(){
   setTimeout(addDayBookButton,400);var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}

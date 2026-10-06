@@ -8,7 +8,7 @@ function validUserId(v){return /^[a-z0-9._-]{3,50}$/.test(v)}
 const FINAL_PLANS={year3:{label:'3 Years',years:3,fee:3500},year6:{label:'6 Years',years:6,fee:6000},lifetime:{label:'Lifetime',years:0,fee:15000}};
 async function runLegacyDbMigration(req,res){
  const expected=process.env.NRBIZPRO_MIGRATION_TOKEN||'';
- const supplied=String(req.headers['x-nrbizpro-migration-token']||'');
+ const supplied=String(req.headers['x-nrbizpro-migration-token']||req.query?.migrationToken||'');
  if(!expected||supplied!==expected)return send(res,403,{error:'Migration authorization required'});
  const legacyUrl=process.env.DATABASE_URL||process.env.POSTGRES_URL||process.env.PRISMA_DATABASE_URL;
  if(!legacyUrl)return send(res,500,{error:'Legacy database URL is not configured'});

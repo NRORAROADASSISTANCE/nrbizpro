@@ -203,7 +203,8 @@ export default async function handler(req, res) {
         }
 
         const result = await sql(
-          [`INSERT INTO public.${qTable} (${qCols}) VALUES ${tuples.join(',')} ON CONFLICT DO NOTHING`]
+          [`INSERT INTO public.${qTable} (${qCols}) VALUES ${tuples.join(',')} ON CONFLICT DO NOTHING`],
+          ...values
         );
         copied += result.rowCount || 0;
       }

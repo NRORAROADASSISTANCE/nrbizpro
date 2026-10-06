@@ -66,7 +66,25 @@
    document.getElementById('nrCustomerAdd')?.addEventListener('click',openAdd);
    document.querySelectorAll('[data-customer-view]').forEach(btn=>btn.addEventListener('click',()=>openView(btn.dataset.customerView)));\n   document.querySelectorAll('[data-customer-view]').forEach(btn=>{const l=document.createElement('button');l.type='button';l.className='secondary';l.textContent='Ledger';l.style.marginLeft='5px';l.onclick=()=>openLedger(btn.dataset.customerView);btn.parentElement.appendChild(l);});
  }
- function openCustomerDashboard(){
+ function receiveCustomerPayment(customerRef){
+  const list=normalized(),c=list.find(x=>String(x.mobile||'')===String(customerRef)||String(x.id||'')===String(customerRef));if(!c)return;
+  const bs=bills().filter(b=>billMatchesCustomer(b,c));
+  const total=bs.reduce((a,b)=>a+Number(b.total||0),0);
+  const pays=Array.isArray(S().customerPayments)?S().customerPayments.filter(p=>(String(p.customerMobile||'')===String(c.mobile||''))||String(p.customer||'').toLowerCase()===String(c.name||'').toLowerCase()):[];
+  const received=pays.reduce((a,p)=>a+Number(p.amount||0),0);
+  const due=Math.max(0,Number(c.openingBalance||0)+total-received);
+  if(due<=0)return alert('No outstanding amount for this customer.');
+  window.openModal?.('Receive Customer Payment','<div class="modal-grid"><label class="field">Customer<input value="'+esc(c.name||'')+'" readonly></label><label class="field">Outstanding<input value="'+money(due)+'" readonly></label><label class="field">Payment Amount<input id="ncpAmount" type="number" min="0.01" max="'+due+'" step="0.01" value="'+due+'"></label><label class="field">Payment Method<select id="ncpMethod"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Other</option></select></label></div><div class="modal-actions"><button type="button" class="secondary" onclick="closeModal()">Cancel</button><button type="button" class="primary" id="ncpSave">Receive Payment</button></div>');
+  document.getElementById('ncpSave').onclick=()=>{
+    const amount=Number(document.getElementById('ncpAmount').value||0)||0,method=document.getElementById('ncpMethod').value;
+    if(amount<=0||amount>due)return alert('Enter a valid payment amount.');
+    if(!Array.isArray(S().customerPayments))S().customerPayments=[];
+    S().customerPayments.push({id:'CPAY-'+Date.now(),date:new Date().toISOString(),invoice:'Customer Account',invoiceId:'',customer:c.name||'',customerMobile:c.mobile||'',amount,method,businessId:window.currentUser?.id||''});
+    try{window.save?.();window.NRBizProCloudQueueSave?.()}catch(e){}
+    closeModal();alert('Customer payment received successfully.');
+  };
+}
+function openCustomerDashboard(){
   const list=normalized();
   const rows=list.map(c=>{
     const bs=bills().filter(b=>billMatchesCustomer(b,c));
@@ -74,8 +92,9 @@
     const opening=Number(c.openingBalance||0),sales=bs.reduce((a,b)=>a+Number(b.total||0),0),collected=ps.reduce((a,p)=>a+Number(p.amount||0),0),due=Math.max(0,opening+sales-collected);
     return {id:c.id,mobile:c.mobile,name:c.name,opening,sales,collected,due};
   });
-  const html='<div class="nr-cards"><div><span>Total Customers</span><b>'+rows.length+'</b></div><div><span>Sales</span><b>'+money(rows.reduce((a,r)=>a+r.sales,0))+'</b></div><div><span>Collected</span><b>'+money(rows.reduce((a,r)=>a+r.collected,0))+'</b></div><div><span>Outstanding</span><b>'+money(rows.reduce((a,r)=>a+r.due,0))+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Customer</th><th>Opening</th><th>Sales</th><th>Collected</th><th>Due</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((r,i)=>'<tr><td>'+esc(r.name||'—')+'</td><td>'+money(r.opening)+'</td><td>'+money(r.sales)+'</td><td>'+money(r.collected)+'</td><td><b>'+money(r.due)+'</b></td><td><button type="button" data-cdash="'+i+'">Ledger</button></td></tr>').join(''):'<tr><td colspan="6">No customers found.</td></tr>')+'</tbody></table></div>';
+  const html='<div class="nr-cards"><div><span>Total Customers</span><b>'+rows.length+'</b></div><div><span>Sales</span><b>'+money(rows.reduce((a,r)=>a+r.sales,0))+'</b></div><div><span>Collected</span><b>'+money(rows.reduce((a,r)=>a+r.collected,0))+'</b></div><div><span>Outstanding</span><b>'+money(rows.reduce((a,r)=>a+r.due,0))+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Customer</th><th>Opening</th><th>Sales</th><th>Collected</th><th>Due</th><th>Action</th></tr></thead><tbody>'+(rows.length?rows.map((r,i)=>'<tr><td>'+esc(r.name||'—')+'</td><td>'+money(r.opening)+'</td><td>'+money(r.sales)+'</td><td>'+money(r.collected)+'</td><td><b>'+money(r.due)+'</b></td><td><button type="button" data-cdash="'+i+'">Ledger</button> <button type="button" data-crecv="'+i+'">Receive</button></td></tr>').join(''):'<tr><td colspan="6">No customers found.</td></tr>')+'</tbody></table></div>';
   window.openModal?.('Customer Financial Dashboard',html);
+  document.querySelectorAll('[data-crecv]').forEach(b=>b.onclick=()=>receiveCustomerPayment(rows[Number(b.dataset.crecv)]?.mobile||rows[Number(b.dataset.crecv)]?.id));
   document.querySelectorAll('[data-cdash]').forEach(b=>b.onclick=()=>openLedger(rows[Number(b.dataset.cdash)]?.mobile||rows[Number(b.dataset.cdash)]?.id));
 }
 function openAdd(){

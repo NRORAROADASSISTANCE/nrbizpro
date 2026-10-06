@@ -55,8 +55,19 @@ function render(type,from,to){
     document.getElementById('nrDashSales').onclick=function(){render('sales',today,today);};document.getElementById('nrDashStock').onclick=function(){render('stock',today,today);};document.getElementById('nrDashPL').onclick=function(){render('pl',today,today);};
   }
   function openDayBook(){
-  const now=new Date(),d=now.toISOString().slice(0,10);
-  window.openModal?.('Day Book / Cash Book',renderDayBook(d,d));
+  const now=new Date(),d=now.toISOString().slice(0,10),s=getState();
+  const opening=Number(s.cashBookOpeningBalance||0)||0;
+  const html=renderDayBook(d,d);
+  const rows=[];
+  (Array.isArray(s.bills)?s.bills:[]).filter(b=>inRange(b,d,d)).forEach(b=>{const p=Number(paid(b)||0);if(p>0)rows.push({mode:b.paymentMethod||'Other',in:p,out:0})});
+  (Array.isArray(s.customerPayments)?s.customerPayments:[]).filter(x=>inRange(x,d,d)).forEach(x=>rows.push({mode:x.method||'Other',in:Number(x.amount||0),out:0}));
+  (Array.isArray(s.purchases)?s.purchases:[]).filter(x=>inRange(x,d,d)).forEach(x=>{const p=Number(x.paidAmount||0);if(p>0)rows.push({mode:x.paymentMethod||'Other',in:0,out:p})});
+  (Array.isArray(s.supplierPayments)?s.supplierPayments:[]).filter(x=>inRange(x,d,d)).forEach(x=>rows.push({mode:x.method||'Other',in:0,out:Number(x.amount||0)}));
+  const modes=['Cash','UPI','Card','Bank Transfer','Other'];
+  const cards=modes.map(m=>{const a=rows.filter(r=>String(r.mode).toLowerCase()===m.toLowerCase()).reduce((x,r)=>x+r.in-r.out,0);return '<div><span>'+esc(m)+'</span><b>'+money(a)+'</b></div>'}).join('');
+  const net=rows.reduce((a,r)=>a+r.in-r.out,0),closing=opening+net;
+  const top='<div class="nr-cards"><div><span>Opening Balance</span><b>'+money(opening)+'</b></div><div><span>Today Net</span><b>'+money(net)+'</b></div><div><span>Closing Balance</span><b>'+money(closing)+'</b></div></div><div class="nr-cards">'+cards+'</div>';
+  window.openModal?.('Day Book / Cash Book',top+html);
 }
 function openReports(){
     var host=document.getElementById('customerManagement');if(!host)return;

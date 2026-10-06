@@ -22,8 +22,9 @@
     if(typeof window.renderAuth==='function') window.renderAuth('login',message||'Please log in to continue.');
   }
   function saveServerUser(d){
+    // Server identity is authoritative. Never preload a local workspace during login.
     window.currentUser=d.user;
-    if(typeof window.loadData==='function')window.state=window.loadData(d.user.id);
+    window.state=null;
     // Do not merge server identity into a possibly stale local workspace here.\n    // loadServerData() must run first and is the only source of workspace state.\n    const key='nr-bizpro-users-v1';
     try{const users=JSON.parse(localStorage.getItem(key)||'[]');const i=users.findIndex(u=>u.id===d.user.id);const local={...d.user};if(i>=0)users[i]={...users[i],...local};else users.push(local);localStorage.setItem(key,JSON.stringify(users));}catch{}
   }

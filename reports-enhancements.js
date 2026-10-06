@@ -20,6 +20,7 @@
   (Array.isArray(s.customerPayments)?s.customerPayments:[]).filter(x=>inRange(x,from,to)).forEach(x=>rows.push({date:x.date,type:'Customer Receipt',party:x.customer||'Customer',mode:x.method||'Other',in:Number(x.amount||0),out:0,ref:x.invoice||x.id||''}));
   (Array.isArray(s.purchases)?s.purchases:[]).filter(x=>inRange(x,from,to)).forEach(x=>{const p=Number(x.paidAmount||0);if(p>0)rows.push({date:x.date,type:'Purchase Payment',party:x.supplier||'Supplier',mode:x.paymentMethod||'Other',in:0,out:p,ref:x.id||''});});
   (Array.isArray(s.supplierPayments)?s.supplierPayments:[]).filter(x=>inRange(x,from,to)).forEach(x=>rows.push({date:x.date,type:'Supplier Payment',party:x.supplier||'Supplier',mode:x.method||'Other',in:0,out:Number(x.amount||0),ref:x.purchaseId||x.id||''}));
+  (Array.isArray(s.expenses)?s.expenses:[]).filter(x=>inRange(x,from,to)).forEach(x=>{const amount=Number(x.amount||x.total||x.value||0)||0;if(amount>0)rows.push({date:x.date||x.createdAt,type:'Expense',party:x.category||x.title||x.description||'Expense',mode:x.paymentMethod||x.method||'Other',in:0,out:amount,ref:x.id||''})});
   rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   const totalIn=rows.reduce((a,r)=>a+r.in,0),totalOut=rows.reduce((a,r)=>a+r.out,0);
   const modes={};rows.forEach(r=>{modes[r.mode]=(modes[r.mode]||0)+r.in-r.out});
@@ -63,6 +64,7 @@ function render(type,from,to){
   (Array.isArray(s.customerPayments)?s.customerPayments:[]).filter(x=>inRange(x,d,d)).forEach(x=>rows.push({mode:x.method||'Other',in:Number(x.amount||0),out:0}));
   (Array.isArray(s.purchases)?s.purchases:[]).filter(x=>inRange(x,d,d)).forEach(x=>{const p=Number(x.paidAmount||0);if(p>0)rows.push({mode:x.paymentMethod||'Other',in:0,out:p})});
   (Array.isArray(s.supplierPayments)?s.supplierPayments:[]).filter(x=>inRange(x,d,d)).forEach(x=>rows.push({mode:x.method||'Other',in:0,out:Number(x.amount||0)}));
+  (Array.isArray(s.expenses)?s.expenses:[]).filter(x=>inRange(x,d,d)).forEach(x=>{const amount=Number(x.amount||x.total||x.value||0)||0;if(amount>0)rows.push({mode:x.paymentMethod||x.method||'Other',in:0,out:amount})});
   const modes=['Cash','UPI','Card','Bank Transfer','Other'];
   const cards=modes.map(m=>{const a=rows.filter(r=>String(r.mode).toLowerCase()===m.toLowerCase()).reduce((x,r)=>x+r.in-r.out,0);return '<div><span>'+esc(m)+'</span><b>'+money(a)+'</b></div>'}).join('');
   const net=rows.reduce((a,r)=>a+r.in-r.out,0),closing=opening+net;

@@ -55,7 +55,19 @@ function render(type,from,to){
     host.innerHTML='<div class="nr-head"><div><h3>Business Dashboard</h3><p>Live summary for '+today+'.</p></div></div><div class="nr-cards"><div><span>Today Sales</span><b>'+money(sales)+'</b></div><div><span>Collections</span><b>'+money(col)+'</b></div><div><span>Purchases</span><b>'+money(pur)+'</b></div><div><span>Expenses</span><b>'+money(exp)+'</b></div><div><span>Gross Profit</span><b>'+money(gross)+'</b></div><div><span>Net Profit</span><b>'+money(net)+'</b></div><div><span>Low Stock</span><b>'+low+'</b></div><div><span>Out of Stock</span><b>'+out+'</b></div></div><div class="nr-report-grid"><button id="nrDashSales"><b>Sales Report</b><span>Open →</span></button><button id="nrDashStock"><b>Stock Report</b><span>Open →</span></button><button id="nrDashPL"><b>Profit & Loss</b><span>Open →</span></button></div>';
     document.getElementById('nrDashSales').onclick=function(){render('sales',today,today);};document.getElementById('nrDashStock').onclick=function(){render('stock',today,today);};document.getElementById('nrDashPL').onclick=function(){render('pl',today,today);};
   }
-  function openDayBook(){
+  function openExpenseDashboard(){
+  const s=getState(),all=Array.isArray(s.expenses)?s.expenses:[];
+  const now=new Date(),today=now.toISOString().slice(0,10),month=now.toISOString().slice(0,7);
+  const amt=x=>Number(x.amount||x.total||x.value||0)||0;
+  const todayTotal=all.filter(x=>String(x.date||x.createdAt||'').slice(0,10)===today).reduce((a,x)=>a+amt(x),0);
+  const monthTotal=all.filter(x=>String(x.date||x.createdAt||'').slice(0,7)===month).reduce((a,x)=>a+amt(x),0);
+  const total=all.reduce((a,x)=>a+amt(x),0),cats={},modes={};
+  all.forEach(x=>{const a=amt(x),cat=x.category||x.title||'General',mode=x.paymentMethod||x.method||'Other';cats[cat]=(cats[cat]||0)+a;modes[mode]=(modes[mode]||0)+a});
+  const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+money(x[1])+'</td></tr>').join('');
+  const modeRows=Object.entries(modes).sort((a,b)=>b[1]-a[1]).map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+money(x[1])+'</td></tr>').join('');
+  window.openModal?.('Expense Dashboard','<div class="nr-cards"><div><span>Today</span><b>'+money(todayTotal)+'</b></div><div><span>This Month</span><b>'+money(monthTotal)+'</b></div><div><span>Total Expenses</span><b>'+money(total)+'</b></div><div><span>Entries</span><b>'+all.length+'</b></div></div><div class="table-wrap"><h3>Category-wise Expenses</h3><table><thead><tr><th>Category</th><th>Amount</th></tr></thead><tbody>'+(catRows||'<tr><td colspan="2">No expenses</td></tr>')+'</tbody></table></div><div class="table-wrap" style="margin-top:18px"><h3>Payment Mode-wise Expenses</h3><table><thead><tr><th>Payment Mode</th><th>Amount</th></tr></thead><tbody>'+(modeRows||'<tr><td colspan="2">No expenses</td></tr>')+'</tbody></table></div>');
+}
+function openDayBook(){
   const now=new Date(),d=now.toISOString().slice(0,10),s=getState();
   const opening=Number(s.cashBookOpeningBalance||0)||0;
   const html=renderDayBook(d,d);
@@ -87,13 +99,19 @@ function openReports(){
     closeModal();alert('Cash Book opening balance saved successfully.');
   };
 }
+function addExpenseDashboardButton(){
+  const host=document.querySelector('#reports')||document.querySelector('[data-page="reports"]');
+  if(!host||host.querySelector('[data-open-expense-dashboard]'))return;
+  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Expense Dashboard';b.dataset.openExpenseDashboard='1';b.style.margin='10px 6px 10px 0';b.onclick=openExpenseDashboard;
+  host.appendChild(b);
+}
 function addDayBookButton(){
   const host=document.querySelector('#reports')||document.querySelector('[data-page="reports"]');
   if(!host||host.querySelector('[data-open-daybook]'))return;
   const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Day Book / Cash Book';b.dataset.openDaybook='1';b.style.margin='10px 6px 10px 0';b.onclick=openDayBook;const sbtn=document.createElement('button');sbtn.type='button';sbtn.className='secondary';sbtn.textContent='Cash Book Settings';sbtn.onclick=openCashBookSettings;b.after(sbtn);host.prepend(b);
 }
 function boot(){
-  setTimeout(addDayBookButton,400);var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}
+  setTimeout(addDayBookButton,400);setTimeout(addExpenseDashboardButton,450);var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}
   window.NRBizProReports={open:openReports,render:render};
   window.addEventListener('load',function(){setTimeout(boot,500);});
   window.addEventListener('authReady',boot);

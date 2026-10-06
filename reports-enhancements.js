@@ -12,7 +12,20 @@
   function amount(b){return Number(b&&((b.total)||(b.grandTotal)||(b.amount)||0))||0;}
   function paid(b){var v=b&&(b.paidAmount!=null?b.paidAmount:b.amountPaid!=null?b.amountPaid:b.receivedAmount!=null?b.receivedAmount:b.received);if(v!=null&&v!=='')return Math.max(0,Number(v)||0);return /paid|settled|complete/i.test(String(b&&b.paymentStatus||''))?amount(b):0;}
   function due(b){return Math.max(0,amount(b)-paid(b));}
-  function render(type,from,to){
+  function renderDayBook(from,to){
+  const s=getState(),rows=[];
+  (Array.isArray(s.bills)?s.bills:[]).filter(b=>inRange(b,from,to)).forEach(b=>{
+    const p=Number(paid(b)||0);if(p>0)rows.push({date:b.date||b.billDate,type:'Sales Collection',party:b.customerName||b.customer||'Walk-in Customer',mode:b.paymentMethod||'Other',in:p,out:0,ref:b.invoiceNo||b.invoiceNumber||b.id||''});
+  });
+  (Array.isArray(s.customerPayments)?s.customerPayments:[]).filter(x=>inRange(x,from,to)).forEach(x=>rows.push({date:x.date,type:'Customer Receipt',party:x.customer||'Customer',mode:x.method||'Other',in:Number(x.amount||0),out:0,ref:x.invoice||x.id||''}));
+  (Array.isArray(s.purchases)?s.purchases:[]).filter(x=>inRange(x,from,to)).forEach(x=>{const p=Number(x.paidAmount||0);if(p>0)rows.push({date:x.date,type:'Purchase Payment',party:x.supplier||'Supplier',mode:x.paymentMethod||'Other',in:0,out:p,ref:x.id||''});});
+  (Array.isArray(s.supplierPayments)?s.supplierPayments:[]).filter(x=>inRange(x,from,to)).forEach(x=>rows.push({date:x.date,type:'Supplier Payment',party:x.supplier||'Supplier',mode:x.method||'Other',in:0,out:Number(x.amount||0),ref:x.purchaseId||x.id||''}));
+  rows.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const totalIn=rows.reduce((a,r)=>a+r.in,0),totalOut=rows.reduce((a,r)=>a+r.out,0);
+  const modes={};rows.forEach(r=>{modes[r.mode]=(modes[r.mode]||0)+r.in-r.out});
+  return '<div class="nr-cards"><div><span>Total Receipts</span><b>'+money(totalIn)+'</b></div><div><span>Total Payments</span><b>'+money(totalOut)+'</b></div><div><span>Net</span><b>'+money(totalIn-totalOut)+'</b></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Party</th><th>Mode</th><th>Receipt</th><th>Payment</th><th>Reference</th></tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr><td>'+esc(String(r.date||'').slice(0,10))+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.party)+'</td><td>'+esc(r.mode)+'</td><td>'+money(r.in)+'</td><td>'+money(r.out)+'</td><td>'+esc(r.ref)+'</td></tr>').join(''):'<tr><td colspan="7">No transactions for selected period.</td></tr>')+'</tbody></table></div>';
+}
+function render(type,from,to){
     var host=document.getElementById('customerManagement');if(!host)return;
     var bs=bills().filter(function(x){return inRange(x,from,to);});
     var ps=list('purchases').filter(function(x){return inRange(x,from,to);});
@@ -41,13 +54,23 @@
     host.innerHTML='<div class="nr-head"><div><h3>Business Dashboard</h3><p>Live summary for '+today+'.</p></div></div><div class="nr-cards"><div><span>Today Sales</span><b>'+money(sales)+'</b></div><div><span>Collections</span><b>'+money(col)+'</b></div><div><span>Purchases</span><b>'+money(pur)+'</b></div><div><span>Expenses</span><b>'+money(exp)+'</b></div><div><span>Gross Profit</span><b>'+money(gross)+'</b></div><div><span>Net Profit</span><b>'+money(net)+'</b></div><div><span>Low Stock</span><b>'+low+'</b></div><div><span>Out of Stock</span><b>'+out+'</b></div></div><div class="nr-report-grid"><button id="nrDashSales"><b>Sales Report</b><span>Open →</span></button><button id="nrDashStock"><b>Stock Report</b><span>Open →</span></button><button id="nrDashPL"><b>Profit & Loss</b><span>Open →</span></button></div>';
     document.getElementById('nrDashSales').onclick=function(){render('sales',today,today);};document.getElementById('nrDashStock').onclick=function(){render('stock',today,today);};document.getElementById('nrDashPL').onclick=function(){render('pl',today,today);};
   }
-  function openReports(){
+  function openDayBook(){
+  const now=new Date(),d=now.toISOString().slice(0,10);
+  window.openModal?.('Day Book / Cash Book',renderDayBook(d,d));
+}
+function openReports(){
     var host=document.getElementById('customerManagement');if(!host)return;
     var cards=[['sales','Sales Report'],['purchases','Purchase Report'],['pl','Profit & Loss'],['customers','Customer Outstanding'],['supplier','Supplier Outstanding'],['stock','Stock Report'],['expenses','Expense Report'],['collection','Collection Report']];
     host.innerHTML='<div class="nr-head"><div><h3>Reports</h3><p>Business reports based on stored records.</p></div></div><div class="nr-report-grid">'+cards.map(function(c){return '<button data-report="'+c[0]+'"><b>'+c[1]+'</b><span>Open report →</span></button>';}).join('')+'</div>';
     host.querySelectorAll('[data-report]').forEach(function(b){b.onclick=function(){var d=new Date().toISOString().slice(0,10);render(b.dataset.report,d,d);};});
   }
-  function boot(){var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}
+  function addDayBookButton(){
+  const host=document.querySelector('#reports')||document.querySelector('[data-page="reports"]');
+  if(!host||host.querySelector('[data-open-daybook]'))return;
+  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Day Book / Cash Book';b.dataset.openDaybook='1';b.style.margin='10px 0';b.onclick=openDayBook;host.prepend(b);
+}
+function boot(){
+  setTimeout(addDayBookButton,400);var api=window.NRCustomerDashboard;if(!api||api.__reportsEnhanced)return;var old=api.open;api.open=function(id){if(id==='reports'){openReports();return;}if(id==='dashboard'||id==='home'){openDashboardSummary();return;}old(id);};api.__reportsEnhanced=true;}
   window.NRBizProReports={open:openReports,render:render};
   window.addEventListener('load',function(){setTimeout(boot,500);});
   window.addEventListener('authReady',boot);

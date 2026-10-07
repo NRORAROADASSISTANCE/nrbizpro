@@ -53,85 +53,59 @@ footer{background:#031126}
 <section class="section about" id="about"><div class="wrap aboutgrid"><div><div class="eyebrow">About LETMYTRIP</div><h2>A Unit of NR Group of Companies</h2><p class="lead">LETMYTRIP is being built as a customer-friendly travel platform for transport, hotels and holiday services. The design is intentionally clean, natural and easy to use on desktop and mobile.</p><p class="lead"><b>Support:</b> +91 9160264439</p><a class="btn orange" href="https://wa.me/919160264439?text=Hi%20LETMYTRIP%2C%20I%20want%20travel%20assistance." target="_blank">WhatsApp Us</a></div><div class="photo-wide"><img src="https://images.unsplash.com/photo-1745750434535-5943ef2fd31a?auto=format&fit=crop&fm=jpg&ixlib=rb-4.1.0&q=85&w=1800" alt="Dubai skyline"></div></div></section>
 <section class="section contact" id="contact"><div class="wrap"><div class="eyebrow" style="color:#ffad70">Contact</div><h2>Ready for your next trip?</h2><p class="lead">Talk to LETMYTRIP for travel planning and booking support.</p><div class="contactgrid"><div class="contactbox"><h3>LETMYTRIP</h3><p>📱 +91 9160264439</p><p>💬 <a href="https://wa.me/919160264439?text=Hi%20LETMYTRIP%2C%20I%20want%20travel%20assistance." target="_blank" rel="noopener">WhatsApp Us</a></p><p>🌐 letmytrip.in</p><p>A Unit of NR Group of Companies</p></div><div class="contactbox"><input placeholder="Your name"><input placeholder="Mobile / Email"><textarea placeholder="Tell us about your trip"></textarea><button class="btn orange" onclick="alert('Your enquiry form is ready for backend connection.')">Send Enquiry</button></div></div></div></section></main>
 <footer><div class="wrap"><span>© <span id="year"></span> LETMYTRIP. Travel Made Easy.</span><span>A Unit of NR Group of Companies • +91 9160264439</span></div></footer>
-<div class="modal" id="modal"><div class="modalbox"><h2>Welcome to LETMYTRIP</h2><p class="lead" style="font-size:14px">Secure mobile OTP verification is required to continue.</p><div id="otpPhoneStep"><input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel"><div id="msg91-captcha" style="margin-top:10px"></div><div id="msg91-captcha" style="margin-top:10px"></div><div id="msg91-captcha" style="margin-top:10px"></div><button id="otpSendBtn" class="btn primary" style="width:100%;margin-top:7px">Send OTP</button><p id="otpPhoneStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div><div id="otpVerifyStep" style="display:none"><input id="otpCode" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" autocomplete="one-time-code"><button id="otpVerifyBtn" class="btn primary" style="width:100%;margin-top:7px">Verify & Continue</button><button id="otpResendBtn" class="btn" style="width:100%;margin-top:7px;background:#eef3f9;color:#10284d">Resend OTP</button><p id="otpStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div></div></div>iv>
+<div class="modal" id="modal"><div class="modalbox"><h2>Welcome to LETMYTRIP</h2><p class="lead" style="font-size:14px">Secure mobile OTP verification is required to continue.</p><div id="otpPhoneStep"><input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel"><button id="otpSendBtn" class="btn primary" style="width:100%;margin-top:7px">Send OTP</button><p id="otpPhoneStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div><div id="otpVerifyStep" style="display:none"><input id="otpCode" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" autocomplete="one-time-code"><button id="otpVerifyBtn" class="btn primary" style="width:100%;margin-top:7px">Verify & Continue</button><button id="otpResendBtn" class="btn" style="width:100%;margin-top:7px;background:#eef3f9;color:#10284d">Resend OTP</button><p id="otpStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div></div></div>iv>
 <script>const tabs=[...document.querySelectorAll('.tab')];tabs.forEach(t=>t.onclick=()=>{tabs.forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById('bookingTitle').textContent='Search '+t.dataset.type});function updateClock(){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));document.getElementById('clock').textContent=d.toLocaleTimeString('en-IN',{hour12:true});document.getElementById('date').textContent=d.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'})}setInterval(updateClock,1000);updateClock();document.getElementById('year').textContent=new Date().getFullYear();function searchTravel(){const a=document.querySelector('.tab.active').dataset.type;const m=document.getElementById('msg');m.style.display='block';m.textContent='✓ '+a+' search is ready. Live provider booking will be connected next.'}function jump(x){document.getElementById('to').value=x;document.querySelector('.booking').scrollIntoView({behavior:'smooth'})}function openModal(){document.getElementById('modal').classList.add('show')}function closeModal(){document.getElementById('modal').classList.remove('show')}window.addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});</script><script>
-(async function(){
+(function(){
   const phoneStep=document.getElementById('otpPhoneStep'), verifyStep=document.getElementById('otpVerifyStep');
   const mobile=document.getElementById('otpMobile'), otp=document.getElementById('otpCode');
   const sendBtn=document.getElementById('otpSendBtn'), verifyBtn=document.getElementById('otpVerifyBtn'), resendBtn=document.getElementById('otpResendBtn');
   const phoneStatus=document.getElementById('otpPhoneStatus'), status=document.getElementById('otpStatus');
-  let cfg=null, sdkLoading=null, identifier='';
+  let reqId='';
   const msg=(el,t)=>el.textContent=t;
-  const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  async function loadSdk(){
-    if(typeof window.sendOtp==='function' && typeof window.verifyOtp==='function') return;
-    if(sdkLoading) return sdkLoading;
-    sdkLoading=(async()=>{
-      const r=await fetch('/api/config',{cache:'no-store'});
-      if(!r.ok) throw new Error('OTP configuration is unavailable.');
-      cfg=await r.json();
-      if(!cfg.widgetId||!cfg.tokenAuth) throw new Error('OTP configuration is incomplete.');
-      if(typeof window.initSendOTP!=='function'){
-        await new Promise((resolve,reject)=>{
-          const s=document.createElement('script');
-          s.src='https://verify.msg91.com/otp-provider.js';
-          s.onload=resolve;
-          s.onerror=()=>reject(new Error('MSG91 OTP service failed to load.'));
-          document.head.appendChild(s);
-        });
-      }
-      if(typeof window.initSendOTP!=='function') throw new Error('MSG91 OTP SDK did not initialize.');
-      window.initSendOTP({
-        widgetId:cfg.widgetId,
-        tokenAuth:cfg.tokenAuth,
-        exposeMethods:true,
-        captchaRenderId:'msg91-captcha',
-        success:d=>console.log('MSG91 success',d),
-        failure:e=>console.error('MSG91 failure',e)
-      });
-      for(let i=0;i<40;i++){
-        if(typeof window.sendOtp==='function' && typeof window.verifyOtp==='function') return;
-        await wait(250);
-      }
-      throw new Error('MSG91 OTP SDK is still loading. Please try again.');
-    })();
-    try{await sdkLoading}catch(e){sdkLoading=null;throw e}
-  }
-  sendBtn.onclick=async()=>{
+  async function sendOtp(){
     const m=mobile.value.replace(/\D/g,'').slice(-10);
     if(m.length!==10){msg(phoneStatus,'Please enter a valid 10-digit mobile number.');return}
     try{
-      sendBtn.disabled=true; msg(phoneStatus,'Preparing secure OTP…');
-      await loadSdk();
-      identifier='91'+m;
-      window.sendOtp(identifier,
-        ()=>{phoneStep.style.display='none';verifyStep.style.display='block';msg(status,'OTP sent. Please check your SMS.');},
-        e=>{console.error('MSG91 sendOtp failure',e);const detail=(e&&typeof e==='object')?(e.message||e.error||e.description||e.code||e.type||(()=>{try{return JSON.stringify(e)}catch{return ''}})()):String(e||'');msg(phoneStatus,detail||'OTP could not be sent. Please try again.');}
-      );
-    }catch(e){console.error('LETMYTRIP OTP error',e);msg(phoneStatus,e.message||'Unable to send OTP.')}
-    finally{sendBtn.disabled=false}
-  };
-  verifyBtn.onclick=()=>{
+      sendBtn.disabled=true; msg(phoneStatus,'Sending secure OTP…');
+      const r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m})});
+      const out=await r.json();
+      if(!r.ok||!out.sent) throw new Error(out.error||'OTP could not be sent. Please try again.');
+      reqId=out.reqId;
+      phoneStep.style.display='none'; verifyStep.style.display='block';
+      msg(status,'OTP sent by SMS. Please enter the 6-digit code.');
+    }catch(e){
+      console.error('LETMYTRIP OTP send error',e);
+      msg(phoneStatus,e.message||'OTP could not be sent. Please try again.');
+    }finally{sendBtn.disabled=false}
+  }
+  async function verifyOtp(){
     const code=otp.value.replace(/\D/g,'');
     if(code.length!==6){msg(status,'Enter the 6-digit OTP.');return}
-    if(typeof window.verifyOtp!=='function'){msg(status,'Please tap Send OTP first.');return}
-    verifyBtn.disabled=true; msg(status,'Verifying…');
-    window.verifyOtp(code,async(data)=>{
-      try{
-        const accessToken=data?.accessToken||data?.access_token||data?.token||data?.data?.accessToken||data?.data?.access_token||data?.data?.token;
-        if(!accessToken) throw new Error('Verification token was not returned.');
-        const r=await fetch('/api/verify-access-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken})});
-        const out=await r.json();
-        if(!r.ok||!out.verified) throw new Error(out.error||'Server verification failed.');
-        window.location.reload();
-      }catch(e){console.error(e);msg(status,e.message||'Verification failed.')}
-      finally{verifyBtn.disabled=false}
-    },e=>{console.error('MSG91 verify failure',e);msg(status,'Incorrect or expired OTP. Please try again.');verifyBtn.disabled=false});
-  };
+    if(!reqId){msg(status,'Please send OTP first.');return}
+    try{
+      verifyBtn.disabled=true; msg(status,'Verifying…');
+      const r=await fetch('/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reqId,otp:code})});
+      const out=await r.json();
+      if(!r.ok||!out.verified) throw new Error(out.error||'Incorrect or expired OTP.');
+      window.location.reload();
+    }catch(e){
+      console.error('LETMYTRIP OTP verify error',e);
+      msg(status,e.message||'Verification failed.');
+    }finally{verifyBtn.disabled=false}
+  }
+  sendBtn.onclick=sendOtp;
+  verifyBtn.onclick=verifyOtp;
   resendBtn.onclick=async()=>{
-    if(typeof window.retryOtp!=='function'){msg(status,'Please send OTP first.');return}
-    resendBtn.disabled=true;
-    window.retryOtp(null,()=>{msg(status,'OTP resent. Please check your SMS.');resendBtn.disabled=false},()=>{msg(status,'Unable to resend OTP.');resendBtn.disabled=false});
+    if(!reqId){msg(status,'Please send OTP first.');return}
+    const m=mobile.value.replace(/\D/g,'').slice(-10);
+    try{
+      resendBtn.disabled=true; msg(status,'Resending OTP…');
+      const r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m})});
+      const out=await r.json();
+      if(!r.ok||!out.sent) throw new Error(out.error||'Unable to resend OTP.');
+      reqId=out.reqId; msg(status,'OTP resent by SMS. Please check your phone.');
+    }catch(e){msg(status,e.message||'Unable to resend OTP.')}
+    finally{resendBtn.disabled=false}
   };
 })();
 </script></body></html>

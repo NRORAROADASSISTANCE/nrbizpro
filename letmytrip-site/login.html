@@ -18,6 +18,7 @@
   <section id="phoneStep" class="step active">
     <label for="mobile">Mobile number</label>
     <input id="mobile" class="input" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel">
+    <div id="msg91-captcha" style="margin-top:10px"></div>
     <button id="sendBtn">Send OTP</button>
     <div id="phoneStatus" class="status"></div>
   </section>
@@ -48,14 +49,18 @@ async function initWidget(){
   window.__msg91Ready=true;
   const s=document.createElement("script");
   s.src="https://verify.msg91.com/otp-provider.js";
-  s.onload=()=>window.initSendOTP({
-    widgetId:config.widgetId,
-    tokenAuth:config.tokenAuth,
-    exposeMethods:true,
-    captchaRenderId:"",
-    success:(data)=>console.log("MSG91 success",data),
-    failure:(error)=>console.error("MSG91 failure",error)
-  });
+  s.onload=()=>{
+    try{
+      window.initSendOTP({
+        widgetId:config.widgetId,
+        tokenAuth:config.tokenAuth,
+        exposeMethods:true,
+        captchaRenderId:"msg91-captcha",
+        success:(data)=>console.log("MSG91 success",data),
+        failure:(error)=>console.error("MSG91 failure",error)
+      });
+    }catch(e){console.error("MSG91 init error",e)}
+  };
   s.onerror=()=>{throw new Error("MSG91 SDK failed to load")};
   document.head.appendChild(s);
 }
@@ -73,7 +78,11 @@ document.getElementById("sendBtn").onclick=async()=>{
     if(typeof window.sendOtp!=="function") throw new Error("MSG91 OTP service is not ready");
     window.sendOtp(identifier,
       ()=>{document.getElementById("phoneStep").classList.remove("active");document.getElementById("otpStep").classList.add("active");setStatus("otpStatus","OTP sent. Please check your SMS.");},
-      e=>setStatus("phoneStatus","OTP could not be sent. Please try again.")
+      e=>{
+        console.error("MSG91 sendOtp failure",e);
+        const detail=e?.message||e?.error||e?.description||"OTP could not be sent. Please try again.";
+        setStatus("phoneStatus",detail);
+      }
     );
   }catch(e){console.error(e);setStatus("phoneStatus",e.message||"Unable to start OTP.");}
 };

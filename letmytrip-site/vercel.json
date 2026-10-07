@@ -1,16 +1,3 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/",
-      "missing": [
-        {
-          "type": "cookie",
-          "key": "letmytrip_verified",
-          "value": "1"
-        }
-      ],
-      "dest": "/login.html"
-    }
-  ]
+  "version": 2
 }

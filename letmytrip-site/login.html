@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LETMYTRIP — Secure Login</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Arial,sans-serif;background:radial-gradient(circle at 20% 10%,#fff8e7,#f6f0df 42%,#e9dfc9);color:#10233f;display:grid;place-items:center;padding:24px}
+.card{width:min(470px,100%);background:rgba(255,255,255,.94);border:1px solid rgba(190,150,70,.35);border-radius:26px;padding:34px;box-shadow:0 24px 70px rgba(16,35,63,.16)}
+.brand{font-family:Georgia,serif;font-size:32px;font-weight:700;letter-spacing:.5px;margin-bottom:8px}.gold{color:#b48a3c}.sub{color:#687384;margin:0 0 28px}.step{display:none}.step.active{display:block}label{display:block;font-size:13px;font-weight:700;margin:0 0 8px}.input{width:100%;padding:15px 16px;border:1px solid #d8d0c1;border-radius:14px;font-size:18px;outline:none}.input:focus{border-color:#b48a3c;box-shadow:0 0 0 3px rgba(180,138,60,.12)}button{width:100%;border:0;border-radius:14px;padding:15px;margin-top:16px;background:#10233f;color:#fff;font-size:16px;font-weight:700;cursor:pointer}.secondary{background:#b48a3c}.status{min-height:22px;margin-top:14px;font-size:14px;color:#687384}.small{font-size:12px;color:#8a8f99;margin-top:18px;text-align:center}.otp{letter-spacing:9px;text-align:center;font-size:24px}.back{background:transparent;color:#10233f;border:1px solid #d8d0c1}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">LETMY<span class="gold">TRIP</span></div>
+  <p class="sub">Your journey, beautifully planned.</p>
+
+  <section id="phoneStep" class="step active">
+    <label for="mobile">Mobile number</label>
+    <input id="mobile" class="input" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel">
+    <button id="sendBtn">Send OTP</button>
+    <div id="phoneStatus" class="status"></div>
+  </section>
+
+  <section id="otpStep" class="step">
+    <label for="otp">Enter 6-digit OTP</label>
+    <input id="otp" class="input otp" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code">
+    <button id="verifyBtn" class="secondary">Verify & Continue</button>
+    <button id="resendBtn" class="back">Resend OTP</button>
+    <div id="otpStatus" class="status"></div>
+  </section>
+
+  <div class="small">Secure mobile verification powered by MSG91</div>
+</main>
+
+<script>
+let config=null;
+let identifier="";
+async function loadConfig(){
+  const r=await fetch("/api/config",{cache:"no-store"});
+  if(!r.ok) throw new Error("OTP configuration unavailable");
+  config=await r.json();
+  window.__letmytripConfig=config;
+}
+async function initWidget(){
+  if(window.__msg91Ready) return;
+  await loadConfig();
+  window.__msg91Ready=true;
+  const s=document.createElement("script");
+  s.src="https://verify.msg91.com/otp-provider.js";
+  s.onload=()=>window.initSendOTP({
+    widgetId:config.widgetId,
+    tokenAuth:config.tokenAuth,
+    exposeMethods:true,
+    captchaRenderId:"",
+    success:(data)=>console.log("MSG91 success",data),
+    failure:(error)=>console.error("MSG91 failure",error)
+  });
+  s.onerror=()=>{throw new Error("MSG91 SDK failed to load")};
+  document.head.appendChild(s);
+}
+function mobileValue(){return document.getElementById("mobile").value.replace(/\D/g,"").slice(-10)}
+function setStatus(id,msg){document.getElementById(id).textContent=msg}
+document.getElementById("sendBtn").onclick=async()=>{
+  try{
+    const m=mobileValue();
+    if(m.length!==10) return setStatus("phoneStatus","Please enter a valid 10-digit mobile number.");
+    setStatus("phoneStatus","Preparing secure OTP…");
+    await initWidget();
+    identifier="91"+m;
+    const wait=()=>new Promise(r=>setTimeout(r,300));
+    let tries=0; while(typeof window.sendOtp!=="function"&&tries++<30) await wait();
+    if(typeof window.sendOtp!=="function") throw new Error("MSG91 OTP service is not ready");
+    window.sendOtp(identifier,
+      ()=>{document.getElementById("phoneStep").classList.remove("active");document.getElementById("otpStep").classList.add("active");setStatus("otpStatus","OTP sent. Please check your SMS.");},
+      e=>setStatus("phoneStatus","OTP could not be sent. Please try again.")
+    );
+  }catch(e){console.error(e);setStatus("phoneStatus",e.message||"Unable to start OTP.");}
+};
+document.getElementById("verifyBtn").onclick=async()=>{
+  const otp=document.getElementById("otp").value.replace(/\D/g,"");
+  if(otp.length!==6) return setStatus("otpStatus","Enter the 6-digit OTP.");
+  setStatus("otpStatus","Verifying…");
+  if(typeof window.verifyOtp!=="function") return setStatus("otpStatus","OTP service is not ready. Please retry.");
+  window.verifyOtp(otp,async(data)=>{
+    try{
+      const accessToken=data?.accessToken||data?.access_token||data?.token||data?.data?.accessToken||data?.data?.access_token||data?.data?.token;
+      if(!accessToken) throw new Error("MSG91 did not return an access token.");
+      const r=await fetch("/api/verify-access-token",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken})});
+      const out=await r.json();
+      if(!r.ok||!out.verified) throw new Error(out.error||"Verification failed");
+      location.href="/";
+    }catch(e){console.error(e);setStatus("otpStatus",e.message||"Verification failed.");}
+  },e=>{console.error(e);setStatus("otpStatus","Incorrect or expired OTP. Please try again.");});
+};
+document.getElementById("resendBtn").onclick=()=>{
+  if(typeof window.retryOtp!=="function") return setStatus("otpStatus","OTP service is not ready.");
+  window.retryOtp(null,()=>setStatus("otpStatus","OTP resent."),()=>setStatus("otpStatus","Unable to resend OTP."));
+};
+</script>
+</body>
+</html>

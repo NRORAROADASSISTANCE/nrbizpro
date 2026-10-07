@@ -1,0 +1,98 @@
+name: LETMYTRIP OTP UI Patch
+
+on:
+  push:
+    branches:
+      - letmytrip-otp-secure-20261007
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch LETMYTRIP OTP modal
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("letmytrip-site/index.html")
+          s = p.read_text(encoding="utf-8")
+          old = '''<div class="modal" id="modal"><div class="modalbox"><button class="close" onclick="closeModal()">×</button><h2>Welcome to LETMYTRIP</h2><p class="lead" style="font-size:14px">Mobile OTP login will be compulsory.</p><input placeholder="Mobile number"><button class="btn primary" style="width:100%;margin-top:7px" onclick="alert('OTP backend integration is the next step.')">Send OTP</button></div></div>'''
+          new = '''<div class="modal" id="modal"><div class="modalbox"><h2>Welcome to LETMYTRIP</h2><p class="lead" style="font-size:14px">Secure mobile OTP verification is required to continue.</p><div id="otpPhoneStep"><input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel"><button id="otpSendBtn" class="btn primary" style="width:100%;margin-top:7px">Send OTP</button><p id="otpPhoneStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div><div id="otpVerifyStep" style="display:none"><input id="otpCode" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" autocomplete="one-time-code"><button id="otpVerifyBtn" class="btn primary" style="width:100%;margin-top:7px">Verify & Continue</button><button id="otpResendBtn" class="btn" style="width:100%;margin-top:7px;background:#eef3f9;color:#10284d">Resend OTP</button><p id="otpStatus" style="font-size:12px;color:#66758c;min-height:18px"></p></div></div></div>'''
+          if old not in s:
+              raise SystemExit("OTP placeholder not found")
+          s = s.replace(old, new, 1)
+          script = r'''<script>
+          (async function(){
+            const modal=document.getElementById('modal');
+            const phoneStep=document.getElementById('otpPhoneStep');
+            const verifyStep=document.getElementById('otpVerifyStep');
+            const mobile=document.getElementById('otpMobile');
+            const otp=document.getElementById('otpCode');
+            const sendBtn=document.getElementById('otpSendBtn');
+            const verifyBtn=document.getElementById('otpVerifyBtn');
+            const resendBtn=document.getElementById('otpResendBtn');
+            const phoneStatus=document.getElementById('otpPhoneStatus');
+            const status=document.getElementById('otpStatus');
+            let cfg=null, ready=false, identifier='';
+            function msg(el,t){el.textContent=t}
+            async function init(){
+              if(ready) return;
+              const r=await fetch('/api/config',{cache:'no-store'});
+              if(!r.ok) throw new Error('OTP configuration is unavailable.');
+              cfg=await r.json();
+              await new Promise((resolve,reject)=>{
+                const s=document.createElement('script');
+                s.src='https://verify.msg91.com/otp-provider.js';
+                s.onload=()=>{try{initSendOTP({widgetId:cfg.widgetId,tokenAuth:cfg.tokenAuth,exposeMethods:true,captchaRenderId:'',success:d=>console.log('MSG91 success',d),failure:e=>console.error('MSG91 failure',e)});resolve()}catch(e){reject(e)}};
+                s.onerror=()=>reject(new Error('MSG91 OTP service failed to load.'));
+                document.head.appendChild(s);
+              });
+              ready=true;
+            }
+            sendBtn.onclick=async()=>{
+              const m=mobile.value.replace(/D/g,'').slice(-10);
+              if(m.length!==10){msg(phoneStatus,'Please enter a valid 10-digit mobile number.');return}
+              try{
+                sendBtn.disabled=true; msg(phoneStatus,'Sending OTP…');
+                await init(); identifier='91'+m;
+                if(typeof window.sendOtp!=='function') throw new Error('OTP service is not ready.');
+                window.sendOtp(identifier,()=>{phoneStep.style.display='none';verifyStep.style.display='block';msg(status,'OTP sent. Please check your SMS.');},e=>{console.error(e);msg(phoneStatus,'OTP could not be sent. Please try again.')});
+              }catch(e){console.error(e);msg(phoneStatus,e.message||'Unable to send OTP.')}finally{sendBtn.disabled=false}
+            };
+            verifyBtn.onclick=()=>{
+              const code=otp.value.replace(/D/g,'');
+              if(code.length!==6){msg(status,'Enter the 6-digit OTP.');return}
+              if(typeof window.verifyOtp!=='function'){msg(status,'OTP service is not ready. Please retry.');return}
+              verifyBtn.disabled=true; msg(status,'Verifying…');
+              window.verifyOtp(code,async(data)=>{
+                try{
+                  const accessToken=data?.accessToken||data?.access_token||data?.token||data?.data?.accessToken||data?.data?.access_token||data?.data?.token;
+                  if(!accessToken) throw new Error('Verification token was not returned.');
+                  const r=await fetch('/api/verify-access-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken})});
+                  const out=await r.json();
+                  if(!r.ok||!out.verified) throw new Error(out.error||'Server verification failed.');
+                  window.location.reload();
+                }catch(e){console.error(e);msg(status,e.message||'Verification failed.')}finally{verifyBtn.disabled=false}
+              },e=>{console.error(e);msg(status,'Incorrect or expired OTP. Please try again.');verifyBtn.disabled=false});
+            };
+            resendBtn.onclick=()=>{
+              if(typeof window.retryOtp!=='function'){msg(status,'OTP service is not ready.');return}
+              resendBtn.disabled=true;
+              window.retryOtp(null,()=>{msg(status,'OTP resent. Please check your SMS.');resendBtn.disabled=false},()=>{msg(status,'Unable to resend OTP.');resendBtn.disabled=false});
+            };
+            window.openModal();
+            window.closeModal=function(){};
+            window.addEventListener('load',()=>window.openModal());
+          })();
+          </script>'''
+          s = s.replace('</body>', script + '</body>', 1)
+          p.write_text(s, encoding="utf-8")
+          PY
+          git config user.name "LETMYTRIP OTP Bot"
+          git config user.email "actions@github.com"
+          git add letmytrip-site/index.html
+          git diff --cached --quiet || git commit -m "Integrate MSG91 mobile OTP into LETMYTRIP login"
+          git push

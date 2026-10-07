@@ -1,1 +1,12 @@
-{"$schema":"https://openapi.vercel.sh/vercel.json","rewrites":[{"source":"/","destination":"/api/home"}]}
+{
+  "version":2,
+  "builds":[
+    {"src":"api/*.js","use":"@vercel/node"},
+    {"src":"index.html","use":"@vercel/static"}
+  ],
+  "routes":[
+    {"src":"/api/config","dest":"/api/config.js"},
+    {"src":"/api/verify-access-token","dest":"/api/verify-access-token.js"},
+    {"src":"/","dest":"/api/home.js"}
+  ]
+}

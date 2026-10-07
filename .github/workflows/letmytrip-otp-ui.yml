@@ -1,0 +1,123 @@
+name: LETMYTRIP OTP UI
+on:
+  push:
+    branches:
+      - letmytrip-luxury-20261007
+permissions:
+  contents: write
+jobs:
+  otp-ui:
+    if: !contains(github.event.head_commit.message, 'LETMYTRIP OTP UI')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: letmytrip-luxury-20261007
+          fetch-depth: 0
+      - name: Patch login with MSG91 OTP
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("letmytrip-site/index.html")
+          s=p.read_text(encoding="utf-8")
+          start=s.rfind('<div class="modal"')
+          end=s.find('</div>\\n<script>', start)
+          if start < 0 or end < 0:
+              raise SystemExit("Login modal marker not found")
+          end += len('</div>')
+          modal='''<div class="modal" id="modal">
+          <div class="modalbox">
+            <button class="close" onclick="closeModal()">×</button>
+            <div class="eyebrow">Secure access</div>
+            <h2>Welcome to LETMYTRIP</h2>
+            <p class="lead" style="font-size:14px">Login / Sign Up with your mobile number. OTP verification is compulsory.</p>
+            <div class="field"><label>Mobile Number</label><input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel"></div>
+            <button id="sendOtpBtn" class="btn primary" style="width:100%;margin-top:10px" onclick="sendLetmytripOtp()">Send OTP</button>
+            <div id="otpStage" style="display:none;margin-top:12px">
+              <div class="field"><label>Enter OTP</label><input id="otpCode" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" autocomplete="one-time-code"></div>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="verifyOtpBtn" class="btn primary" style="flex:1" onclick="verifyLetmytripOtp()">Verify & Continue</button>
+                <button class="btn" style="flex:1" onclick="retryLetmytripOtp()">Resend OTP</button>
+              </div>
+            </div>
+            <p id="otpStatus" style="font-size:12px;font-weight:800;margin:10px 0 0"></p>
+          </div>
+          </div>'''
+          s=s[:start]+modal+s[end:]
+          inject=r'''<script>
+          (function(){
+            let otpLoaded=false, otpReady=false, otpMobile="", otpAccessToken="";
+            function otpStatus(msg,ok=false){
+              const el=document.getElementById("otpStatus");
+              if(el){el.textContent=msg;el.style.color=ok?"#087a55":"#a23b2a";}
+            }
+            function loadOtpSdk(){
+              if(otpLoaded) return Promise.resolve();
+              otpLoaded=true;
+              return fetch("/api/config").then(r=>r.json()).then(cfg=>{
+                if(!cfg.configured) throw new Error("MSG91 OTP is not configured yet.");
+                return new Promise((resolve,reject)=>{
+                  window.__letmytripOtpConfig={
+                    widgetId:cfg.widgetId, tokenAuth:cfg.tokenAuth, exposeMethods:true,
+                    captchaRenderId:"",
+                    success:()=>{},
+                    failure:(e)=>{}
+                  };
+                  const sc=document.createElement("script");
+                  sc.src="https://verify.msg91.com/otp-provider.js";
+                  sc.onload=()=>{try{initSendOTP(window.__letmytripOtpConfig);otpReady=true;resolve();}catch(e){reject(e)}};
+                  sc.onerror=()=>reject(new Error("Unable to load MSG91 OTP service."));
+                  document.head.appendChild(sc);
+                });
+              });
+            }
+            window.sendLetmytripOtp=async function(){
+              const raw=(document.getElementById("otpMobile")?.value||"").replace(/\D/g,"");
+              if(!/^[6-9]\d{9}$/.test(raw)){otpStatus("Please enter a valid 10-digit Indian mobile number.");return;}
+              otpMobile="91"+raw;
+              otpStatus("Connecting to secure OTP service...");
+              try{
+                await loadOtpSdk();
+                if(!otpReady||typeof window.sendOtp!=="function") throw new Error("OTP service is not ready.");
+                window.sendOtp(otpMobile,()=>{
+                  document.getElementById("otpStage").style.display="block";
+                  otpStatus("OTP sent successfully. Please check your mobile.",true);
+                },e=>otpStatus("OTP could not be sent. Please try again."));
+              }catch(e){otpStatus(e.message||"OTP service unavailable.");}
+            };
+            window.retryLetmytripOtp=function(){
+              if(typeof window.retryOtp!=="function"){otpStatus("OTP service is not ready.");return;}
+              window.retryOtp(null,()=>otpStatus("New OTP sent successfully.",true),()=>otpStatus("Could not resend OTP."));
+            };
+            window.verifyLetmytripOtp=function(){
+              const code=(document.getElementById("otpCode")?.value||"").replace(/\D/g,"");
+              if(!/^\d{6}$/.test(code)){otpStatus("Please enter the 6-digit OTP.");return;}
+              if(typeof window.verifyOtp!=="function"){otpStatus("OTP service is not ready.");return;}
+              otpStatus("Verifying OTP...");
+              window.verifyOtp(Number(code),async data=>{
+                const token=data?.accessToken||data?.access_token||data?.token||data?.message?.accessToken||data?.message?.access_token;
+                if(!token){otpStatus("OTP verified, but secure access token was not returned.");return;}
+                otpAccessToken=token;
+                try{
+                  const r=await fetch("/api/verify-access-token",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({accessToken:otpAccessToken})});
+                  const out=await r.json().catch(()=>({}));
+                  if(!r.ok){otpStatus(out.error||"Server verification failed.");return;}
+                  localStorage.setItem("letmytrip_verified_mobile",otpMobile.slice(2));
+                  localStorage.setItem("letmytrip_verified","1");
+                  otpStatus("Mobile verified successfully. Welcome to LETMYTRIP.",true);
+                  setTimeout(()=>closeModal(),700);
+                }catch(e){otpStatus("Network error while confirming verification.");}
+              },()=>otpStatus("Invalid or expired OTP. Please try again."));
+            };
+          })();
+          </script>'''
+          s=s.replace('</body></html>',inject+'\n</body></html>')
+          p.write_text(s,encoding="utf-8")
+          PY
+      - name: Commit OTP UI
+        run: |
+          git config user.name "LETMYTRIP Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add letmytrip-site/index.html
+          git commit -m "LETMYTRIP OTP UI" || exit 0
+          git push origin letmytrip-luxury-20261007

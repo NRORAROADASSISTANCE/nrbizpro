@@ -1,4 +1,4 @@
-module.exports = async function handler(req,res){
+export default async function handler(req,res){
   const upstream="https://letmytrip-1k8eqgagd-maskuri-ravindhars-projects.vercel.app/";
   try{
     const r=await fetch(upstream,{cache:"no-store"});

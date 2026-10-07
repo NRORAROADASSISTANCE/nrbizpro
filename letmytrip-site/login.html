@@ -75,7 +75,7 @@ document.getElementById("sendBtn").onclick=async()=>{
     identifier="91"+m;
     const wait=()=>new Promise(r=>setTimeout(r,300));
     let tries=0; while(typeof window.sendOtp!=="function"&&tries++<30) await wait();
-    if(typeof window.sendOtp!=="function") throw new Error("MSG91 OTP service is not ready");
+    if(typeof window.sendOtp!=="function"){ console.error("MSG91 OTP service is not ready"); setStatus("phoneStatus",""); return; }
     window.sendOtp(identifier,
       ()=>{document.getElementById("phoneStep").classList.remove("active");document.getElementById("otpStep").classList.add("active");setStatus("otpStatus","OTP sent. Please check your SMS.");},
       e=>{
@@ -90,7 +90,7 @@ document.getElementById("verifyBtn").onclick=async()=>{
   const otp=document.getElementById("otp").value.replace(/\D/g,"");
   if(otp.length!==6) return setStatus("otpStatus","Enter the 6-digit OTP.");
   setStatus("otpStatus","Verifying…");
-  if(typeof window.verifyOtp!=="function") return setStatus("otpStatus","OTP service is not ready. Please retry.");
+  if(typeof window.verifyOtp!=="function") return setStatus("otpStatus","");
   window.verifyOtp(otp,async(data)=>{
     try{
       const accessToken=data?.accessToken||data?.access_token||data?.token||data?.data?.accessToken||data?.data?.access_token||data?.data?.token;
@@ -103,7 +103,7 @@ document.getElementById("verifyBtn").onclick=async()=>{
   },e=>{console.error(e);setStatus("otpStatus","Incorrect or expired OTP. Please try again.");});
 };
 document.getElementById("resendBtn").onclick=()=>{
-  if(typeof window.retryOtp!=="function") return setStatus("otpStatus","OTP service is not ready.");
+  if(typeof window.retryOtp!=="function") return setStatus("otpStatus","");
   window.retryOtp(null,()=>setStatus("otpStatus","OTP resent."),()=>setStatus("otpStatus","Unable to resend OTP."));
 };
 </script>

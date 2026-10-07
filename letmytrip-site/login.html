@@ -75,7 +75,7 @@ document.getElementById("sendBtn").onclick=async()=>{
     identifier="91"+m;
     const wait=()=>new Promise(r=>setTimeout(r,300));
     let tries=0; while(typeof window.sendOtp!=="function"&&tries++<30) await wait();
-    if(typeof window.sendOtp!=="function"){ console.error("MSG91 OTP service is not ready"); setStatus("phoneStatus",""); return; }
+    if(typeof window.sendOtp!=="function"){ console.error("MSG91 SDK unavailable"); setStatus("phoneStatus",""); return; }
     window.sendOtp(identifier,
       ()=>{document.getElementById("phoneStep").classList.remove("active");document.getElementById("otpStep").classList.add("active");setStatus("otpStatus","OTP sent. Please check your SMS.");},
       e=>{

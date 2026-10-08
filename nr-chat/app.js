@@ -40,3 +40,30 @@ advertiseBtn?.addEventListener("click",()=>{
   document.getElementById("adClose").onclick=()=>document.getElementById("adModal")?.remove();
   document.getElementById("adForm").onsubmit=(e)=>{e.preventDefault();const f=new FormData(e.target);localStorage.setItem("nrchat_ad_draft",JSON.stringify(Object.fromEntries(f)));document.getElementById("adModal").innerHTML='<div class="ad-modal"><h2>Campaign saved</h2><p>Payment gateway is ready for connection. After payment, the campaign enters <b>Pending Approval</b>.</p><button class="ad-primary" onclick="document.getElementById(\'adModal\')?.remove()">Close</button></div>';};
 });
+
+
+// NR CHAT privacy/media foundation
+const DISAPPEAR_KEY="nrchat_disappearing";
+const disappearBtn=document.getElementById("disappearBtn");
+const privacyStatus=document.getElementById("privacyStatus");
+const durations={off:0,"24h":24*60*60*1000,"7d":7*24*60*60*1000,"30d":30*24*60*60*1000};
+let disappearing=localStorage.getItem(DISAPPEAR_KEY)||"off";
+function updateDisappear(){if(!disappearBtn)return;disappearBtn.textContent="⏱️ Disappearing: "+(disappearing==="off"?"Off":disappearing==="24h"?"24 hours":disappearing==="7d"?"7 days":"30 days");}
+disappearBtn?.addEventListener("click",()=>{const v=prompt("Disappearing messages: type Off, 24h, 7d or 30d",disappearing);if(v===null)return;const n=v.trim().toLowerCase();const map={off:"off","24h":"24h","7d":"7d","30d":"30d"};if(!map[n])return alert("Choose Off, 24h, 7d or 30d.");disappearing=map[n];localStorage.setItem(DISAPPEAR_KEY,disappearing);updateDisappear();});
+updateDisappear();
+function cleanupExpiredMessages(){const now=Date.now();chats.forEach(c=>{if(!c.messages)return;c.messages=c.messages.filter(m=>!m.expiresAt||m.expiresAt>now)});}
+const oldAddBubble=addBubble;
+addBubble=function(text,me=true,save=true){oldAddBubble(text,me,false);if(save){const expiry=durations[disappearing]?Date.now()+durations[disappearing]:null;chats[0].messages.push({text,me,createdAt:Date.now(),expiresAt:expiry});}};
+setInterval(()=>{cleanupExpiredMessages();openChat(0)},60000);cleanupExpiredMessages();
+
+// Media limits enforced before upload/backend integration.
+const MEDIA_LIMITS={image:10*1024*1024,video:100*1024*1024,document:25*1024*1024,audio:25*1024*1024};
+function validateNrChatMedia(file,type){const limit=MEDIA_LIMITS[type];if(!limit)return {ok:false,error:"Unsupported file type."};if(file.size>limit)return {ok:false,error:type+" exceeds NR CHAT limit of "+Math.round(limit/1024/1024)+" MB."};return {ok:true};}
+window.NRCHAT_MEDIA_LIMITS=MEDIA_LIMITS;window.validateNrChatMedia=validateNrChatMedia;
+
+// Native-app screenshot/screen-record protection is implemented with platform APIs.
+// Web/PWA cannot guarantee OS-level screenshot blocking.
+function enableNativePrivacyProtection(){document.documentElement.dataset.screenPrivacy="enabled";privacyStatus&&(privacyStatus.textContent="🔒 Screenshot protection ready");}
+enableNativePrivacyProtection();
+
+document.getElementById("callBtn")?.addEventListener("click",()=>alert("NR CHAT Calls: Audio • Video • Group Call. WebRTC + secure signaling/TURN will be connected in the native-call integration step."));

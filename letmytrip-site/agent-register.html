@@ -60,16 +60,30 @@ label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}input,selec
 </div>
 </main>
 <script>
-document.getElementById('agentForm').addEventListener('submit',function(e){
+document.getElementById('agentForm').addEventListener('submit',async function(e){
  e.preventDefault();
- const data=Object.fromEntries(new FormData(this).entries());
- const no='LMT-A'+Date.now().toString().slice(-7);
- data.applicationNo=no; data.status='PENDING'; data.submittedAt=new Date().toISOString();
- try{localStorage.setItem('letmytrip_agent_application_'+no,JSON.stringify(data));}catch(_){}
- document.getElementById('appNo').textContent=no;
- document.getElementById('formWrap').style.display='none';
- document.getElementById('success').classList.add('show');
- window.scrollTo({top:0,behavior:'smooth'});
+ const form=this;
+ const button=form.querySelector('button[type="submit"]');
+ const original=button.textContent;
+ button.disabled=true;
+ button.textContent='Submitting...';
+ try{
+   const response=await fetch('/api/agent-register',{
+     method:'POST',
+     headers:{'Content-Type':'application/json'},
+     body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+   });
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok||!data.saved) throw new Error(data.error||'Unable to submit application');
+   document.getElementById('appNo').textContent=data.applicationNo;
+   document.getElementById('formWrap').style.display='none';
+   document.getElementById('success').classList.add('show');
+   window.scrollTo({top:0,behavior:'smooth'});
+ }catch(error){
+   alert(error.message||'Unable to submit application. Please try again.');
+   button.disabled=false;
+   button.textContent=original;
+ }
 });
 </script>
 </body></html>

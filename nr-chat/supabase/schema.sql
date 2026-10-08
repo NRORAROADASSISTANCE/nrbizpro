@@ -29,6 +29,10 @@ create table if not exists public.conversation_members (
   user_id uuid references auth.users(id) on delete cascade,
   joined_at timestamptz not null default now(),
   last_read_at timestamptz,
+  is_hidden boolean not null default false,
+  is_private boolean not null default false,
+  is_locked boolean not null default false,
+  hidden_at timestamptz,
   primary key (conversation_id,user_id)
 );
 
@@ -55,3 +59,17 @@ alter table public.messages enable row level security;
 
 -- Policies will be added with the authenticated Supabase client in the next integration step.
 -- Never expose a service-role key in browser code.
+
+-- Per-user privacy controls for hidden/private/locked conversations.
+-- The lock credential must never be stored here; use secure device authentication or a dedicated auth flow.
+create table if not exists public.conversation_privacy (
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  is_hidden boolean not null default false,
+  is_private boolean not null default false,
+  is_locked boolean not null default false,
+  updated_at timestamptz not null default now(),
+  primary key (conversation_id,user_id)
+);
+
+alter table public.conversation_privacy enable row level security;

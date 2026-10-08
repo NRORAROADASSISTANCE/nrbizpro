@@ -12,6 +12,6 @@ module.exports=async function(req,res){
   if(!r.ok)return res.status(502).json({error:"Unable to load agent account"});
   const a=rows[0];
   if(!a||a.status!=="APPROVED")return res.status(401).json({error:"Agent account is not approved"});
-  return res.status(200).json({ok:true,agent:{applicationNo:a.application_no,agencyName:a.agency_name,ownerName:a.owner_name,mobile:a.mobile,email:a.email}});
+  return res.status(200).json({ok:true,agent:{applicationNo:a.application_no,agencyName:a.agency_name,ownerName:a.owner_name,mobile:a.mobile,email:a.email,ticketMarkup:a.ticket_markup||0,ticketMarkupMode:a.ticket_markup_mode||"FIXED"}});
  }catch(e){console.error(e);return res.status(500).json({error:"Server error"});}
 };

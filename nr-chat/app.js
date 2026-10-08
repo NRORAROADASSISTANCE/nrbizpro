@@ -74,7 +74,13 @@ function openAdCreator(parent){
   modal.querySelector(".ad-close").onclick=()=>modal.remove();
   modal.querySelector("#adForm").onsubmit=e=>{e.preventDefault();localStorage.setItem("nrchat_business_ad_draft",JSON.stringify(Object.fromEntries(new FormData(e.target))));alert("Advertisement saved. Payment integration will activate the selected campaign duration after successful payment.");modal.remove();parent?.remove();};
 }
-document.getElementById("accountType")?.addEventListener("click",()=>openBusinessDashboard());
+document.getElementById("accountType")?.addEventListener("click",()=>{
+  try{
+    const pending=JSON.parse(localStorage.getItem("nrchat_signup_pending")||"null");
+    if(pending?.accountKind==="business") openBusinessDashboard();
+    else alert("Business Dashboard is available only for Business Accounts.");
+  }catch(e){alert("Please create or sign in with a Business Account first.");}
+});
 
 // NR CHAT privacy/media foundation
 const DISAPPEAR_KEY="nrchat_disappearing";

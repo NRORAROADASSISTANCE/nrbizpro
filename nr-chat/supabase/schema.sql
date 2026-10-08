@@ -241,3 +241,24 @@ alter table public.call_participants enable row level security;
 -- Production native app must enforce screenshot/screen-record blocking at OS level.
 -- Android: FLAG_SECURE. iOS: app-level capture detection/protection where supported.
 -- Web browsers cannot guarantee screenshot prevention.
+
+
+-- Account identity and mandatory mobile verification state
+alter table public.profiles add column if not exists date_of_birth date;
+alter table public.profiles add column if not exists age integer;
+alter table public.profiles add column if not exists account_type text default 'standard' check (account_type in ('minor','standard'));
+alter table public.profiles add column if not exists phone text;
+alter table public.profiles add column if not exists phone_verified_at timestamptz;
+create unique index if not exists profiles_phone_unique_idx on public.profiles(phone) where phone is not null;
+
+-- Safety / moderation audit foundation. Do not store raw OTPs here.
+create table if not exists public.safety_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  event_type text not null check (event_type in ('report','block','minor_safety','content_flag','screenshot_attempt')),
+  severity text not null default 'low' check (severity in ('low','medium','high','critical')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.safety_events enable row level security;

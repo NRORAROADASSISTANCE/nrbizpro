@@ -137,37 +137,83 @@ footer{background:#031126}
   };
 })();
 </script>
-<section class="section" id="agent-registration" style="background:#fbf8f2">
-  <div class="wrap">
-    <div class="eyebrow">LETMYTRIP FOR BUSINESS</div>
-    <h2>Travel Agent Registration</h2>
-    <p class="lead">Register your travel agency with LETMYTRIP. No OTP is required for this application.</p>
-    <div class="card" style="margin-top:24px">
-      <form id="mainAgentForm">
-        <div class="formgrid">
-          <div class="field"><label>Agency / Company Name</label><input name="agencyName" required></div>
-          <div class="field"><label>Owner / Agent Name</label><input name="ownerName" required></div>
-          <div class="field"><label>Mobile Number</label><input name="mobile" inputmode="tel" required></div>
-          <div class="field"><label>WhatsApp Number</label><input name="whatsapp" inputmode="tel"></div>
-          <div class="field"><label>Email</label><input name="email" type="email" required></div>
-          <div class="field"><label>Business Type</label><select name="businessType" required><option value="">Select</option><option>Travel Agency</option><option>Tour Operator</option><option>Freelancer</option><option>Corporate Travel</option><option>Other</option></select></div>
-          <div class="field"><label>PAN</label><input name="pan"></div>
-          <div class="field"><label>GST</label><input name="gst"></div>
-          <div class="field"><label>Website</label><input name="website" type="url"></div>
-          <div class="field"><label>Pincode</label><input name="pincode" inputmode="numeric"></div>
-          <div class="field"><label>State</label><input name="state"></div>
-          <div class="field"><label>City</label><input name="city"></div>
-          <div class="field" style="grid-column:1/-1"><label>Business Address</label><textarea name="address" rows="3" required></textarea></div>
-          <div class="field"><label>Bank Account Holder</label><input name="bankAccountHolder"></div>
-          <div class="field"><label>Bank Name</label><input name="bankName"></div>
-          <div class="field"><label>Account Number</label><input name="accountNumber" inputmode="numeric"></div>
-          <div class="field"><label>IFSC</label><input name="ifsc"></div>
+<section class="section" id="agent-registration" style="background:#f7f4ed">
+  <div class="wrap" style="max-width:1040px">
+    <div style="text-align:center;max-width:760px;margin:0 auto 34px">
+      <div class="eyebrow">LETMYTRIP • PARTNER NETWORK</div>
+      <h2 style="margin-bottom:12px">Become a Travel Partner</h2>
+      <p class="lead" style="margin:0 auto">Register your travel agency with LETMYTRIP and join our growing travel partner network.</p>
+    </div>
+
+    <div style="background:#fff;border:1px solid rgba(20,20,20,.09);border-radius:24px;box-shadow:0 18px 55px rgba(20,20,20,.08);overflow:hidden">
+      <form id="mainAgentForm" style="padding:30px">
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 24px">
+
+          <div style="grid-column:1/-1;padding-bottom:2px;border-bottom:1px solid rgba(20,20,20,.08)">
+            <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">01 • Agency Details</div>
+            <div style="font-size:13px;opacity:.62;margin-top:5px">Tell us about your travel business</div>
+          </div>
+
+          <div class="field"><label>Agency / Company Name <span>*</span></label><input name="agencyName" required placeholder="Enter agency name"></div>
+          <div class="field"><label>Owner / Agent Name <span>*</span></label><input name="ownerName" required placeholder="Full name"></div>
+          <div class="field"><label>Business Type <span>*</span></label><select name="businessType" required><option value="">Select business type</option><option>Travel Agency</option><option>Tour Operator</option><option>Freelancer</option><option>Corporate Travel</option><option>Other</option></select></div>
+          <div class="field"><label>Website</label><input name="website" type="url" placeholder="https://example.com"></div>
+
+          <div style="grid-column:1/-1;padding:4px 0 2px;border-bottom:1px solid rgba(20,20,20,.08)">
+            <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">02 • Contact Details</div>
+            <div style="font-size:13px;opacity:.62;margin-top:5px">Your primary communication details</div>
+          </div>
+
+          <div class="field"><label>Mobile Number <span>*</span></label><input name="mobile" inputmode="tel" required placeholder="10-digit mobile number"></div>
+          <div class="field"><label>WhatsApp Number</label><input name="whatsapp" inputmode="tel" placeholder="WhatsApp number"></div>
+          <div class="field"><label>Email Address <span>*</span></label><input name="email" type="email" required placeholder="name@company.com"></div>
+          <div class="field"><label>Pincode</label><input name="pincode" inputmode="numeric" placeholder="Pincode"></div>
+          <div class="field"><label>State</label><input name="state" placeholder="State"></div>
+          <div class="field"><label>City</label><input name="city" placeholder="City"></div>
+          <div class="field" style="grid-column:1/-1"><label>Business Address <span>*</span></label><textarea name="address" rows="3" required placeholder="Complete business address"></textarea></div>
+
+          <div style="grid-column:1/-1;padding:4px 0 2px;border-bottom:1px solid rgba(20,20,20,.08)">
+            <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">03 • Business Documents</div>
+            <div style="font-size:13px;opacity:.62;margin-top:5px">Optional now — can be updated later</div>
+          </div>
+
+          <div class="field"><label>PAN Number</label><input name="pan" placeholder="PAN"></div>
+          <div class="field"><label>GST Number</label><input name="gst" placeholder="GSTIN"></div>
+
+          <div style="grid-column:1/-1;padding:4px 0 2px;border-bottom:1px solid rgba(20,20,20,.08)">
+            <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700">04 • Bank Details</div>
+            <div style="font-size:13px;opacity:.62;margin-top:5px">For future partner settlements</div>
+          </div>
+
+          <div class="field"><label>Account Holder Name</label><input name="bankAccountHolder" placeholder="Account holder"></div>
+          <div class="field"><label>Bank Name</label><input name="bankName" placeholder="Bank name"></div>
+          <div class="field"><label>Account Number</label><input name="accountNumber" inputmode="numeric" placeholder="Account number"></div>
+          <div class="field"><label>IFSC Code</label><input name="ifsc" placeholder="IFSC"></div>
         </div>
-        <button class="btn orange" type="submit" style="margin-top:18px">Submit Agent Application</button>
-        <div id="mainAgentMsg" style="margin-top:14px"></div>
+
+        <div style="margin-top:30px;padding-top:22px;border-top:1px solid rgba(20,20,20,.08);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+          <div style="font-size:12px;opacity:.62">No OTP required for this application.</div>
+          <button class="btn orange" type="submit" style="min-width:220px">Submit Application →</button>
+        </div>
+        <div id="mainAgentMsg" role="status" aria-live="polite" style="margin-top:18px;font-weight:600"></div>
       </form>
     </div>
   </div>
+  <style>
+    #agent-registration .field label{display:block;margin-bottom:8px;font-size:12px;font-weight:700;letter-spacing:.03em}
+    #agent-registration .field label span{opacity:.65}
+    #agent-registration .field input,#agent-registration .field select,#agent-registration .field textarea{width:100%;box-sizing:border-box;border:1px solid rgba(20,20,20,.14);border-radius:12px;background:#fff;padding:13px 14px;font:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
+    #agent-registration .field input:focus,#agent-registration .field select:focus,#agent-registration .field textarea:focus{border-color:rgba(20,20,20,.42);box-shadow:0 0 0 3px rgba(20,20,20,.05)}
+    @media(max-width:700px){#agent-registration form{padding:20px!important}#agent-registration form>div:first-child{grid-template-columns:1fr!important;gap:22px!important}#agent-registration .field[style*="grid-column"]{grid-column:1!important}}
+  </style>
+  <script>
+  (function(){
+    const f=document.getElementById("mainAgentForm"),m=document.getElementById("mainAgentMsg"); if(!f)return;
+    f.addEventListener("submit",async function(e){e.preventDefault();m.textContent="Submitting your application...";
+      try{const r=await fetch("/api/agent-register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.fromEntries(new FormData(f).entries()))});const d=await r.json().catch(()=>({}));if(!r.ok||!d.saved)throw new Error(d.error||"Unable to submit application");m.textContent="Application submitted successfully • Application No: "+(d.applicationNo||"Generated");f.reset()}catch(err){m.textContent=err.message||"Unable to submit application. Please try again."}
+    });
+  })();
+  </script>
 </section>
 <script>
 (function(){
@@ -185,51 +231,4 @@ footer{background:#031126}
   });
 })();
 </script>
-<!-- LETMYTRIP-BACKEND-OTP --><script>
-(function(){
-  function boot(){
-    const send=document.getElementById('otpSendBtn');
-    const verify=document.getElementById('otpVerifyBtn');
-    const resend=document.getElementById('otpResendBtn');
-    const mobile=document.getElementById('otpMobile');
-    const otp=document.getElementById('otpCode');
-    const phoneStep=document.getElementById('otpPhoneStep');
-    const verifyStep=document.getElementById('otpVerifyStep');
-    const ps=document.getElementById('otpPhoneStatus');
-    const st=document.getElementById('otpStatus');
-    if(!send||!verify||!mobile||!otp)return;
-    const clean=v=>String(v||'').replace(/\D/g,'').slice(-10);
-    let reqId='';
-    const s2=send.cloneNode(true);send.replaceWith(s2);
-    const v2=verify.cloneNode(true);verify.replaceWith(v2);
-    s2.onclick=async function(){
-      const m=clean(mobile.value);
-      if(m.length!==10){ps.textContent='Please enter a valid 10-digit mobile number.';return;}
-      s2.disabled=true;ps.textContent='Sending OTP…';
-      try{
-        const r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m})});
-        const d=await r.json();
-        if(!r.ok||!d.sent)throw new Error(d.error||'OTP could not be sent.');
-        reqId=d.reqId;phoneStep.style.display='none';verifyStep.style.display='block';st.textContent='OTP sent. Please check your SMS.';
-      }catch(e){console.error(e);ps.textContent=e.message||'OTP could not be sent. Please try again.';}
-      finally{s2.disabled=false;}
-    };
-    v2.onclick=async function(){
-      const code=clean(otp.value);
-      if(code.length!==6){st.textContent='Enter the 6-digit OTP.';return;}
-      if(!reqId){st.textContent='OTP request expired. Please send OTP again.';return;}
-      v2.disabled=true;st.textContent='Verifying…';
-      try{
-        const r=await fetch('/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reqId:reqId,otp:code})});
-        const d=await r.json();
-        if(!r.ok||!d.verified)throw new Error(d.error||'Incorrect or expired OTP.');
-        st.textContent='Verified successfully.';setTimeout(function(){location.reload();},400);
-      }catch(e){console.error(e);st.textContent=e.message||'Verification failed. Please try again.';}
-      finally{v2.disabled=false;}
-    };
-    if(resend){const r2=resend.cloneNode(true);resend.replaceWith(r2);r2.onclick=function(){s2.click();};}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.addEventListener('load',boot);
-})();
-</script></body>
+</body>

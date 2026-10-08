@@ -208,3 +208,36 @@ alter table public.status_views enable row level security;
 alter table public.business_profiles enable row level security;
 alter table public.business_subscriptions enable row level security;
 alter table public.monetization_transactions enable row level security;
+
+
+-- Disappearing messages
+alter table public.messages add column if not exists expires_at timestamptz;
+create index if not exists messages_expires_idx on public.messages(expires_at) where expires_at is not null;
+
+-- Media metadata and strict application-level size limits (bytes)
+create table if not exists public.call_sessions (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  call_type text not null check (call_type in ('audio','video','group_audio','group_video')),
+  status text not null default 'ringing' check (status in ('ringing','active','ended','missed','declined')),
+  started_at timestamptz,
+  ended_at timestamptz,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.call_participants (
+  call_id uuid not null references public.call_sessions(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  joined_at timestamptz,
+  left_at timestamptz,
+  muted boolean not null default false,
+  camera_on boolean not null default false,
+  primary key(call_id,user_id)
+);
+create index if not exists call_sessions_conversation_idx on public.call_sessions(conversation_id,created_at desc);
+alter table public.call_sessions enable row level security;
+alter table public.call_participants enable row level security;
+
+-- Production native app must enforce screenshot/screen-record blocking at OS level.
+-- Android: FLAG_SECURE. iOS: app-level capture detection/protection where supported.
+-- Web browsers cannot guarantee screenshot prevention.

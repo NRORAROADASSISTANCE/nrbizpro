@@ -1,0 +1,4 @@
+const crypto=require("crypto");
+function sign(secret){const p=Buffer.from(JSON.stringify({exp:Date.now()+8*60*60*1000})).toString("base64url");return p+"."+crypto.createHmac("sha256",secret).update(p).digest("base64url")}
+function valid(req,secret){try{const raw=req.headers.cookie||"",token=raw.split(";").map(x=>x.trim()).find(x=>x.startsWith("letmytrip_admin_session="))?.split("=").slice(1).join("=");const [p,s]=String(token||"").split(".");if(!p||!s)return false;const e=crypto.createHmac("sha256",secret).update(p).digest("base64url");return s.length===e.length&&crypto.timingSafeEqual(Buffer.from(s),Buffer.from(e))&&Date.now()<JSON.parse(Buffer.from(p,"base64url").toString()).exp}catch{return false}}
+module.exports={sign,valid};

@@ -52,9 +52,9 @@ document.addEventListener("click",e=>{if(chatMenu&&!chatMenu.contains(e.target)&
 chatMenu?.addEventListener("click",e=>{
  const btn=e.target.closest("button"); if(!btn)return;
  const action=btn.dataset.action; chatMenu.hidden=true;
- if(action==="hide"){chats.find(c=>c.name===document.getElementById("person").textContent)?.hidden=true; renderList(search.value); document.getElementById("status").textContent="Chat hidden"; alert("Chat hidden. It can be restored from Private/Hidden Chats.");}
- if(action==="private"){chats.find(c=>c.name===document.getElementById("person").textContent)?.private=true; document.getElementById("status").textContent="Private chat"; alert("Private chat enabled. Access will be protected after account + privacy backend integration.");}
- if(action==="lock"){const pin=prompt("Set a 4-digit chat lock PIN:"); if(pin&&/^\\d{4}$/.test(pin)){chats.find(c=>c.name===document.getElementById("person").textContent)?.locked=true; localStorage.setItem("nrchat_lock_demo",pin); document.getElementById("status").textContent="Chat locked"; alert("Chat lock enabled for this device.");}else if(pin!==null)alert("Please enter exactly 4 digits.");}
+ if(action==="hide"){const target=chats.find(c=>c.name===document.getElementById("person").textContent);if(target)target.hidden=true; renderList(search.value); document.getElementById("status").textContent="Chat hidden"; alert("Chat hidden. It can be restored from Private/Hidden Chats.");}
+ if(action==="private"){const target=chats.find(c=>c.name===document.getElementById("person").textContent);if(target)target.private=true; document.getElementById("status").textContent="Private chat"; alert("Private chat enabled. Access will be protected after account + privacy backend integration.");}
+ if(action==="lock"){const pin=prompt("Set a 4-digit chat lock PIN:"); if(pin&&/^\\d{4}$/.test(pin)){const target=chats.find(c=>c.name===document.getElementById("person").textContent);if(target)target.locked=true; localStorage.setItem("nrchat_lock_demo",pin); document.getElementById("status").textContent="Chat locked"; alert("Chat lock enabled for this device.");}else if(pin!==null)alert("Please enter exactly 4 digits.");}
  if(action==="delete"){if(confirm("Delete this chat and its local messages?")){const target=chats.find(c=>c.name===document.getElementById("person").textContent)||chats[0];target.messages=[];target.preview="Chat deleted";document.getElementById("status").textContent="Chat deleted";openChat(0);}}
 });
 

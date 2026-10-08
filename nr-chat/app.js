@@ -59,25 +59,22 @@ chatMenu?.addEventListener("click",e=>{
 });
 
 
-// Advertiser campaign starter (UI-ready; payment/backend connection follows secure Supabase/Razorpay setup).
-const advertiseBtn=document.getElementById("advertiseBtn");
-advertiseBtn?.addEventListener("click",()=>{
-  const html=`<div class="ad-modal-backdrop" id="adModal"><div class="ad-modal">
-    <button class="ad-close" id="adClose">×</button><h2>Advertise with NR CHAT</h2><p>Promote your business to NR CHAT users.</p>
-    <form id="adForm">
-      <input name="business" required placeholder="Business / Company name"><input name="contact" required placeholder="Contact person">
-      <input name="mobile" required placeholder="Mobile number"><input name="email" type="email" required placeholder="Email">
-      <input name="title" required placeholder="Advertisement title">
-      <select name="package" required><option value="">Choose campaign package</option><option value="7_days">Starter — ₹499 / 7 days</option><option value="15_days">Growth — ₹999 / 15 days</option><option value="30_days">Premium — ₹1,999 / 30 days</option><option value="custom">Custom campaign</option></select>
-      <input name="location" placeholder="Target location (e.g. Hyderabad)"><input name="destination" placeholder="Website / WhatsApp / landing page">
-      <textarea name="description" placeholder="Ad description"></textarea><button class="ad-primary" type="submit">Continue to Payment</button>
-    </form><div class="ad-note">After payment, NR CONNECT reviews and approves the campaign.</div>
-  </div></div>`;
-  document.body.insertAdjacentHTML("beforeend",html);
-  document.getElementById("adClose").onclick=()=>document.getElementById("adModal")?.remove();
-  document.getElementById("adForm").onsubmit=(e)=>{e.preventDefault();const f=new FormData(e.target);localStorage.setItem("nrchat_ad_draft",JSON.stringify(Object.fromEntries(f)));document.getElementById("adModal").innerHTML='<div class="ad-modal"><h2>Campaign saved</h2><p>Payment gateway is ready for connection. After payment, the campaign enters <b>Pending Approval</b>.</p><button class="ad-primary" onclick="document.getElementById(\'adModal\')?.remove()">Close</button></div>';};
-});
-
+// Business account advertisement access — kept separate from personal chat UI.
+function openBusinessDashboard(){
+  const wrap=document.createElement("div");wrap.className="ad-modal-backdrop";
+  wrap.innerHTML='<div class="ad-modal"><button class="ad-close">×</button><h2>🏢 Business Dashboard</h2><p>Create and manage paid NR CHAT advertisements.</p><div class="business-dashboard"><div><b>Create Advertisement</b><small>Choose package → Pay → Campaign activates for the selected period.</small></div><div><b>My Campaigns</b><small>Active, pending, expired and payment status.</small></div><div><b>Payment History</b><small>View completed and failed campaign payments.</small></div></div><button class="ad-primary" id="businessAdBtn">Create Advertisement</button><div class="ad-note">Advertisement access is available only for Business Accounts. Personal users will not see this dashboard.</div></div>';
+  document.body.appendChild(wrap);
+  wrap.querySelector(".ad-close").onclick=()=>wrap.remove();
+  wrap.querySelector("#businessAdBtn").onclick=()=>openAdCreator(wrap);
+}
+function openAdCreator(parent){
+  const modal=document.createElement("div");modal.className="ad-modal-backdrop";
+  modal.innerHTML='<div class="ad-modal"><button class="ad-close">×</button><h2>Create Advertisement</h2><p>Payment success will start the campaign; expiry will automatically stop it.</p><form id="adForm"><input name="business" required placeholder="Business / Company name"><input name="title" required placeholder="Advertisement title"><input name="mobile" required inputmode="numeric" maxlength="10" placeholder="Mobile number"><input name="destination" placeholder="Website / landing page"><input name="location" placeholder="Target location"><select name="package" required><option value="">Choose duration</option><option value="7_days">₹499 — 7 days</option><option value="15_days">₹999 — 15 days</option><option value="30_days">₹1,999 — 30 days</option></select><textarea name="description" placeholder="Advertisement description"></textarea><button class="ad-primary" type="submit">Continue to Payment</button></form><div class="ad-note">Live payment gateway and campaign activation will be connected through the secure backend.</div></div>';
+  document.body.appendChild(modal);
+  modal.querySelector(".ad-close").onclick=()=>modal.remove();
+  modal.querySelector("#adForm").onsubmit=e=>{e.preventDefault();localStorage.setItem("nrchat_business_ad_draft",JSON.stringify(Object.fromEntries(new FormData(e.target))));alert("Advertisement saved. Payment integration will activate the selected campaign duration after successful payment.");modal.remove();parent?.remove();};
+}
+document.getElementById("accountType")?.addEventListener("click",()=>openBusinessDashboard());
 
 // NR CHAT privacy/media foundation
 const DISAPPEAR_KEY="nrchat_disappearing";
@@ -110,11 +107,11 @@ document.getElementById("callBtn")?.addEventListener("click",()=>alert("NR CHAT 
 const signupBtn=document.getElementById("signupBtn");
 function calcAge(dob){const d=new Date(dob);if(Number.isNaN(d.getTime()))return null;const now=new Date();let age=now.getFullYear()-d.getFullYear();const m=now.getMonth()-d.getMonth();if(m<0||(m===0&&now.getDate()<d.getDate()))age--;return age;}
 signupBtn?.addEventListener("click",()=>{
- const wrap=document.createElement("div");wrap.className="ad-modal-backdrop";wrap.innerHTML='<div class="ad-modal"><button class="ad-close">×</button><h2>Create NR CHAT Account</h2><p>Independent signup — no WhatsApp account or WhatsApp API required.</p><form id="signupForm"><input name="name" required placeholder="Full name"><input name="dob" required type="date"><input id="signupAge" readonly placeholder="Age"><select id="accountTypeSelect" disabled><option>Account type</option></select><input name="mobile" required inputmode="numeric" maxlength="10" placeholder="Mobile number"><button class="ad-primary" type="submit">Send OTP</button></form><div class="ad-note">OTP verification is mandatory before account activation. MSG91 credentials stay server-side.</div></div>';
+ const wrap=document.createElement("div");wrap.className="ad-modal-backdrop";wrap.innerHTML='<div class="ad-modal"><button class="ad-close">×</button><h2>Create NR CHAT Account</h2><p>Independent signup — no WhatsApp account or WhatsApp API required.</p><form id="signupForm"><input name="name" required placeholder="Full name"><input name="dob" required type="date"><input id="signupAge" readonly placeholder="Age"><select id="accountTypeSelect" disabled><option>Account type</option></select><select name="accountKind" required><option value="personal">Personal Account</option><option value="business">Business Account</option></select><input name="mobile" required inputmode="numeric" maxlength="10" placeholder="Mobile number"><button class="ad-primary" type="submit">Send OTP</button></form><div class="ad-note">OTP verification is mandatory before account activation. MSG91 credentials stay server-side.</div></div>';
  document.body.appendChild(wrap);wrap.querySelector(".ad-close").onclick=()=>wrap.remove();
  const dob=wrap.querySelector('[name="dob"]'),age=wrap.querySelector('#signupAge'),type=wrap.querySelector('#accountTypeSelect');
  function refresh(){const n=calcAge(dob.value);age.value=n===null?"":String(n);type.innerHTML='<option>'+ (n===null?"Account type":n<18?"MINOR ACCOUNT":"STANDARD ACCOUNT") +'</option>';}
- dob.addEventListener("change",refresh);refresh();wrap.querySelector("#signupForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),n=calcAge(f.get("dob"));if(n===null||n<0||n>120)return alert("Please enter a valid date of birth.");const mobile=String(f.get("mobile")).replace(/\\D/g,"");if(!/^\\d{10}$/.test(mobile))return alert("Enter a valid 10-digit mobile number.");localStorage.setItem("nrchat_signup_pending",JSON.stringify({name:f.get("name"),dob:f.get("dob"),age:n,accountType:n<18?"minor":"standard",mobile}));alert("OTP step is ready. Connect MSG91 server credentials to send and verify the OTP.");wrap.remove();};
+ dob.addEventListener("change",refresh);refresh();wrap.querySelector("#signupForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),n=calcAge(f.get("dob"));if(n===null||n<0||n>120)return alert("Please enter a valid date of birth.");const mobile=String(f.get("mobile")).replace(/\\D/g,"");if(!/^\\d{10}$/.test(mobile))return alert("Enter a valid 10-digit mobile number.");localStorage.setItem("nrchat_signup_pending",JSON.stringify({name:f.get("name"),dob:f.get("dob"),age:n,accountType:n<18?"minor":"standard",accountKind:f.get("accountKind"),mobile}));alert("OTP step is ready. Connect MSG91 server credentials to send and verify the OTP.");wrap.remove();};
 });
 
 const PROFILE_PRIVACY_KEY="nrchat_profile_privacy";

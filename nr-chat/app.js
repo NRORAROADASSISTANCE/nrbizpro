@@ -20,3 +20,23 @@ chatMenu?.addEventListener("click",e=>{
  if(action==="lock"){const pin=prompt("Set a 4-digit chat lock PIN:"); if(pin&&/^\\d{4}$/.test(pin)){chats[0].locked=true; localStorage.setItem("nrchat_lock_demo",pin); document.getElementById("status").textContent="Chat locked"; alert("Chat lock enabled for this device.");}else if(pin!==null)alert("Please enter exactly 4 digits.");}
  if(action==="delete"){if(confirm("Delete this chat and its local messages?")){chats[0].messages=[];chats[0].preview="Chat deleted";document.getElementById("status").textContent="Chat deleted";openChat(0);}}
 });
+
+
+// Advertiser campaign starter (UI-ready; payment/backend connection follows secure Supabase/Razorpay setup).
+const advertiseBtn=document.getElementById("advertiseBtn");
+advertiseBtn?.addEventListener("click",()=>{
+  const html=`<div class="ad-modal-backdrop" id="adModal"><div class="ad-modal">
+    <button class="ad-close" id="adClose">×</button><h2>Advertise with NR CHAT</h2><p>Promote your business to NR CHAT users.</p>
+    <form id="adForm">
+      <input name="business" required placeholder="Business / Company name"><input name="contact" required placeholder="Contact person">
+      <input name="mobile" required placeholder="Mobile number"><input name="email" type="email" required placeholder="Email">
+      <input name="title" required placeholder="Advertisement title">
+      <select name="package" required><option value="">Choose campaign package</option><option value="7_days">Starter — ₹499 / 7 days</option><option value="15_days">Growth — ₹999 / 15 days</option><option value="30_days">Premium — ₹1,999 / 30 days</option><option value="custom">Custom campaign</option></select>
+      <input name="location" placeholder="Target location (e.g. Hyderabad)"><input name="destination" placeholder="Website / WhatsApp / landing page">
+      <textarea name="description" placeholder="Ad description"></textarea><button class="ad-primary" type="submit">Continue to Payment</button>
+    </form><div class="ad-note">After payment, NR CONNECT reviews and approves the campaign.</div>
+  </div></div>`;
+  document.body.insertAdjacentHTML("beforeend",html);
+  document.getElementById("adClose").onclick=()=>document.getElementById("adModal")?.remove();
+  document.getElementById("adForm").onsubmit=(e)=>{e.preventDefault();const f=new FormData(e.target);localStorage.setItem("nrchat_ad_draft",JSON.stringify(Object.fromEntries(f)));document.getElementById("adModal").innerHTML='<div class="ad-modal"><h2>Campaign saved</h2><p>Payment gateway is ready for connection. After payment, the campaign enters <b>Pending Approval</b>.</p><button class="ad-primary" onclick="document.getElementById(\'adModal\')?.remove()">Close</button></div>';};
+});

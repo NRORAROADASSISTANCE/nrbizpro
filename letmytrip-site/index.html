@@ -102,7 +102,7 @@ footer{background:#031126}
       await initWidget(); identifier='91'+m;
       window.sendOtp(identifier,
         ()=>{phoneStep.style.display='none';verifyStep.style.display='block';msg(status,'OTP sent by SMS. Please enter the 6-digit code.');},
-        e=>{console.error('LETMYTRIP MSG91 send error',e);msg(phoneStatus,e?.message||e?.error||'OTP could not be sent. Please try again.');}
+        e=>{console.error('LETMYTRIP MSG91 send error',e);const detail=typeof e==='string'?e:(e?.message||e?.error||e?.description||(e?JSON.stringify(e):''));msg(phoneStatus,detail||'MSG91 rejected the OTP request. Please try again.');}
       );
     }catch(e){console.error('LETMYTRIP OTP initialization error',e);msg(phoneStatus,e.message||'OTP service is temporarily unavailable.')}
     finally{sendBtn.disabled=false}

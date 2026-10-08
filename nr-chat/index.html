@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NR CHAT — NR CONNECT</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">NR</div><div><b>NR CHAT</b><span>by NR CONNECT</span></div></div>
+    <div class="profile"><div class="avatar">R</div><div><b>Welcome</b><small>Connect with people</small></div></div>
+    <div class="search"><input id="search" placeholder="Search chats"></div>
+    <div class="tabs"><button class="active">Chats</button><button>Contacts</button></div>
+    <div id="chatList" class="chat-list"></div>
+    <div class="sidebar-footer"><span>NR CONNECT</span><span>v1.0</span></div>
+  </aside>
+  <main class="chat">
+    <header class="chat-head">
+      <div class="mobile-brand">NR CHAT</div>
+      <div class="chat-person"><div class="avatar online">M</div><div><b id="person">NR CHAT</b><small id="status">Start a conversation</small></div></div>
+      <div class="head-actions"><button title="Search">⌕</button><button title="More">⋮</button></div>
+    </header>
+    <section id="messages" class="messages">
+      <div class="welcome"><div class="welcome-icon">NR</div><h1>Welcome to NR CHAT</h1><p>Private, simple and fast messaging by NR CONNECT.</p></div>
+    </section>
+    <form id="composer" class="composer">
+      <button type="button" id="attach" title="Attach">＋</button>
+      <input id="message" autocomplete="off" placeholder="Type a message…">
+      <button class="send" type="submit" title="Send">➤</button>
+    </form>
+  </main>
+</div>
+<script src="./app.js"></script>
+</body>
+</html>

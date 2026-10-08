@@ -122,18 +122,86 @@ create table if not exists public.business_subscriptions (
 );
 
 -- Monetization foundation: payments/earnings ledger.
+-- NR CONNECT company-only monetization ledger.
+-- No creator rewards or user payouts: advertising income belongs to NR CONNECT.
 create table if not exists public.monetization_transactions (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  transaction_type text not null check (transaction_type in ('subscription','business_plan','advertising','creator_reward','refund','payout')),
+  transaction_type text not null check (transaction_type in ('subscription','business_plan','advertising','refund')),
   amount numeric(12,2) not null default 0,
   currency text not null default 'INR',
   status text not null default 'pending' check (status in ('pending','paid','failed','refunded')),
   provider text,
   provider_reference text,
+  advertiser_id uuid references auth.users(id) on delete set null,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
+
+-- Advertiser accounts and campaigns.
+create table if not exists public.advertiser_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique references auth.users(id) on delete cascade,
+  business_name text not null,
+  contact_name text,
+  mobile text,
+  email text,
+  website_url text,
+  gst_number text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.ad_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  advertiser_id uuid not null references public.advertiser_profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  creative_type text not null default 'image' check (creative_type in ('image','video','text')),
+  creative_url text,
+  destination_url text,
+  call_to_action text default 'Learn More',
+  target_location text,
+  daily_budget numeric(12,2) not null default 0,
+  total_budget numeric(12,2) not null default 0,
+  package text not null default 'custom' check (package in ('7_days','15_days','30_days','custom')),
+  starts_at timestamptz,
+  ends_at timestamptz,
+  status text not null default 'draft' check (status in ('draft','pending_payment','paid','pending_approval','active','paused','rejected','completed','refunded')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.ad_campaign_events (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.ad_campaigns(id) on delete cascade,
+  event_type text not null check (event_type in ('impression','click','conversion')),
+  session_id text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.ad_packages (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  duration_days integer not null,
+  price numeric(12,2) not null,
+  currency text not null default 'INR',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+insert into public.ad_packages (name,duration_days,price)
+select * from (values
+  ('Starter 7 Days',7,499::numeric),
+  ('Growth 15 Days',15,999::numeric),
+  ('Premium 30 Days',30,1999::numeric)
+) v(name,duration_days,price)
+where not exists (select 1 from public.ad_packages);
+
+alter table public.monetization_transactions enable row level security;
+alter table public.advertiser_profiles enable row level security;
+alter table public.ad_campaigns enable row level security;
+alter table public.ad_campaign_events enable row level security;
+alter table public.ad_packages enable row level security;
 
 alter table public.statuses enable row level security;
 alter table public.status_views enable row level security;

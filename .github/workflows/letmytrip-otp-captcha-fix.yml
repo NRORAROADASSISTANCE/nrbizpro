@@ -1,4 +1,4 @@
-name: LETMYTRIP OTP Captcha Fix
+name: LETMYTRIP OTP Captcha Cleanup
 
 on:
   push:
@@ -13,24 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix MSG91 web captcha integration
+      - name: Remove obsolete MSG91 captcha configuration
         run: |
           python3 <<'PY'
           from pathlib import Path
           p = Path("letmytrip-site/index.html")
           s = p.read_text(encoding="utf-8")
-          s2 = s.replace(
-              '<input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel">',
-              '<input id="otpMobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel"><div id="msg91-captcha" style="margin-top:10px"></div>'
-          )
-          s2 = s2.replace("captchaRenderId:'',", "captchaRenderId:'msg91-captcha',")
-          s2 = s2.replace("replace(/D/g,'')", "replace(/\\D/g,'')")
-          if s2 == s:
-              raise SystemExit("No expected OTP integration text found")
-          p.write_text(s2, encoding="utf-8")
+          s2 = s
+          s2 = s2.replace('<div id="msg91-captcha" style="margin-top:10px"></div>', '')
+          s2 = s2.replace("captchaRenderId:'msg91-captcha',", '')
+          s2 = s2.replace("captchaRenderId:'',", '')
+          if s2 != s:
+              p.write_text(s2, encoding="utf-8")
           PY
           git config user.name "LETMYTRIP OTP Bot"
           git config user.email "actions@github.com"
           git add letmytrip-site/index.html
-          git diff --cached --quiet || git commit -m "Fix MSG91 captcha for LETMYTRIP web OTP"
-          git push
+          if git diff --cached --quiet; then
+            echo "No captcha cleanup changes needed."
+          else
+            git commit -m "Remove obsolete MSG91 captcha from LETMYTRIP"
+            git push
+          fi

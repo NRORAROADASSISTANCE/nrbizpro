@@ -21,7 +21,7 @@ jobs:
           s = p.read_text(encoding="utf-8")
           s2 = s
           s2 = s2.replace('<div id="msg91-captcha" style="margin-top:10px"></div>', '')
-          s2 = s2.replace("captchaRenderId:'msg91-captcha',", '')
+          s2 = s2.replace("captchaRenderId:'',", '')
           s2 = s2.replace("captchaRenderId:'',", '')
           if s2 != s:
               p.write_text(s2, encoding="utf-8")

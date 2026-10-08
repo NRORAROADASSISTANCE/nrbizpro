@@ -3,3 +3,40 @@
 
 .business-card{margin:8px 12px 14px;padding:14px;border:1px solid #e3d9fb;border-radius:14px;background:linear-gradient(135deg,#faf7ff,#eef8ff);display:flex;flex-direction:column;gap:6px}.business-card b{font-size:13px;color:#30204e}.business-card small{font-size:11px;color:#7b7190}.business-card button,.ad-primary{border:0;background:linear-gradient(135deg,#6847ff,#26c6ff);color:#fff;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer;margin-top:5px}.ad-modal-backdrop{position:fixed;inset:0;background:#1b103b66;display:grid;place-items:center;z-index:100;padding:18px}.ad-modal{position:relative;width:min(520px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;padding:26px;box-shadow:0 30px 90px #160a3d44}.ad-modal h2{margin:0 0 5px;color:#261841}.ad-modal p{margin:0 0 18px;color:#776d8c;font-size:13px}.ad-modal form{display:grid;gap:10px}.ad-modal input,.ad-modal select,.ad-modal textarea{width:100%;border:1px solid #ded4f1;border-radius:11px;padding:11px 12px;outline:none;font:inherit;background:#fff}.ad-modal textarea{min-height:80px;resize:vertical}.ad-close{position:absolute;right:14px;top:12px;border:0;background:#f2edfb;width:34px;height:34px;border-radius:50%;font-size:22px;cursor:pointer}.ad-note{margin-top:12px;font-size:11px;color:#8b829c}
 .signup-btn{margin:0 12px 12px;border:0;border-radius:11px;padding:10px 12px;background:linear-gradient(135deg,#6847ff,#26c6ff);color:#fff;font-weight:700;cursor:pointer}.chat-tools{display:flex;align-items:center;gap:8px;padding:8px 22px;border-top:1px solid #f0eafa;background:#fff;font-size:11px;color:#7d7391}.chat-tools button{border:1px solid #e3d9f4;background:#faf8ff;color:#5e4b7a;border-radius:999px;padding:7px 11px;cursor:pointer}.chat-tools span{margin-left:auto}@media(max-width:760px){.chat-tools{padding:7px 10px}.chat-tools span{display:none}}.signup-btn{margin:0 12px 12px;border:0;border-radius:11px;padding:10px 12px;background:linear-gradient(135deg,#6847ff,#26c6ff);color:#fff;font-weight:700;cursor:pointer}.chat-tools{display:flex;align-items:center;gap:8px;padding:8px 22px;border-top:1px solid #f0eafa;background:#fff;font-size:11px;color:#7d7391}.chat-tools button{border:1px solid #e3d9f4;background:#faf8ff;color:#5e4b7a;border-radius:999px;padding:7px 11px;cursor:pointer}.chat-tools span{margin-left:auto}.ad-modal label{display:grid;gap:5px;font-size:12px;color:#655a77}.ad-modal label select{margin-top:0}@media(max-width:760px){.chat-tools{padding:7px 10px}.chat-tools span{display:none}}
+/* Mobile WhatsApp-style navigation */
+.mobile-back{display:none;border:0;background:#f2edfb;color:#4e3b70;width:38px;height:38px;border-radius:12px;font-size:30px;line-height:1;cursor:pointer;flex:none}
+@media(max-width:760px){
+  html,body{width:100%;height:100%;overflow:hidden}
+  .app{display:block;width:100%;height:100dvh;min-height:100dvh;max-width:none;margin:0;box-shadow:none;background:#fff;position:relative;overflow:hidden}
+  .sidebar{display:flex;width:100%;height:100dvh;border:0;position:absolute;inset:0;z-index:2;background:#fff}
+  .sidebar .brand{height:64px;padding:0 16px}
+  .sidebar .profile{padding:14px 16px}
+  .sidebar .search{padding:0 12px 10px}
+  .sidebar .business-card{margin:6px 12px 10px}
+  .sidebar-footer{padding:12px 16px}
+  .chat{display:none;width:100%;height:100dvh;position:absolute;inset:0;z-index:3;background:#fff}
+  .app.mobile-chat-open .sidebar{display:none}
+  .app.mobile-chat-open .chat{display:flex}
+  .mobile-back{display:block}
+  .mobile-brand{display:none}
+  .chat-head{height:64px;min-height:64px;padding:0 10px;gap:9px}
+  .chat-person{min-width:0;flex:1}
+  .chat-person>div:last-child{min-width:0}
+  .chat-person b,.chat-person small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55vw}
+  .head-actions{display:flex;margin-left:auto}
+  .head-actions button{width:36px;height:36px}
+  .head-actions button:first-child,.head-actions button:nth-child(2){display:none}
+  .head-actions button:last-child{display:grid;place-items:center}
+  .messages{padding:14px 10px 10px}
+  .welcome h1{font-size:21px}
+  .welcome p{font-size:13px}
+  .bubble{max-width:88%;font-size:14px}
+  .chat-tools{padding:6px 10px}
+  .composer{padding:8px 9px calc(8px + env(safe-area-inset-bottom));gap:7px;min-height:58px}
+  .composer input{min-width:0;height:42px}
+  .composer button{width:42px;height:42px}
+  .chat-menu{right:10px;top:58px}
+}
+@media(min-width:761px){
+  .mobile-back{display:none!important}
+}

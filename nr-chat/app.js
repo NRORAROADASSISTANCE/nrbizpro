@@ -7,3 +7,4 @@ form.addEventListener("submit",e=>{e.preventDefault();const v=input.value.trim()
 search.addEventListener("input",e=>renderList(e.target.value));
 document.getElementById("attach").onclick=()=>alert("File and media sharing will be connected in the next NR CHAT build.");
 renderList();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}

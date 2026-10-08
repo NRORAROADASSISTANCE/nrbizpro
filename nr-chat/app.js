@@ -67,3 +67,15 @@ function enableNativePrivacyProtection(){document.documentElement.dataset.screen
 enableNativePrivacyProtection();
 
 document.getElementById("callBtn")?.addEventListener("click",()=>alert("NR CHAT Calls: Audio • Video • Group Call. WebRTC + secure signaling/TURN will be connected in the native-call integration step."));
+
+
+// Signup identity flow: DOB -> automatic age -> minor/standard classification -> OTP verification handoff.
+const signupBtn=document.getElementById("signupBtn");
+function calcAge(dob){const d=new Date(dob);if(Number.isNaN(d.getTime()))return null;const now=new Date();let age=now.getFullYear()-d.getFullYear();const m=now.getMonth()-d.getMonth();if(m<0||(m===0&&now.getDate()<d.getDate()))age--;return age;}
+signupBtn?.addEventListener("click",()=>{
+ const wrap=document.createElement("div");wrap.className="ad-modal-backdrop";wrap.innerHTML='<div class="ad-modal"><button class="ad-close">×</button><h2>Create NR CHAT Account</h2><p>Independent signup — no WhatsApp account or WhatsApp API required.</p><form id="signupForm"><input name="name" required placeholder="Full name"><input name="dob" required type="date"><input id="signupAge" readonly placeholder="Age"><select id="accountTypeSelect" disabled><option>Account type</option></select><input name="mobile" required inputmode="numeric" maxlength="10" placeholder="Mobile number"><button class="ad-primary" type="submit">Send OTP</button></form><div class="ad-note">OTP verification is mandatory before account activation. MSG91 credentials stay server-side.</div></div>';
+ document.body.appendChild(wrap);wrap.querySelector(".ad-close").onclick=()=>wrap.remove();
+ const dob=wrap.querySelector('[name="dob"]'),age=wrap.querySelector('#signupAge'),type=wrap.querySelector('#accountTypeSelect');
+ function refresh(){const n=calcAge(dob.value);age.value=n===null?"":String(n);type.innerHTML='<option>'+ (n===null?"Account type":n<18?"MINOR ACCOUNT":"STANDARD ACCOUNT") +'</option>';}
+ dob.addEventListener("change",refresh);refresh();wrap.querySelector("#signupForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.target),n=calcAge(f.get("dob"));if(n===null||n<0||n>120)return alert("Please enter a valid date of birth.");const mobile=String(f.get("mobile")).replace(/\\D/g,"");if(!/^\\d{10}$/.test(mobile))return alert("Enter a valid 10-digit mobile number.");localStorage.setItem("nrchat_signup_pending",JSON.stringify({name:f.get("name"),dob:f.get("dob"),age:n,accountType:n<18?"minor":"standard",mobile}));alert("OTP step is ready. Connect MSG91 server credentials to send and verify the OTP.");wrap.remove();};
+});

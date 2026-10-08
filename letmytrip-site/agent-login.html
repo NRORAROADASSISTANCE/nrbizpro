@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LETMYTRIP | Agent Login</title>
+<style>
+:root{--navy:#062e86;--blue:#0b74d1;--orange:#f57b16;--ink:#10284d;--muted:#66758c;--line:#e3e9f1}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:linear-gradient(135deg,#f7fbff,#eef4fb);color:var(--ink)}
+header{padding:18px 5%;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.brand{font-size:27px;font-weight:900;color:var(--navy)}.brand span{color:var(--orange)}a{color:var(--blue);font-weight:800;text-decoration:none}
+main{min-height:calc(100vh - 75px);display:grid;place-items:center;padding:25px 18px}.card{width:min(460px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px;box-shadow:0 18px 50px rgba(13,45,88,.10)}
+.eyebrow{font-size:12px;letter-spacing:2px;color:var(--orange);font-weight:900}.card h1{margin:10px 0 7px}.muted{color:var(--muted);line-height:1.55}label{display:block;font-size:13px;font-weight:800;margin:18px 0 7px}input{width:100%;padding:13px;border:1px solid #ccd8e5;border-radius:11px;font:inherit}button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:11px;background:var(--navy);color:#fff;font-weight:900;font-size:15px;cursor:pointer}.msg{margin-top:15px;font-weight:700;line-height:1.5}.links{margin-top:20px;text-align:center;font-size:14px}
+</style></head><body><header><div class="brand">LET<span>MY</span>TRIP</div><a href="/agent-portal.html">← Agent Portal</a></header>
+<main><div class="card"><div class="eyebrow">AGENT LOGIN</div><h1>Welcome back</h1><p class="muted">Login with the mobile number or email used during agent registration.</p>
+<form id="loginForm"><label>Mobile / Email</label><input id="identifier" required autocomplete="username" placeholder="10-digit mobile or email">
+<label>Password</label><input id="password" type="password" required autocomplete="current-password" placeholder="Your password">
+<button id="btn">Login to Agent Portal →</button></form><div class="msg" id="msg"></div><div class="links"><a href="/agent-register.html">New agent? Sign up</a></div></div></main>
+<script>
+document.getElementById("loginForm").addEventListener("submit",async e=>{e.preventDefault();const b=document.getElementById("btn"),m=document.getElementById("msg");b.disabled=true;b.textContent="Checking...";m.textContent="";
+try{const r=await fetch("/api/agent-login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({identifier:document.getElementById("identifier").value.trim(),password:document.getElementById("password").value})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw Error(d.error||"Login failed");localStorage.setItem("letmytrip_agent",JSON.stringify(d.agent));location.href="/agent-dashboard.html"}catch(err){m.textContent=err.message||"Unable to login";}finally{b.disabled=false;b.textContent="Login to Agent Portal →"}});
+</script></body></html>

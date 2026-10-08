@@ -1,4 +1,4 @@
-name: LETMYTRIP OTP Captcha Cleanup
+name: LETMYTRIP OTP Backend Fallback
 
 on:
   push:
@@ -13,25 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Remove obsolete MSG91 captcha configuration
+      - name: Add backend OTP fallback
         run: |
           python3 <<'PY'
           from pathlib import Path
-          p = Path("letmytrip-site/index.html")
-          s = p.read_text(encoding="utf-8")
-          s2 = s
-          s2 = s2.replace('<div id="msg91-captcha" style="margin-top:10px"></div>', '')
-          s2 = s2.replace("captchaRenderId:'',", '')
-          s2 = s2.replace("captchaRenderId:'',", '')
-          if s2 != s:
-              p.write_text(s2, encoding="utf-8")
+          import base64
+          p=Path("letmytrip-site/index.html")
+          s=p.read_text(encoding="utf-8")
+          marker="<!-- LETMYTRIP-BACKEND-OTP -->"
+          if marker not in s:
+              code=base64.b64decode("PHNjcmlwdD4KKGZ1bmN0aW9uKCl7CiAgZnVuY3Rpb24gYm9vdCgpewogICAgY29uc3Qgc2VuZD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb3RwU2VuZEJ0bicpOwogICAgY29uc3QgdmVyaWZ5PWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdvdHBWZXJpZnlCdG4nKTsKICAgIGNvbnN0IHJlc2VuZD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb3RwUmVzZW5kQnRuJyk7CiAgICBjb25zdCBtb2JpbGU9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ290cE1vYmlsZScpOwogICAgY29uc3Qgb3RwPWRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdvdHBDb2RlJyk7CiAgICBjb25zdCBwaG9uZVN0ZXA9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ290cFBob25lU3RlcCcpOwogICAgY29uc3QgdmVyaWZ5U3RlcD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb3RwVmVyaWZ5U3RlcCcpOwogICAgY29uc3QgcHM9ZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoJ290cFBob25lU3RhdHVzJyk7CiAgICBjb25zdCBzdD1kb2N1bWVudC5nZXRFbGVtZW50QnlJZCgnb3RwU3RhdHVzJyk7CiAgICBpZighc2VuZHx8IXZlcmlmeXx8IW1vYmlsZXx8IW90cClyZXR1cm47CiAgICBjb25zdCBjbGVhbj12PT5TdHJpbmcodnx8JycpLnJlcGxhY2UoL1xEL2csJycpLnNsaWNlKC0xMCk7CiAgICBsZXQgcmVxSWQ9Jyc7CiAgICBjb25zdCBzMj1zZW5kLmNsb25lTm9kZSh0cnVlKTtzZW5kLnJlcGxhY2VXaXRoKHMyKTsKICAgIGNvbnN0IHYyPXZlcmlmeS5jbG9uZU5vZGUodHJ1ZSk7dmVyaWZ5LnJlcGxhY2VXaXRoKHYyKTsKICAgIHMyLm9uY2xpY2s9YXN5bmMgZnVuY3Rpb24oKXsKICAgICAgY29uc3QgbT1jbGVhbihtb2JpbGUudmFsdWUpOwogICAgICBpZihtLmxlbmd0aCE9PTEwKXtwcy50ZXh0Q29udGVudD0nUGxlYXNlIGVudGVyIGEgdmFsaWQgMTAtZGlnaXQgbW9iaWxlIG51bWJlci4nO3JldHVybjt9CiAgICAgIHMyLmRpc2FibGVkPXRydWU7cHMudGV4dENvbnRlbnQ9J1NlbmRpbmcgT1RQ4oCmJzsKICAgICAgdHJ5ewogICAgICAgIGNvbnN0IHI9YXdhaXQgZmV0Y2goJy9hcGkvc2VuZC1vdHAnLHttZXRob2Q6J1BPU1QnLGhlYWRlcnM6eydDb250ZW50LVR5cGUnOidhcHBsaWNhdGlvbi9qc29uJ30sYm9keTpKU09OLnN0cmluZ2lmeSh7bW9iaWxlOm19KX0pOwogICAgICAgIGNvbnN0IGQ9YXdhaXQgci5qc29uKCk7CiAgICAgICAgaWYoIXIub2t8fCFkLnNlbnQpdGhyb3cgbmV3IEVycm9yKGQuZXJyb3J8fCdPVFAgY291bGQgbm90IGJlIHNlbnQuJyk7CiAgICAgICAgcmVxSWQ9ZC5yZXFJZDtwaG9uZVN0ZXAuc3R5bGUuZGlzcGxheT0nbm9uZSc7dmVyaWZ5U3RlcC5zdHlsZS5kaXNwbGF5PSdibG9jayc7c3QudGV4dENvbnRlbnQ9J09UUCBzZW50LiBQbGVhc2UgY2hlY2sgeW91ciBTTVMuJzsKICAgICAgfWNhdGNoKGUpe2NvbnNvbGUuZXJyb3IoZSk7cHMudGV4dENvbnRlbnQ9ZS5tZXNzYWdlfHwnT1RQIGNvdWxkIG5vdCBiZSBzZW50LiBQbGVhc2UgdHJ5IGFnYWluLic7fQogICAgICBmaW5hbGx5e3MyLmRpc2FibGVkPWZhbHNlO30KICAgIH07CiAgICB2Mi5vbmNsaWNrPWFzeW5jIGZ1bmN0aW9uKCl7CiAgICAgIGNvbnN0IGNvZGU9Y2xlYW4ob3RwLnZhbHVlKTsKICAgICAgaWYoY29kZS5sZW5ndGghPT02KXtzdC50ZXh0Q29udGVudD0nRW50ZXIgdGhlIDYtZGlnaXQgT1RQLic7cmV0dXJuO30KICAgICAgaWYoIXJlcUlkKXtzdC50ZXh0Q29udGVudD0nT1RQIHJlcXVlc3QgZXhwaXJlZC4gUGxlYXNlIHNlbmQgT1RQIGFnYWluLic7cmV0dXJuO30KICAgICAgdjIuZGlzYWJsZWQ9dHJ1ZTtzdC50ZXh0Q29udGVudD0nVmVyaWZ5aW5n4oCmJzsKICAgICAgdHJ5ewogICAgICAgIGNvbnN0IHI9YXdhaXQgZmV0Y2goJy9hcGkvdmVyaWZ5LW90cCcse21ldGhvZDonUE9TVCcsaGVhZGVyczp7J0NvbnRlbnQtVHlwZSc6J2FwcGxpY2F0aW9uL2pzb24nfSxib2R5OkpTT04uc3RyaW5naWZ5KHtyZXFJZDpyZXFJZCxvdHA6Y29kZX0pfSk7CiAgICAgICAgY29uc3QgZD1hd2FpdCByLmpzb24oKTsKICAgICAgICBpZighci5va3x8IWQudmVyaWZpZWQpdGhyb3cgbmV3IEVycm9yKGQuZXJyb3J8fCdJbmNvcnJlY3Qgb3IgZXhwaXJlZCBPVFAuJyk7CiAgICAgICAgc3QudGV4dENvbnRlbnQ9J1ZlcmlmaWVkIHN1Y2Nlc3NmdWxseS4nO3NldFRpbWVvdXQoZnVuY3Rpb24oKXtsb2NhdGlvbi5yZWxvYWQoKTt9LDQwMCk7CiAgICAgIH1jYXRjaChlKXtjb25zb2xlLmVycm9yKGUpO3N0LnRleHRDb250ZW50PWUubWVzc2FnZXx8J1ZlcmlmaWNhdGlvbiBmYWlsZWQuIFBsZWFzZSB0cnkgYWdhaW4uJzt9CiAgICAgIGZpbmFsbHl7djIuZGlzYWJsZWQ9ZmFsc2U7fQogICAgfTsKICAgIGlmKHJlc2VuZCl7Y29uc3QgcjI9cmVzZW5kLmNsb25lTm9kZSh0cnVlKTtyZXNlbmQucmVwbGFjZVdpdGgocjIpO3IyLm9uY2xpY2s9ZnVuY3Rpb24oKXtzMi5jbGljaygpO307fQogIH0KICBpZihkb2N1bWVudC5yZWFkeVN0YXRlPT09J2xvYWRpbmcnKWRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ0RPTUNvbnRlbnRMb2FkZWQnLGJvb3QpO2Vsc2UgYm9vdCgpOwogIHdpbmRvdy5hZGRFdmVudExpc3RlbmVyKCdsb2FkJyxib290KTsKfSkoKTsKPC9zY3JpcHQ+").decode("utf-8")
+              s=s.replace("</body>", marker+code+"</body>", 1)
+              p.write_text(s, encoding="utf-8")
           PY
           git config user.name "LETMYTRIP OTP Bot"
           git config user.email "actions@github.com"
           git add letmytrip-site/index.html
-          if git diff --cached --quiet; then
-            echo "No captcha cleanup changes needed."
-          else
-            git commit -m "Remove obsolete MSG91 captcha from LETMYTRIP"
-            git push
-          fi
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Use backend MSG91 OTP flow in LETMYTRIP"; git push; fi

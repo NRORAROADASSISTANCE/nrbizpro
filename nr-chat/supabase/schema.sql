@@ -73,3 +73,70 @@ create table if not exists public.conversation_privacy (
 );
 
 alter table public.conversation_privacy enable row level security;
+
+
+-- NR CHAT Status / Stories
+create table if not exists public.statuses (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  status_type text not null default 'text' check (status_type in ('text','image','video')),
+  text_content text,
+  media_url text,
+  background text,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '24 hours')
+);
+create index if not exists statuses_user_expires_idx on public.statuses(user_id,expires_at);
+
+create table if not exists public.status_views (
+  status_id uuid not null references public.statuses(id) on delete cascade,
+  viewer_id uuid not null references auth.users(id) on delete cascade,
+  viewed_at timestamptz not null default now(),
+  primary key(status_id,viewer_id)
+);
+
+-- NR CHAT Business Accounts
+create table if not exists public.business_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  business_name text not null,
+  category text,
+  description text,
+  logo_url text,
+  website_url text,
+  phone text,
+  email text,
+  address text,
+  verified boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.business_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  plan text not null default 'free' check (plan in ('free','pro','premium')),
+  status text not null default 'active' check (status in ('active','past_due','cancelled','expired')),
+  started_at timestamptz not null default now(),
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Monetization foundation: payments/earnings ledger.
+create table if not exists public.monetization_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  transaction_type text not null check (transaction_type in ('subscription','business_plan','advertising','creator_reward','refund','payout')),
+  amount numeric(12,2) not null default 0,
+  currency text not null default 'INR',
+  status text not null default 'pending' check (status in ('pending','paid','failed','refunded')),
+  provider text,
+  provider_reference text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.statuses enable row level security;
+alter table public.status_views enable row level security;
+alter table public.business_profiles enable row level security;
+alter table public.business_subscriptions enable row level security;
+alter table public.monetization_transactions enable row level security;

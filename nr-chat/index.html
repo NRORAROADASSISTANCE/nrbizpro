@@ -23,13 +23,13 @@
     <header class="chat-head">
       <div class="mobile-brand">NR CHAT</div>
       <div class="chat-person"><div class="avatar online">M</div><div><b id="person">NR CHAT</b><small id="status">Start a conversation</small></div></div>
-      <div class="head-actions"><button title="Search">⌕</button><button id="chatMenuBtn" title="Chat privacy options">⋮</button></div>
+      <div class="head-actions"><button title="Search">⌕</button><button id="chatMenuBtn" title="Chat privacy options">⋮</button><button id="callBtn" title="Calls">📞</button></div>
       <div id="chatMenu" class="chat-menu" hidden><button data-action="hide">🙈 Hide chat</button><button data-action="private">🔒 Private chat</button><button data-action="lock">🔐 Chat lock</button><button data-action="delete">🗑️ Delete chat</button></div>
     </header>
     <section id="messages" class="messages">
       <div class="welcome"><div class="welcome-icon">NR</div><h1>Welcome to NR CHAT</h1><p>Private, simple and fast messaging by NR CONNECT.</p></div>
     </section>
-    <form id="composer" class="composer">
+    <div class="chat-tools"><button type="button" id="disappearBtn">⏱️ Disappearing: Off</button><span id="privacyStatus">🔒 Protected</span></div><form id="composer" class="composer">
       <button type="button" id="attach" title="Attach">＋</button>
       <input id="message" autocomplete="off" placeholder="Type a message…">
       <button class="send" type="submit" title="Send">➤</button>

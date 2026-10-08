@@ -1,0 +1,1 @@
+const {valid}=require("./_admin-auth");module.exports=async function(req,res){if(req.method!=="GET")return res.status(405).json({error:"Method not allowed"});const key=process.env.LETMYTRIP_ADMIN_KEY;if(!key||!valid(req,key))return res.status(401).json({error:"Not authenticated"});return res.status(200).json({ok:true});};

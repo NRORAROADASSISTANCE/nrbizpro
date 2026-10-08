@@ -18,7 +18,6 @@
   <section id="phoneStep" class="step active">
     <label for="mobile">Mobile number</label>
     <input id="mobile" class="input" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel">
-    <div id="msg91-captcha" style="margin-top:10px"></div>
     <button id="sendBtn">Send OTP</button>
     <div id="phoneStatus" class="status"></div>
   </section>
@@ -55,7 +54,6 @@ async function initWidget(){
         widgetId:config.widgetId,
         tokenAuth:config.tokenAuth,
         exposeMethods:true,
-        captchaRenderId:"msg91-captcha",
         success:(data)=>console.log("MSG91 success",data),
         failure:(error)=>console.error("MSG91 failure",error)
       });

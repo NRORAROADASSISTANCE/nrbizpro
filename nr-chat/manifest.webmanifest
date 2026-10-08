@@ -1,0 +1,13 @@
+{
+  "name":"NR CHAT by NR CONNECT",
+  "short_name":"NR CHAT",
+  "start_url":"/nr-chat/",
+  "scope":"/nr-chat/",
+  "display":"standalone",
+  "background_color":"#f5f8fc",
+  "theme_color":"#1261ff",
+  "description":"Private, simple and fast messaging by NR CONNECT.",
+  "icons":[
+    {"src":"/nr-chat/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

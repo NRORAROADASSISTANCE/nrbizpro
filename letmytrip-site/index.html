@@ -60,115 +60,80 @@ footer{background:#031126}
   const mobile=document.getElementById('otpMobile'), otp=document.getElementById('otpCode');
   const sendBtn=document.getElementById('otpSendBtn'), verifyBtn=document.getElementById('otpVerifyBtn'), resendBtn=document.getElementById('otpResendBtn');
   const phoneStatus=document.getElementById('otpPhoneStatus'), status=document.getElementById('otpStatus');
-  let msg91InitPromise=null, identifier='';
+  let identifier='', readyPromise=null;
   const msg=(el,t)=>el.textContent=t;
-  async function initMsg91(){
-    if(typeof window.sendOtp==='function'&&typeof window.verifyOtp==='function')return;
-    if(msg91InitPromise)return msg91InitPromise;
-    msg91InitPromise=(async()=>{
+  const clean=v=>String(v||'').replace(/\D/g,'').slice(-10);
+  async function initWidget(){
+    if(typeof window.sendOtp==='function' && typeof window.verifyOtp==='function') return;
+    if(readyPromise) return readyPromise;
+    readyPromise=(async()=>{
       const r=await fetch('/api/config',{cache:'no-store'});
-      if(!r.ok)throw new Error('OTP configuration unavailable');
+      if(!r.ok) throw new Error('OTP configuration unavailable');
       const config=await r.json();
       await new Promise((resolve,reject)=>{
-        if(window.initSendOTP)return resolve();
+        if(window.initSendOTP) return resolve();
         const s=document.createElement('script');
         s.src='https://verify.msg91.com/otp-provider.js';
-        s.onload=resolve;s.onerror=()=>reject(new Error('MSG91 SDK failed to load'));
+        s.onload=resolve;
+        s.onerror=()=>reject(new Error('MSG91 SDK failed to load'));
         document.head.appendChild(s);
       });
-      if(typeof window.initSendOTP!=='function')throw new Error('MSG91 SDK unavailable');
-      window.initSendOTP({widgetId:config.widgetId,tokenAuth:config.tokenAuth,exposeMethods:true,
-        success:d=>console.log('MSG91 widget success',d),failure:e=>console.error('MSG91 widget failure',e)});
+      if(typeof window.initSendOTP!=='function') throw new Error('MSG91 SDK unavailable');
+      window.initSendOTP({
+        widgetId:config.widgetId,
+        tokenAuth:config.tokenAuth,
+        exposeMethods:true,
+        success:d=>console.log('MSG91 widget success',d),
+        failure:e=>console.error('MSG91 widget failure',e)
+      });
       let tries=0;
-      while((typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')&&tries++<40)await new Promise(r=>setTimeout(r,250));
-      if(typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')throw new Error('MSG91 OTP methods are unavailable');
+      while((typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')&&tries++<40)
+        await new Promise(r=>setTimeout(r,250));
+      if(typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')
+        throw new Error('MSG91 OTP methods are unavailable');
     })();
-    try{await msg91InitPromise}catch(e){msg91InitPromise=null;throw e}
+    try{return await readyPromise}catch(e){readyPromise=null;throw e}
   }
-  async function sendOtp(){
-    const m=mobile.value.replace(/\D/g,'').slice(-10);
+  sendBtn.onclick=async()=>{
+    const m=clean(mobile.value);
     if(m.length!==10){msg(phoneStatus,'Please enter a valid 10-digit mobile number.');return}
     try{
-      sendBtn.disabled=true;msg(phoneStatus,'Preparing secure OTP…');await initMsg91();identifier='91'+m;
-      window.sendOtp(identifier,()=>{phoneStep.style.display='none';verifyStep.style.display='block';msg(status,'OTP sent by SMS. Please enter the 6-digit code.')},
-        e=>{console.error('LETMYTRIP MSG91 send error',e);msg(phoneStatus,e?.message||e?.error||'OTP could not be sent. Please try again.')});
+      sendBtn.disabled=true; msg(phoneStatus,'Sending secure OTP…');
+      await initWidget(); identifier='91'+m;
+      window.sendOtp(identifier,
+        ()=>{phoneStep.style.display='none';verifyStep.style.display='block';msg(status,'OTP sent by SMS. Please enter the 6-digit code.');},
+        e=>{console.error('LETMYTRIP MSG91 send error',e);msg(phoneStatus,e?.message||e?.error||'OTP could not be sent. Please try again.');}
+      );
     }catch(e){console.error('LETMYTRIP OTP initialization error',e);msg(phoneStatus,e.message||'OTP service is temporarily unavailable.')}
     finally{sendBtn.disabled=false}
-  }
-  async function verifyOtp(){
-    const code=otp.value.replace(/\D/g,'');
+  };
+  verifyBtn.onclick=async()=>{
+    const code=String(otp.value||'').replace(/\D/g,'');
     if(code.length!==6){msg(status,'Enter the 6-digit OTP.');return}
     if(!identifier){msg(status,'Please send OTP first.');return}
     try{
-      verifyBtn.disabled=true;msg(status,'Verifying…');await initMsg91();
+      verifyBtn.disabled=true;msg(status,'Verifying OTP…');await initWidget();
       window.verifyOtp(code,async data=>{
         try{
           const accessToken=data?.accessToken||data?.access_token||data?.token||data?.data?.accessToken||data?.data?.access_token||data?.data?.token;
-          if(!accessToken)throw new Error('MSG91 did not return an access token.');
+          if(!accessToken) throw new Error('MSG91 did not return an access token.');
           const r=await fetch('/api/verify-access-token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken})});
-          const out=await r.json();if(!r.ok||!out.verified)throw new Error(out.error||'Verification failed.');
-          window.location.reload();
+          const out=await r.json().catch(()=>({}));
+          if(!r.ok||!out.verified) throw new Error(out.error||'Verification failed.');
+          location.reload();
         }catch(e){console.error('LETMYTRIP access-token verification error',e);msg(status,e.message||'Verification failed.')}
         finally{verifyBtn.disabled=false}
       },e=>{console.error('LETMYTRIP MSG91 verify error',e);msg(status,'Incorrect or expired OTP. Please try again.');verifyBtn.disabled=false});
     }catch(e){console.error('LETMYTRIP OTP verification initialization error',e);msg(status,e.message||'OTP service is temporarily unavailable.');verifyBtn.disabled=false}
-  }
-  sendBtn.onclick=sendOtp;verifyBtn.onclick=verifyOtp;
+  };
   resendBtn.onclick=async()=>{
     if(!identifier){msg(status,'Please send OTP first.');return}
     try{
-      resendBtn.disabled=true;msg(status,'Resending OTP…');await initMsg91();
-      if(typeof window.retryOtp!=='function')throw new Error('MSG91 resend is unavailable.');
+      resendBtn.disabled=true;msg(status,'Resending OTP…');await initWidget();
+      if(typeof window.retryOtp!=='function') throw new Error('MSG91 resend is unavailable.');
       window.retryOtp(null,()=>msg(status,'OTP resent by SMS. Please check your phone.'),e=>{console.error('LETMYTRIP MSG91 retry error',e);msg(status,'Unable to resend OTP. Please try again.')});
-    }catch(e){console.error('LETMYTRIP resend initialization error',e);msg(status,e.message||'Unable to resend OTP.')}
+    }catch(e){console.error('LETMYTRIP resend error',e);msg(status,e.message||'Unable to resend OTP.')}
     finally{resendBtn.disabled=false}
   };
 })();
-</script><!-- LETMYTRIP-BACKEND-OTP --><script>
-(function(){
-  function boot(){
-    const send=document.getElementById('otpSendBtn');
-    const verify=document.getElementById('otpVerifyBtn');
-    const resend=document.getElementById('otpResendBtn');
-    const mobile=document.getElementById('otpMobile');
-    const otp=document.getElementById('otpCode');
-    const phoneStep=document.getElementById('otpPhoneStep');
-    const verifyStep=document.getElementById('otpVerifyStep');
-    const ps=document.getElementById('otpPhoneStatus');
-    const st=document.getElementById('otpStatus');
-    if(!send||!verify||!mobile||!otp)return;
-    const clean=v=>String(v||'').replace(/\D/g,'').slice(-10);
-    let reqId='';
-    const s2=send.cloneNode(true);send.replaceWith(s2);
-    const v2=verify.cloneNode(true);verify.replaceWith(v2);
-    s2.onclick=async function(){
-      const m=clean(mobile.value);
-      if(m.length!==10){ps.textContent='Please enter a valid 10-digit mobile number.';return;}
-      s2.disabled=true;ps.textContent='Sending OTP…';
-      try{
-        const r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m})});
-        const d=await r.json();
-        if(!r.ok||!d.sent)throw new Error(d.error||'OTP could not be sent.');
-        reqId=d.reqId;phoneStep.style.display='none';verifyStep.style.display='block';st.textContent='OTP sent. Please check your SMS.';
-      }catch(e){console.error(e);ps.textContent=e.message||'OTP could not be sent. Please try again.';}
-      finally{s2.disabled=false;}
-    };
-    v2.onclick=async function(){
-      const code=clean(otp.value);
-      if(code.length!==6){st.textContent='Enter the 6-digit OTP.';return;}
-      if(!reqId){st.textContent='OTP request expired. Please send OTP again.';return;}
-      v2.disabled=true;st.textContent='Verifying…';
-      try{
-        const r=await fetch('/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reqId:reqId,otp:code})});
-        const d=await r.json();
-        if(!r.ok||!d.verified)throw new Error(d.error||'Incorrect or expired OTP.');
-        st.textContent='Verified successfully.';setTimeout(function(){location.reload();},400);
-      }catch(e){console.error(e);st.textContent=e.message||'Verification failed. Please try again.';}
-      finally{v2.disabled=false;}
-    };
-    if(resend){const r2=resend.cloneNode(true);resend.replaceWith(r2);r2.onclick=function(){s2.click();};}
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.addEventListener('load',boot);
-})();
-</script></body></html>
+</script></body>

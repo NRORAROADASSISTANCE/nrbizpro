@@ -136,4 +136,51 @@ footer{background:#031126}
     finally{resendBtn.disabled=false}
   };
 })();
-</script></script></body>
+</script></script><!-- LETMYTRIP-BACKEND-OTP --><script>
+(function(){
+  function boot(){
+    const send=document.getElementById('otpSendBtn');
+    const verify=document.getElementById('otpVerifyBtn');
+    const resend=document.getElementById('otpResendBtn');
+    const mobile=document.getElementById('otpMobile');
+    const otp=document.getElementById('otpCode');
+    const phoneStep=document.getElementById('otpPhoneStep');
+    const verifyStep=document.getElementById('otpVerifyStep');
+    const ps=document.getElementById('otpPhoneStatus');
+    const st=document.getElementById('otpStatus');
+    if(!send||!verify||!mobile||!otp)return;
+    const clean=v=>String(v||'').replace(/\D/g,'').slice(-10);
+    let reqId='';
+    const s2=send.cloneNode(true);send.replaceWith(s2);
+    const v2=verify.cloneNode(true);verify.replaceWith(v2);
+    s2.onclick=async function(){
+      const m=clean(mobile.value);
+      if(m.length!==10){ps.textContent='Please enter a valid 10-digit mobile number.';return;}
+      s2.disabled=true;ps.textContent='Sending OTP…';
+      try{
+        const r=await fetch('/api/send-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mobile:m})});
+        const d=await r.json();
+        if(!r.ok||!d.sent)throw new Error(d.error||'OTP could not be sent.');
+        reqId=d.reqId;phoneStep.style.display='none';verifyStep.style.display='block';st.textContent='OTP sent. Please check your SMS.';
+      }catch(e){console.error(e);ps.textContent=e.message||'OTP could not be sent. Please try again.';}
+      finally{s2.disabled=false;}
+    };
+    v2.onclick=async function(){
+      const code=clean(otp.value);
+      if(code.length!==6){st.textContent='Enter the 6-digit OTP.';return;}
+      if(!reqId){st.textContent='OTP request expired. Please send OTP again.';return;}
+      v2.disabled=true;st.textContent='Verifying…';
+      try{
+        const r=await fetch('/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reqId:reqId,otp:code})});
+        const d=await r.json();
+        if(!r.ok||!d.verified)throw new Error(d.error||'Incorrect or expired OTP.');
+        st.textContent='Verified successfully.';setTimeout(function(){location.reload();},400);
+      }catch(e){console.error(e);st.textContent=e.message||'Verification failed. Please try again.';}
+      finally{v2.disabled=false;}
+    };
+    if(resend){const r2=resend.cloneNode(true);resend.replaceWith(r2);r2.onclick=function(){s2.click();};}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  window.addEventListener('load',boot);
+})();
+</script></body>

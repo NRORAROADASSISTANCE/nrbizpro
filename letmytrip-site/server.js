@@ -33,7 +33,7 @@ if (fs.existsSync(API_DIR)) {
 app.get(["/", "/index.html"], (req, res, next) => {
   fs.readFile(path.join(ROOT, "index.html"), "utf8", (err, html) => {
     if (err) return next(err);
-    const tag = '<script src="/homepage-polish.js" defer></script>';
+    const tag = '<script src="/homepage-polish.js" defer></script><script src="/chatbot-enhance.js" defer></script>';
     const bodyClose = html.toLowerCase().lastIndexOf("</body>");
     const output = bodyClose >= 0
       ? html.slice(0, bodyClose) + tag + html.slice(bodyClose)

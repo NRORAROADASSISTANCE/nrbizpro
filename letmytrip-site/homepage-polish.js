@@ -1,21 +1,32 @@
 (function () {
-  function tidyLetmytripHome() {
-    // Remove only the old inline agency form/card. Never remove a page-wide wrapper.
-    const forms = Array.from(document.querySelectorAll("form"));
-    const agentForm = forms.find((form) =>
-      /agency\s*\/\s*company name/i.test(form.innerText || form.textContent || "") ||
-      Array.from(form.querySelectorAll("input,select,textarea")).some((field) =>
-        /agency|business type/i.test((field.placeholder || "") + " " + (field.name || "") + " " + (field.getAttribute("aria-label") || "")));
-    if (agentForm) {
-      const card = agentForm.closest("section, article, .form-card, .registration-card, .partner-form-card");
-      if (card && card.tagName !== "MAIN" && card.tagName !== "BODY" &&
-          !card.querySelector("header, nav, footer") &&
-          /agency|travel partner/i.test(card.innerText || card.textContent || "")) {
-        card.remove();
-      } else {
-        agentForm.remove();
-      }
+  function removeDuplicatePartnerSection() {
+    const heading = Array.from(document.querySelectorAll("h1,h2,h3,h4"))
+      .find((el) => /become a travel partner/i.test((el.textContent || "").trim()));
+    if (!heading) return;
+
+    // Find the smallest section/container holding both the partner heading and the old registration form.
+    let node = heading;
+    let target = null;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const text = node.innerText || node.textContent || "";
+      const hasPartnerForm = /agency\s*\/\s*company name|business type/i.test(text) &&
+        !!node.querySelector("form, input, select, textarea");
+      if (hasPartnerForm && !node.querySelector("header, nav, footer")) target = node;
+      node = node.parentElement;
     }
+    // Prefer the highest bounded section containing the heading/form, but never remove the whole page.
+    if (target && target !== document.body && target !== document.documentElement &&
+        target.tagName !== "MAIN" && target.tagName !== "HTML") {
+      target.remove();
+    } else {
+      // Fallback: remove the heading and its introductory copy, plus the adjacent registration card.
+      const intro = heading.closest("section, article") || heading.parentElement?.parentElement;
+      if (intro && intro !== document.body && intro.tagName !== "MAIN") intro.remove();
+    }
+  }
+
+  function tidyLetmytripHome() {
+    removeDuplicatePartnerSection();
 
     // Add small, understated quick links beside the existing right-side footer details.
     const footer = document.querySelector("footer") ||

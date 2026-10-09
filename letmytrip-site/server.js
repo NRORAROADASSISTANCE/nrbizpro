@@ -29,8 +29,20 @@ if (fs.existsSync(API_DIR)) {
   }
 }
 
+// Serve the homepage with the small UI cleanup script without changing the original page theme.
+app.get(["/", "/index.html"], (req, res, next) => {
+  fs.readFile(path.join(ROOT, "index.html"), "utf8", (err, html) => {
+    if (err) return next(err);
+    const tag = '<script src="/homepage-polish.js" defer></script>';
+    const output = /<\\/body>/i.test(html)
+      ? html.replace(/<\\/body>/i, tag + "</body>")
+      : html + tag;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).send(output);
+  });
+});
 app.use(express.static(ROOT, { extensions: ["html"], index: "index.html" }));
-app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "index.html")));
 app.get("/healthz", (_req, res) => res.status(200).json({ ok: true, service: "letmytrip" }));
 app.use((req, res) => {
   if (req.path.startsWith("/api/")) return res.status(404).json({ error: "API endpoint not found" });

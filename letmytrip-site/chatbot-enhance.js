@@ -141,9 +141,8 @@
     while (candidate && candidate !== document.body) {
       const rect = candidate.getBoundingClientRect();
       const hasInput = !!candidate.querySelector("input,textarea");
-      const hasClose = Array.from(candidate.querySelectorAll("button,[role='button']")).some((b) =>
-        /close|×|✕/i.test((b.getAttribute("aria-label") || "") + " " + (b.textContent || "").trim()));
-      if (hasInput && hasClose && rect.width >= 280 && rect.height >= 300) return candidate;
+      const hasButton = candidate.querySelector("button,[role='button']");
+      if (hasInput && hasButton && rect.width >= 280 && rect.height >= 300) return candidate;
       candidate = candidate.parentElement;
     }
   }

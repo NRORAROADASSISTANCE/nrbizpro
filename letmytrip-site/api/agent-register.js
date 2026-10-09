@@ -46,19 +46,23 @@ module.exports = async function handler(req,res){
       password_hash:hashPassword(password)
     };
 
+    const requestHeaders={
+      "apikey":supabaseKey,
+      "Content-Type":"application/json",
+      "Prefer":"return=minimal"
+    };
+    // Legacy Supabase service_role keys are JWTs and can be used as Bearer tokens.
+    // New sb_secret_* keys are API keys, not JWTs; do not send them as Authorization.
+    if(supabaseKey.startsWith("eyJ")) requestHeaders["Authorization"]="Bearer "+supabaseKey;
+
     const upstream=await fetch(supabaseUrl.replace(/\/$/,"")+"/rest/v1/agent_applications",{
       method:"POST",
-      headers:{
-        "apikey":supabaseKey,
-        "Authorization":"Bearer "+supabaseKey,
-        "Content-Type":"application/json",
-        "Prefer":"return=minimal"
-      },
+      headers:requestHeaders,
       body:JSON.stringify(row)
     });
     if(!upstream.ok){
       const raw=await upstream.text();
-      console.error("Supabase agent insert failed",raw);
+      console.error("Supabase agent insert failed",upstream.status,raw.slice(0,500));
       return res.status(502).json({saved:false,error:"Could not save the application to Supabase."});
     }
     return res.status(200).json({saved:true,applicationNo});

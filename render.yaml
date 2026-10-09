@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: letmytrip
+    runtime: node
+    rootDir: letmytrip-site
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true

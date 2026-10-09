@@ -34,8 +34,9 @@ app.get(["/", "/index.html"], (req, res, next) => {
   fs.readFile(path.join(ROOT, "index.html"), "utf8", (err, html) => {
     if (err) return next(err);
     const tag = '<script src="/homepage-polish.js" defer></script>';
-    const output = /<\\/body>/i.test(html)
-      ? html.replace(/<\\/body>/i, tag + "</body>")
+    const bodyClose = html.toLowerCase().lastIndexOf("</body>");
+    const output = bodyClose >= 0
+      ? html.slice(0, bodyClose) + tag + html.slice(bodyClose)
       : html + tag;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");

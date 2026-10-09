@@ -22,31 +22,31 @@ module.exports = async function handler(req,res){
     const supabaseKey=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_PUBLISHABLE_KEY;
     if(!supabaseUrl||!supabaseKey) return res.status(500).json({error:"Supabase configuration is missing"});
 
-    const dateParts=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
-    const dateMap=Object.fromEntries(dateParts.map(p=>[p.type,p.value]));
-    const dateStamp=dateMap.year+dateMap.month+dateMap.day;
-    const applicationPrefix="LMT-"+dateStamp+"-";
     const requestHeaders={
       "apikey":supabaseKey,
       "Content-Type":"application/json",
       "Prefer":"return=minimal"
     };
+    // Legacy service_role keys are JWTs; sb_secret_* keys are API keys, not JWTs.
     if(supabaseKey.startsWith("eyJ")) requestHeaders["Authorization"]="Bearer "+supabaseKey;
 
-    // Continue the daily sequence: LMT-YYYYMMDD-0001, 0002, ...
-    let sequence=1;
-    const latest=await fetch(supabaseUrl.replace(/\\/$/,"")+"/rest/v1/agent_applications?select=application_no&application_no=like."+encodeURIComponent(applicationPrefix+"*")+"&order=application_no.desc&limit=1",{
-      method:"GET",headers:requestHeaders
+    // Use a database function so concurrent submissions cannot receive the same number.
+    const numberResponse=await fetch(supabaseUrl.replace(/\/$/,"")+"/rest/v1/rpc/next_agent_application_no",{
+      method:"POST",
+      headers:requestHeaders,
+      body:"{}"
     });
-    if(latest.ok){
-      const rows=await latest.json();
-      const match=String(rows?.[0]?.application_no||"").match(/-(\\d{4,})$/);
-      if(match) sequence=Number(match[1])+1;
-    } else {
-      const raw=await latest.text();
-      console.error("Could not read latest daily application number",latest.status,raw.slice(0,300));
+    if(!numberResponse.ok){
+      const raw=await numberResponse.text();
+      console.error("Application number RPC failed",numberResponse.status,raw.slice(0,500));
+      return res.status(502).json({saved:false,error:"Could not generate application number. Please contact support."});
     }
-    const applicationNo=applicationPrefix+String(sequence).padStart(4,"0");
+    const applicationNo=String(await numberResponse.text()).replace(/^"|"$/g,"").trim();
+    if(!/^LMT-\d{8}-\d{4,}$/.test(applicationNo)){
+      console.error("Unexpected application number response",applicationNo);
+      return res.status(502).json({saved:false,error:"Could not generate application number."});
+    }
+
     const row={
       application_no:applicationNo,
       agency_name:String(body.agencyName).trim(),

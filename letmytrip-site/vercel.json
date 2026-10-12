@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/destinations", "destination": "/destinations.html" },
     { "source": "/", "destination": "/index.html" }
   ]
 }

@@ -30,7 +30,7 @@ async function registerDemoDevice(device){if(!device||device==='unknown')return 
 function pub(b,demoLimitInfo=null){if(!b)return null;return {id:b.id,userId:b.user_id,business:b.business,owner:b.owner,mobile:b.mobile,email:b.email,category:b.category,gst:b.gst,address:b.address||'',status:b.status,plan:b.plan,subscriptionEnds:b.subscription_ends,pendingPlan:b.pending_plan,pendingAmount:Number(b.pending_amount||0),lastPaymentId:b.last_payment_id,phoneVerified:!!b.phone_verified,emailVerified:!!b.email_verified,registrationFee:3500,demoPrintsUsed:demoLimitInfo?demoLimitInfo.used:Number(b.demo_prints_used||0),demoPrintsRemaining:demoLimitInfo?demoLimitInfo.remaining:Math.max(0,3-Number(b.demo_prints_used||0))}}
 async function msg91WidgetRequest(path, payload){
   const token=String(process.env.MSG91_WIDGET_TOKEN||'').trim();
-  const widgetId=String(process.env.MSG91_WIDGET_ID||'366a61647a4a37333039353351').trim();
+  const widgetId=String(process.env.MSG91_WIDGET_ID||'366a61647a4a373330393531').trim();
   if(!token||!widgetId) throw new Error('MSG91 OTP is not configured on the server.');
   const body={widgetId,...payload};
   const r=await fetch('https://control.msg91.com/api/v5/widget/'+path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','token':token},body:JSON.stringify(body)});

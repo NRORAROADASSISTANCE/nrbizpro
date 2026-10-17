@@ -7,6 +7,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "paytmchecksum": "^1.0.4"
   }
 }

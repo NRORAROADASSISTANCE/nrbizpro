@@ -9,7 +9,7 @@
    const params=new URLSearchParams(location.search);
    const orderId=params.get('ORDERID')||params.get('orderId');
    if(!orderId) throw new Error('Order reference was not returned by Paytm. Please open NR BizPro and check payment status.');
-   const r=await fetch('/api/paytm/verify-payment',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId})});
+   const r=await fetch('/api/verify-payment',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({gateway:'paytm',orderId})});
    const d=await r.json();
    if(!r.ok||!d.verified) throw new Error(d.error||'Payment is not confirmed yet.');
    status.textContent='Payment verified. Your membership is active. You can return to NR BizPro.';

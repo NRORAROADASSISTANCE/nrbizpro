@@ -44,8 +44,8 @@ async function verifyMsg91AccessToken(accessToken, expectedIdentifier){
   if(!key) throw new Error('MSG91 OTP is not configured on the server.');
   const token=String(accessToken||'').trim();
   if(!token) throw new Error('Missing MSG91 access token.');
-  const body=new URLSearchParams({'authkey':key,'access-token':token});
-  const r=await fetch('https://control.msg91.com/api/v5/widget/verifyAccessToken',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','Accept':'application/json'},body});
+  const body=JSON.stringify({'authkey':key,'access-token':token});
+  const r=await fetch('https://control.msg91.com/api/v5/widget/verifyAccessToken',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body});
   const data=await r.json().catch(()=>({}));
   if(!r.ok || String(data?.type||'').toLowerCase()==='error' || data?.code===201) throw new Error(data?.message||'MSG91 access token verification failed.');
   const findIdentifier=(v)=>{

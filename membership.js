@@ -21,8 +21,17 @@
         document.head.appendChild(script);
       });
       const configuration={widgetId:cfg.widgetId,tokenAuth:cfg.widgetToken,exposeMethods:true,success:(data)=>{window.__msg91LastSuccess=data;},failure:(error)=>{window.__msg91LastFailure=error;}};
-      await Promise.resolve(window.initSendOTP(configuration));
-      if(typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')throw Error('MSG91 widget loaded, but Send/Verify methods were not initialized. Check the widget token and Web SDK settings.');
+      window.initSendOTP(configuration);
+      // MSG91 initializes its exposed methods asynchronously in some browsers.
+      // Wait briefly for the official SDK methods before allowing Send OTP.
+      const deadline=Date.now()+10000;
+      while((typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function')&&Date.now()<deadline){
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      if(typeof window.sendOtp!=='function'||typeof window.verifyOtp!=='function'){
+        const detail=responseValue(window.__msg91LastFailure,'message','error');
+        throw Error(detail||'MSG91 widget did not expose Send/Verify methods. Check the widget token and Web SDK settings in MSG91.');
+      }
       return true;
     })().catch(err=>{msg91WidgetReady=null;throw err});
     return msg91WidgetReady;

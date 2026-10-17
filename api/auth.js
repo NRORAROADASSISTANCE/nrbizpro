@@ -429,7 +429,7 @@ const r=await sql`UPDATE security_approvals SET status=${decision},approved_by=$
   const identifier=kind==='mobile'?normalizeOtpMobile(req.body?.identifier):normalizeOtpEmail(req.body?.identifier);
   if(kind!=='mobile'&&kind!=='email')return send(res,400,{error:'Invalid OTP type.'});
   if(!identifier||(kind==='mobile'&&identifier.length!==12)||(kind==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)))return send(res,400,{error:'Invalid OTP identifier.'});
-  try{const d=await msg91WidgetRequest('sendOtp',{identifier});return send(res,200,{ok:true,reqId:d?.message||d?.reqId||d?.['reqId']||'',raw:d});}
+  try{const d=await msg91WidgetRequest('sendOtp',{identifier});const accessToken=String(d?.['access-token']||d?.accessToken||'').trim();const reqId=String(d?.reqId||d?.req_id||d?.message||'').trim();if(!accessToken&&!reqId)throw new Error('MSG91 did not return an OTP request ID.');return send(res,200,{ok:true,reqId,accessToken,invisibleVerified:!!(accessToken&&d?.invisibleVerified)});}
   catch(e){return send(res,502,{error:e.message||'Could not send OTP.'});}
 }
 if(req.method==='POST'&&a==='otp-verify'){
@@ -438,7 +438,7 @@ if(req.method==='POST'&&a==='otp-verify'){
   const otp=String(req.body?.otp||'').trim();
   if(kind!=='mobile'&&kind!=='email')return send(res,400,{error:'Invalid OTP type.'});
   if(!reqId||!/^[0-9]{4,8}$/.test(otp))return send(res,400,{error:'OTP and request ID are required.'});
-  try{const d=await msg91WidgetRequest('verifyOtp',{reqId,otp});const accessToken=d?.['access-token']||d?.accessToken||d?.token||d?.message||'';if(!accessToken)throw new Error('MSG91 did not return an access token.');return send(res,200,{ok:true,accessToken});}
+  try{const d=await msg91WidgetRequest('verifyOtp',{reqId,otp});const accessToken=d?.['access-token']||d?.accessToken||'';if(!accessToken)throw new Error('MSG91 did not return an access token.');return send(res,200,{ok:true,accessToken});}
   catch(e){return send(res,401,{error:e.message||'OTP verification failed.'});}
 }
 

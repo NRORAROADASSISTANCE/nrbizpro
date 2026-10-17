@@ -16,12 +16,12 @@ export default async function handler(req,res){
   const b=await sessionBusiness(req);
   if(!b)return send(res,401,{verified:false,error:'Login session expired. Please login and retry.'});
   if(!b.pending_plan)return send(res,400,{verified:false,error:'No pending membership payment was found.'});
-  const planFees={year3:3500,lifetime:6000,test10:10};
-  const years={year3:3,lifetime:0,test10:0};
+  const planFees={monthly:199,yearly:1999,year3:6000,year6:8500,lifetime:18500,test10:10};
+  const days={monthly:30,yearly:365,year3:1095,year6:2190,lifetime:0,test10:0};
   const plan=b.pending_plan;
   if(!planFees[plan])return send(res,400,{verified:false,error:'Invalid pending membership plan.'});
   const expectedAmount=(Number(b.pending_amount)||0)*100;
-  const expectedPlanAmount=plan==='test10'?1000:(planFees[plan]+3500)*100;
+  const expectedPlanAmount=planFees[plan]*100;
   if(expectedAmount!==expectedPlanAmount)return send(res,400,{verified:false,error:'Payment amount configuration mismatch.'});
   const auth=Buffer.from(`${keyId}:${secret}`).toString('base64');
   const orderResponse=await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(razorpay_order_id)}`,{headers:{Authorization:`Basic ${auth}`}});
@@ -37,8 +37,8 @@ export default async function handler(req,res){
    return send(res,200,{verified:true,testPayment:true,paymentId:razorpay_payment_id,orderId:razorpay_order_id,user:r.rows[0]});
   }
   const base=b.status==='active'&&b.subscription_ends&&new Date(b.subscription_ends)>new Date()?new Date(b.subscription_ends):new Date();
-  if(years[plan]>0)base.setDate(base.getDate()+365*years[plan]);
-  await sql`UPDATE businesses SET status='active',plan=${plan},subscription_ends=${years[plan]>0?base.toISOString():null},pending_plan=null,pending_amount=0,last_payment_id=${razorpay_payment_id},updated_at=now() WHERE id=${b.id}`;
+  if(days[plan]>0)base.setDate(base.getDate()+days[plan]);
+  await sql`UPDATE businesses SET status='active',plan=${plan},subscription_ends=${days[plan]>0?base.toISOString():null},pending_plan=null,pending_amount=0,last_payment_id=${razorpay_payment_id},updated_at=now() WHERE id=${b.id}`;
   const r=await sql`SELECT id,business,owner,mobile,email,category,gst,address,status,plan,subscription_ends,pending_plan,pending_amount,last_payment_id FROM businesses WHERE id=${b.id}`;
   return send(res,200,{verified:true,paymentId:razorpay_payment_id,orderId:razorpay_order_id,user:r.rows[0]});
  }catch(e){console.error(e);return send(res,400,{verified:false,error:'Payment verification failed.'});}

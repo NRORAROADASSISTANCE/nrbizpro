@@ -16,8 +16,8 @@ export default async function handler(req,res){
   const b=await sessionBusiness(req);
   if(!b)return send(res,401,{verified:false,error:'Login session expired. Please login and retry.'});
   if(!b.pending_plan)return send(res,400,{verified:false,error:'No pending membership payment was found.'});
-  const planFees={monthly:199,yearly:1999,year3:6000,year6:8500,lifetime:18500,test10:10};
-  const days={monthly:30,yearly:365,year3:1095,year6:2190,lifetime:0,test10:0};
+  const planFees={monthly:11976,year3:6000,year6:8500,lifetime:18500,test10:10};
+  const days={monthly:730,year3:1095,year6:2190,lifetime:0,test10:0};
   const plan=b.pending_plan;
   if(!planFees[plan])return send(res,400,{verified:false,error:'Invalid pending membership plan.'});
   const expectedAmount=(Number(b.pending_amount)||0)*100;

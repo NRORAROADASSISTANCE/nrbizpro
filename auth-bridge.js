@@ -176,6 +176,20 @@
 @media(max-width:800px){#publicLanding .pl-nav{padding-bottom:70px}#publicLanding .pl-clock-inline{top:auto!important;bottom:12px!important;right:0!important;min-width:150px!important}#publicLanding .pl-nav .pl-links{padding-right:0;justify-content:flex-start}#publicLanding .pl-showcase{height:290px;margin:0 0 34px;border-radius:18px}#publicLanding .pl-showcase-caption{max-width:85%;left:22px;bottom:22px}#publicLanding .pl-showcase-caption b{font-size:26px}}
 @media(max-width:520px){#publicLanding .pl-nav{padding-top:72px;padding-bottom:82px}#publicLanding .pl-showcase{height:300px}#publicLanding .pl-showcase-caption{max-width:90%;left:17px;right:16px;bottom:19px}}
 @media(prefers-reduced-motion:reduce){#publicLanding .pl-showcase-card{transition:none!important}}
+
+/* Natural product photography: reduce dramatic overlays and let the real photos lead */
+#publicLanding .pl-showcase{background:#f6f8fc;border-color:#d9e3f1;box-shadow:0 18px 44px rgba(14,39,79,.10)}
+#publicLanding .pl-showcase-card{background:#f7f9fc;transform:none!important}
+#publicLanding .pl-showcase-card.is-active{transform:none!important}
+#publicLanding .pl-showcase-card img{object-fit:cover;object-position:center 48%;opacity:1;filter:none;transition:opacity .6s ease}
+#publicLanding .pl-showcase-card:after{inset:0;background:linear-gradient(90deg,rgba(9,28,58,.68) 0%,rgba(9,28,58,.36) 38%,rgba(9,28,58,.02) 72%),linear-gradient(0deg,rgba(9,28,58,.12),transparent 45%)}
+#publicLanding .pl-showcase-caption{max-width:min(450px,65%);left:clamp(22px,4vw,52px);bottom:clamp(22px,4vw,42px);text-shadow:0 1px 5px rgba(0,0,0,.12)}
+#publicLanding .pl-showcase-caption .pl-showcase-label{background:rgba(16,39,75,.54);border:1px solid rgba(255,255,255,.52);backdrop-filter:blur(5px)}
+#publicLanding .pl-showcase-caption b{font-size:clamp(22px,3vw,34px);line-height:1.16}
+#publicLanding .pl-showcase-caption span{font-size:13px;line-height:1.55}
+#publicLanding .pl-showcase-dots{right:22px;bottom:20px}
+#publicLanding .pl-showcase-dot{box-shadow:0 1px 5px rgba(0,0,0,.2)}
+@media(max-width:800px){#publicLanding .pl-showcase-card:after{background:linear-gradient(90deg,rgba(9,28,58,.58),rgba(9,28,58,.16) 70%),linear-gradient(0deg,rgba(9,28,58,.18),transparent 50%)}#publicLanding .pl-showcase-caption{max-width:78%}}
 </style><div class="pl-wrap"><nav class="pl-nav"><div class="pl-brand"><span class="pl-mark">NR</span><span>NR BizPro</span></div><div class="pl-links"><a href="pricing.html">Pricing</a><a href="services.html">Services</a><a href="contact.html">Contact</a><button class="pl-web" id="plHms">HMS</button><button class="pl-web" id="plWebApp">Web App</button><button class="pl-login" id="plLogin">Login</button></div></nav><section class="pl-hero"><div><span class="pl-badge">UNIVERSAL BILLING & BUSINESS MANAGEMENT</span><h1>One platform.<br>Every business.</h1><p class="pl-sub">Create invoices, manage products and stock, track customers, and run your business from one simple workspace.</p><div class="pl-actions"><button class="pl-primary" id="plSignup">Create Business Account</button></div></div><div class="pl-card"><h3>Everything you need to bill</h3><div class="pl-feature"><span class="pl-check">✓</span><span>Fast billing with product and barcode support</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Products, pricing, GST and stock management</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Customer records, bill history and printing</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Business-specific tools for different categories</span></div></div></section>
 <section class="pl-showcase" aria-label="NR BizPro billing software highlights">
   <article class="pl-showcase-card"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&amp;fit=crop&amp;w=900&amp;q=85" alt="Retail payment terminal and checkout counter" loading="lazy"><div class="pl-showcase-caption"><span class="pl-showcase-label">SMART BILLING</span><b>Fast Checkout & Invoices</b><span>Professional bills, GST and customer records in one workflow.</span></div></article>

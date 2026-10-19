@@ -78,3 +78,37 @@ body{background:radial-gradient(ellipse at 0% 0%,rgba(24,92,190,.12),transparent
 #customerManagement .nr-box,#customerManagement .nr-empty,#customerManagement .nr-perms,#customerManagement .nr-cards>div,#customerManagement .nr-report-grid button{border-color:rgba(199,154,66,.26);box-shadow:0 8px 24px rgba(21,52,96,.045)}
 #customerManagement .nr-head button,#customerManagement .nr-actions button,#customerManagement .nr-table button{background:linear-gradient(110deg,#174e9f,#1768e8 75%,#c69a42)}
 @media(max-width:850px){#customerManagement .nr-layout{grid-template-columns:1fr!important}#customerManagement .nr-module-nav,#customerManagement .nr-content{grid-column:1;grid-row:auto;width:100%}}
+
+/* NR BizPro universal business-module luxury refinement — styling only */
+:root{--nr-gold:#c6a15b;--nr-gold-soft:#f8f1e2;--nr-blue:#155bd5;--nr-blue-deep:#103b7c;--nr-ink:#10264a;--nr-muted:#687a95;--nr-line:#e1e8f2;--nr-shadow:0 12px 30px rgba(16,38,74,.065)}
+body{background:radial-gradient(ellipse at 95% 0%,rgba(198,161,91,.11),transparent 28%),linear-gradient(135deg,#f5f8fd 0%,#eef3fb 100%);background-attachment:fixed}
+#app .topbar{background:rgba(255,255,255,.96);border-bottom:1px solid rgba(198,161,91,.65);box-shadow:0 5px 20px rgba(16,38,74,.045);backdrop-filter:blur(14px)}
+#app .brand-mark{background:linear-gradient(145deg,#176be9 0%,#103b7c 72%,#c6a15b 100%);box-shadow:0 9px 22px rgba(16,59,124,.22)}
+#app .shell{column-gap:20px}
+#app .hero{position:relative;overflow:hidden;border-color:rgba(198,161,91,.44);background:linear-gradient(112deg,#fff 0%,#f5f9ff 68%,#fff8eb 100%);box-shadow:0 14px 32px rgba(16,38,74,.06)}
+#app .hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#175ed4,#c6a15b)}
+#app .hero h1{color:#10264a;letter-spacing:-.05em}
+#app .hero .eyebrow{color:#175ed4}
+#app .tabs{background:rgba(255,255,255,.96);border-color:rgba(198,161,91,.35);box-shadow:0 14px 34px rgba(16,38,74,.065);backdrop-filter:blur(12px)}
+#app .tab{min-height:42px;color:#405675}
+#app .tab:before{border-color:#a4b4cc}
+#app .tab:hover{background:linear-gradient(90deg,#f1f6ff,#fffaf0);color:#154fae}
+#app .tab.active{background:linear-gradient(105deg,#164d9d 0%,#1d6de0 72%,#c6a15b 100%);box-shadow:0 8px 18px rgba(21,78,157,.2)}
+#app .tab-panel>.panel,#app .tab-panel .module-card,#app .tab-panel .card,#app .tab-panel .section-card{border-color:#e1e8f2;box-shadow:0 10px 28px rgba(16,38,74,.05)}
+#app .panel-head{border-bottom-color:#e8edf5}
+#app .panel-head h2,#app .tab-panel h2{color:#10264a}
+#app .stat{border-color:#e0e7f1;background:linear-gradient(145deg,#fff 0%,#fff 72%,#fffbf3 100%);box-shadow:0 8px 24px rgba(16,38,74,.045)}
+#app .stat:before{background:linear-gradient(180deg,#1d6de0 0%,#477ce4 60%,#c6a15b 100%)}
+#app .quick-grid button{border-color:#e2e9f3;background:linear-gradient(145deg,#fff,#f8faff 75%,#fffaf0);box-shadow:0 6px 18px rgba(16,38,74,.035)}
+#app .quick-grid button:hover{border-color:#d5bd87;box-shadow:0 12px 26px rgba(16,59,124,.09)}
+#app .table-wrap{border-color:#e0e7f1;box-shadow:0 5px 18px rgba(16,38,74,.025)}
+#app th{background:linear-gradient(90deg,#f0f5fd,#fff9ed);color:#526884;border-bottom-color:#e2e7ef}
+#app td{color:#263c5b}
+#app tbody tr:hover{background:#f8faff}
+#app input,#app select,#app textarea{border-color:#d7e1ef;background:#fff}
+#app input:focus,#app select:focus,#app textarea:focus{border-color:#b69a5b;box-shadow:0 0 0 3px rgba(198,161,91,.16)}
+#app .primary,#app button.primary{background:linear-gradient(105deg,#1656b5 0%,#246fe2 72%,#c6a15b 100%);box-shadow:0 7px 16px rgba(21,78,157,.16)}
+#app .secondary{background:linear-gradient(110deg,#f4f8ff,#fffaf0);border-color:#e0d3b5;color:#1a4c93}
+#app #modal .nr-modal-card{border-color:rgba(198,161,91,.45);box-shadow:0 28px 90px rgba(14,35,75,.22)}
+#app .empty{background:linear-gradient(145deg,#f9fbff,#fffaf1);border-color:#d8e2ef}
+@media(max-width:760px){#app .tabs{border-color:rgba(198,161,91,.35)}}

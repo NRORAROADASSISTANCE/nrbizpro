@@ -157,6 +157,25 @@
 #publicLanding .pl-showcase-label{display:inline-block;margin-bottom:7px;padding:4px 8px;border-radius:99px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.36);font-size:9px;letter-spacing:.1em;font-weight:800}
 @media(max-width:800px){#publicLanding .pl-showcase{margin:0 0 30px;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}#publicLanding .pl-showcase-card,#publicLanding .pl-showcase-card img{min-height:165px;height:165px}#publicLanding .pl-showcase-caption{left:10px;bottom:10px}#publicLanding .pl-showcase-caption b{font-size:13px}#publicLanding .pl-showcase-caption span{font-size:10px}}
 @media(max-width:620px){#publicLanding .pl-showcase{grid-template-columns:1fr}#publicLanding .pl-showcase-card,#publicLanding .pl-showcase-card img{height:190px;min-height:190px}#publicLanding .pl-clock-inline{min-width:140px}#publicLanding .pl-links{gap:7px}}
+
+#publicLanding .pl-nav{position:relative;padding-bottom:58px}
+#publicLanding .pl-clock-inline{position:absolute!important;right:0!important;top:0!important;z-index:5!important;min-width:166px!important;padding:10px 14px!important;border:1px solid #d1ad63!important;border-radius:14px!important;background:linear-gradient(145deg,#fff,#fffaf0)!important;box-shadow:0 8px 24px rgba(13,35,70,.09)!important}
+#publicLanding .pl-nav .pl-links{padding-right:185px;justify-content:flex-end}
+#publicLanding .pl-showcase{position:relative;display:block;height:clamp(250px,31vw,370px);margin:-22px 0 54px;border-radius:24px;overflow:hidden;border:1px solid rgba(199,154,66,.48);background:linear-gradient(120deg,#0b2044,#164c94 65%,#c49a43);box-shadow:0 24px 58px rgba(14,39,79,.15)}
+#publicLanding .pl-showcase-card{position:absolute;inset:0;min-height:0;height:100%;width:100%;border:0;border-radius:0;box-shadow:none;opacity:0;visibility:hidden;transform:scale(1.02);transition:opacity .8s ease,transform 5.5s ease,visibility .8s}
+#publicLanding .pl-showcase-card.is-active{opacity:1;visibility:visible;transform:scale(1)}
+#publicLanding .pl-showcase-card img{height:100%;width:100%;object-fit:cover;opacity:.92;filter:saturate(.88) contrast(1.03)}
+#publicLanding .pl-showcase-card:after{inset:0;background:linear-gradient(90deg,rgba(6,21,47,.88),rgba(9,35,75,.65) 43%,rgba(8,24,49,.04)),linear-gradient(0deg,rgba(8,22,45,.38),transparent 48%)}
+#publicLanding .pl-showcase-caption{left:clamp(24px,5vw,66px);right:auto;bottom:clamp(26px,5vw,54px);max-width:min(490px,75%);text-shadow:0 2px 14px rgba(0,0,0,.2)}
+#publicLanding .pl-showcase-caption b{font-size:clamp(23px,3.4vw,38px);letter-spacing:-.8px;line-height:1.12}
+#publicLanding .pl-showcase-caption span{font-size:14px;line-height:1.6;color:#f1f5fc}
+#publicLanding .pl-showcase-caption .pl-showcase-label{font-size:10px;letter-spacing:.15em;color:#fff;background:rgba(201,160,75,.25);border-color:rgba(255,228,167,.65);padding:7px 11px;margin-bottom:13px}
+#publicLanding .pl-showcase-dots{position:absolute;z-index:3;right:24px;bottom:23px;display:flex;gap:8px}
+#publicLanding .pl-showcase-dot{width:8px;height:8px;padding:0;border:1px solid #fff;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer}
+#publicLanding .pl-showcase-dot.is-active{width:26px;border-radius:99px;background:#e4c47d;border-color:#e4c47d}
+@media(max-width:800px){#publicLanding .pl-nav{padding-bottom:70px}#publicLanding .pl-clock-inline{top:auto!important;bottom:12px!important;right:0!important;min-width:150px!important}#publicLanding .pl-nav .pl-links{padding-right:0;justify-content:flex-start}#publicLanding .pl-showcase{height:290px;margin:0 0 34px;border-radius:18px}#publicLanding .pl-showcase-caption{max-width:85%;left:22px;bottom:22px}#publicLanding .pl-showcase-caption b{font-size:26px}}
+@media(max-width:520px){#publicLanding .pl-nav{padding-top:72px;padding-bottom:82px}#publicLanding .pl-showcase{height:300px}#publicLanding .pl-showcase-caption{max-width:90%;left:17px;right:16px;bottom:19px}}
+@media(prefers-reduced-motion:reduce){#publicLanding .pl-showcase-card{transition:none!important}}
 </style><div class="pl-wrap"><nav class="pl-nav"><div class="pl-brand"><span class="pl-mark">NR</span><span>NR BizPro</span></div><div class="pl-links"><a href="pricing.html">Pricing</a><a href="services.html">Services</a><a href="contact.html">Contact</a><button class="pl-web" id="plHms">HMS</button><button class="pl-web" id="plWebApp">Web App</button><button class="pl-login" id="plLogin">Login</button></div></nav><section class="pl-hero"><div><span class="pl-badge">UNIVERSAL BILLING & BUSINESS MANAGEMENT</span><h1>One platform.<br>Every business.</h1><p class="pl-sub">Create invoices, manage products and stock, track customers, and run your business from one simple workspace.</p><div class="pl-actions"><button class="pl-primary" id="plSignup">Create Business Account</button></div></div><div class="pl-card"><h3>Everything you need to bill</h3><div class="pl-feature"><span class="pl-check">✓</span><span>Fast billing with product and barcode support</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Products, pricing, GST and stock management</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Customer records, bill history and printing</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Business-specific tools for different categories</span></div></div></section>
 <section class="pl-showcase" aria-label="NR BizPro billing software highlights">
   <article class="pl-showcase-card"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&amp;fit=crop&amp;w=900&amp;q=85" alt="Retail payment terminal and checkout counter" loading="lazy"><div class="pl-showcase-caption"><span class="pl-showcase-label">SMART BILLING</span><b>Fast Checkout & Invoices</b><span>Professional bills, GST and customer records in one workflow.</span></div></article>
@@ -202,8 +221,10 @@
 <footer style="text-align:center;padding:0 0 20px;color:#718198;font-size:12px">© NR BizPro • Universal Billing & Business Management</footer></div>`;
     document.body.appendChild(landing);
     const publicClock=document.getElementById('nrPublicClock');
-    const publicNav=landing.querySelector('.pl-links');
-    if(publicClock&&publicNav){publicClock.classList.add('pl-clock-inline');publicNav.insertBefore(publicClock,publicNav.firstChild);}
+    const publicNav=landing.querySelector('.pl-nav');
+    if(publicClock&&publicNav){publicClock.classList.add('pl-clock-inline');publicNav.appendChild(publicClock);}
+    const slides=Array.from(landing.querySelectorAll('.pl-showcase-card'));
+    if(slides.length>1){let active=0;const dots=document.createElement('div');dots.className='pl-showcase-dots';slides.forEach((slide,i)=>{slide.classList.toggle('is-active',i===0);const dot=document.createElement('button');dot.type='button';dot.className='pl-showcase-dot'+(i===0?' is-active':'');dot.setAttribute('aria-label','Show slide '+(i+1));dot.addEventListener('click',()=>{active=i;slides.forEach((s,j)=>{s.classList.toggle('is-active',j===active);dots.children[j].classList.toggle('is-active',j===active);});});dots.appendChild(dot);});landing.querySelector('.pl-showcase').appendChild(dots);setInterval(()=>{active=(active+1)%slides.length;slides.forEach((s,j)=>{s.classList.toggle('is-active',j===active);dots.children[j].classList.toggle('is-active',j===active);});},5200);}
     const openAuth=mode=>{landing.remove();document.getElementById('authScreen')?.classList.remove('hidden');window.renderAuth?.(mode)};
     document.getElementById('plLogin').onclick=()=>openAuth('login');
     document.getElementById('plWebApp').onclick=()=>openAuth('login');

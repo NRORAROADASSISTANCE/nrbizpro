@@ -64,7 +64,8 @@
    search?.addEventListener('input',filter);
    document.getElementById('nrCustomerClear')?.addEventListener('click',()=>{search.value='';filter();search.focus()});
    document.getElementById('nrCustomerAdd')?.addEventListener('click',openAdd);
-   document.querySelectorAll('[data-customer-view]').forEach(btn=>btn.addEventListener('click',()=>openView(btn.dataset.customerView)));\n   document.querySelectorAll('[data-customer-view]').forEach(btn=>{const l=document.createElement('button');l.type='button';l.className='secondary';l.textContent='Ledger';l.style.marginLeft='5px';l.onclick=()=>openLedger(btn.dataset.customerView);btn.parentElement.appendChild(l);});
+   document.querySelectorAll('[data-customer-view]').forEach(btn=>btn.addEventListener('click',()=>openView(btn.dataset.customerView)));
+   document.querySelectorAll('[data-customer-view]').forEach(btn=>{const l=document.createElement('button');l.type='button';l.className='secondary';l.textContent='Ledger';l.style.marginLeft='5px';l.onclick=()=>openLedger(btn.dataset.customerView);btn.parentElement.appendChild(l);});
  }
  function receiveCustomerPayment(customerRef){
   const list=normalized(),c=list.find(x=>String(x.mobile||'')===String(customerRef)||String(x.id||'')===String(customerRef));if(!c)return;

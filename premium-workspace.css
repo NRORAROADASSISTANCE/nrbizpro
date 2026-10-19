@@ -47,3 +47,34 @@ body{background:#f4f7fc;color:var(--nr-ink)}
 @media(max-width:1050px){#app .shell{grid-template-columns:190px minmax(0,1fr);column-gap:15px;padding:18px 14px 34px}#app .stats{grid-template-columns:repeat(2,minmax(0,1fr))}#app .tabs{top:88px;padding:8px}#app .tab{padding:11px 9px}}
 @media(max-width:760px){#app .topbar{height:auto;min-height:68px;padding:12px 14px;gap:12px;align-items:flex-start}#app .topbar .brand small{display:none}#app .top-actions{gap:8px;flex-wrap:wrap;justify-content:flex-end;font-size:11px}#app .nr-live-clock-top{display:none}#app .shell{display:flex;flex-direction:column;padding:14px 12px 30px;gap:13px}#app .hero{width:100%;padding:18px;flex-direction:column;align-items:stretch;gap:15px}#app .hero h1{font-size:24px}#app .stats{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#app .stat{padding:14px 13px}#app .stat strong{font-size:19px}#app .tabs{width:100%;position:static;display:flex;flex-direction:row;align-items:stretch;overflow-x:auto;white-space:nowrap;padding:7px;gap:5px;border-radius:14px}#app .tab{flex:0 0 auto;width:auto;max-width:190px;padding:10px 12px;font-size:11px}#app .tab:before{flex-basis:7px;width:7px;height:7px}#app .tab-panel{width:100%;min-height:300px}#app .tab-panel>.panel{padding:15px}#app .panel-head{flex-direction:column;align-items:stretch}#app .search{width:100%}#app .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#app .table-wrap{overflow:auto}#app .brand-mark{width:38px;height:38px}#app .brand strong{font-size:15px}}
 @media(prefers-reduced-motion:reduce){#app *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* NR BizPro luxe blue + gold finish */
+:root{--nr-gold:#c79a42;--nr-gold-light:#f6e8bd;--nr-luxe-navy:#0d2346}
+body{background:radial-gradient(ellipse at 0% 0%,rgba(24,92,190,.12),transparent 34%),radial-gradient(ellipse at 100% 0%,rgba(211,167,76,.15),transparent 30%),#f4f7fc}
+#app .topbar{border-bottom:1px solid rgba(199,154,66,.38);background:linear-gradient(105deg,#fff 0%,#f7faff 62%,#fff9e9 100%);position:relative}
+#app .topbar:after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;background:linear-gradient(90deg,#174ea6,#c79a42,#f0d68f,#174ea6)}
+#app .brand-mark{background:linear-gradient(145deg,#143e7e,#176af1 68%,#d0a247);border:1px solid rgba(255,255,255,.75);box-shadow:0 7px 22px rgba(16,65,135,.22)}
+#app .shell{background:radial-gradient(ellipse at 2% 4%,rgba(21,87,174,.08),transparent 28%),radial-gradient(ellipse at 96% 5%,rgba(210,169,87,.10),transparent 24%)}
+#app .hero{border-color:rgba(199,154,66,.36);background:linear-gradient(115deg,#fff 0%,#f4f8ff 68%,#fff8e9 100%);position:relative;overflow:hidden}
+#app .hero:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#1756ac,#d4ab52,#f5e3ac)}
+#app .stat{border-color:#e0e8f4;background:linear-gradient(150deg,#fff,#fbfcff);box-shadow:0 9px 26px rgba(21,52,96,.055)}
+#app .stat:before{background:linear-gradient(#1768dc,#c79a42)}
+#app .tabs{border-color:rgba(199,154,66,.34);background:linear-gradient(180deg,#fff,#fbfcff);box-shadow:0 12px 32px rgba(18,48,91,.07),inset 0 3px 0 rgba(199,154,66,.2)}
+#app .tab.active{background:linear-gradient(110deg,#154b98 0%,#1769e8 70%,#c69a42 145%);box-shadow:0 8px 18px rgba(19,72,151,.2)}
+#app .tab:hover{background:linear-gradient(90deg,#edf4ff,#fff9eb)}
+#app .tab-panel>.panel,#app .tab-panel .module-card,#app .tab-panel .card,#app .tab-panel .section-card{border-color:rgba(199,154,66,.25)}
+#app .primary,#app button.primary{background:linear-gradient(110deg,#174e9f,#1768e8 72%,#c49a45);border:1px solid rgba(199,154,66,.28)}
+#app .primary:hover,#app button.primary:hover{filter:brightness(1.035);box-shadow:0 8px 18px rgba(23,78,159,.2)}
+#app .secondary{border-color:rgba(199,154,66,.35)}
+/* Business Management: keep navigation in left rail, all selected content in the center */
+#customerManagement{min-width:0;width:100%;max-width:100%;overflow:visible}
+#customerManagement .nr-layout{display:grid!important;grid-template-columns:245px minmax(0,1fr)!important;align-items:start;gap:18px!important;width:100%;max-width:100%}
+#customerManagement .nr-module-nav{grid-column:1;grid-row:1;min-width:0;background:linear-gradient(180deg,#fff,#f8faff 78%,#fff9eb);border-color:rgba(199,154,66,.36);box-shadow:0 12px 28px rgba(19,49,92,.07),inset 0 3px 0 rgba(199,154,66,.18)}
+#customerManagement .nr-content{grid-column:2;grid-row:1;min-width:0;width:100%;max-width:100%;overflow-x:auto}
+#customerManagement .nr-group-toggle{background:linear-gradient(100deg,#f1f6ff,#fff);border:1px solid #e5ecf8}
+#customerManagement .nr-group-toggle[aria-expanded="true"]{background:linear-gradient(105deg,#174e9f,#1768e8 75%,#c69a42);color:#fff;border-color:rgba(199,154,66,.55);box-shadow:0 6px 15px rgba(20,69,145,.15)}
+#customerManagement .nr-subnav{border-left-color:#d1aa5a}
+#customerManagement .nr-side.active{background:linear-gradient(105deg,#1c6ff0,#3c5df0 75%,#c79a42);box-shadow:0 7px 17px rgba(23,83,171,.18)}
+#customerManagement .nr-box,#customerManagement .nr-empty,#customerManagement .nr-perms,#customerManagement .nr-cards>div,#customerManagement .nr-report-grid button{border-color:rgba(199,154,66,.26);box-shadow:0 8px 24px rgba(21,52,96,.045)}
+#customerManagement .nr-head button,#customerManagement .nr-actions button,#customerManagement .nr-table button{background:linear-gradient(110deg,#174e9f,#1768e8 75%,#c69a42)}
+@media(max-width:850px){#customerManagement .nr-layout{grid-template-columns:1fr!important}#customerManagement .nr-module-nav,#customerManagement .nr-content{grid-column:1;grid-row:auto;width:100%}}

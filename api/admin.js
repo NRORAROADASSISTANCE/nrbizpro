@@ -43,7 +43,7 @@ async function runLegacyDbMigration(req,res){
     if(!rows.rows.length)break;
     const values=[],tuples=[];
     for(const row of rows.rows){const ph=[];for(const c of cols){values.push(row[c]);ph.push('
-export default async function handler(req,res){await initDb();try{
+export default async function handler(req,res){try{await initDb();
  if(req.method==='POST'&&req.body?.action==='login'){const cfg=await ensureAdmin();const r=await sql`SELECT * FROM admins WHERE email=${req.body.email?.trim().toLowerCase()}`;if(!r.rows[0]||!(await verifyPassword(req.body.password||'',r.rows[0].password_hash)))return send(res,401,{error:'Invalid admin credentials.'});const t=token();await sql`INSERT INTO sessions(token,admin,expires_at) VALUES(${t},true,now()+interval '30 days')`;cookie(res,'nr_admin',t);return send(res,200,{ok:true,email:r.rows[0].email,defaulted:cfg.defaulted})}
  if(req.method==='POST'&&req.body?.action==='logout'){clearCookie(res,'nr_admin');return send(res,200,{ok:true})}
  if(req.method==='GET'&&req.query.action==='session'){if(!(await sessionAdmin(req)))return send(res,401,{error:'Admin login required'});return send(res,200,{ok:true})}

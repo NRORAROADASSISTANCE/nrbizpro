@@ -120,7 +120,7 @@ function supplierForm(existing,index){
 function addSupplierLedgerButtons(){
   const host=document.querySelector('#purchase')||document.querySelector('[data-page="purchases"]')||document.body;
   if(!host||host.dataset.supplierLedgerReady)return;
-  const names=[...new Set(purchases().map(p=>String(p.supplier||'').trim()).filter(Boolean))];
+  const purchaseRows=Array.isArray(purchases())?purchases():[];const names=[...new Set(purchaseRows.map(p=>String(p?.supplier||'').trim()).filter(Boolean))];
   if(!names.length)return;
   const box=document.createElement('div');box.dataset.supplierLedgerReady='1';box.style.cssText='margin:20px 0;padding:16px;border:1px solid #ddd;border-radius:12px';
   box.innerHTML='<b>Supplier Ledger</b> <select id="nrSupplierLedger"><option value="">Select Supplier</option>'+names.map(n=>'<option>'+esc(n)+'</option>').join('')+'</select>';

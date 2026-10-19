@@ -141,7 +141,28 @@
 #publicLanding footer{border-top:1px solid rgba(199,154,66,.26);padding-top:24px!important}
 @media(max-width:800px){#publicLanding .pl-nav{margin-bottom:20px;padding-bottom:28px}#publicLanding .pl-hero{grid-template-columns:1fr;gap:25px;padding-bottom:42px}#publicLanding .pl-hero h1{font-size:clamp(39px,8vw,54px);letter-spacing:-1.7px}#publicLanding .pl-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#publicLanding .pl-section{padding:20px 0 34px}}
 @media(max-width:520px){#publicLanding .pl-wrap{padding:20px 15px 35px}#publicLanding .pl-nav{padding-top:72px}#publicLanding .pl-links{justify-content:flex-start}#publicLanding .pl-hero h1{font-size:38px;letter-spacing:-1.2px}#publicLanding .pl-grid{grid-template-columns:1fr}#publicLanding .pl-mini{padding:19px}#publicLanding .pl-card{border-radius:18px}}
+#publicLanding .pl-nav{gap:22px;align-items:center}
+#publicLanding .pl-links{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#publicLanding .pl-clock-inline{position:static!important;inset:auto!important;z-index:auto!important;min-width:145px;padding:9px 12px!important;margin:0 2px!important;border:1px solid rgba(199,154,66,.55)!important;border-radius:12px!important;background:linear-gradient(130deg,#fff,#fff9e9)!important;box-shadow:0 4px 14px rgba(18,45,86,.06)!important;text-align:center;display:block}
+#publicLanding .pl-clock-inline div:first-child{font-size:9px!important;font-weight:800;letter-spacing:.05em;color:#61718b}
+#publicLanding .pl-clock-inline div:last-child{font-size:15px!important;font-weight:900;color:#174d9b;margin-top:4px}
+#publicLanding .pl-showcase{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px;margin:-26px 0 48px}
+#publicLanding .pl-showcase-card{position:relative;min-height:215px;overflow:hidden;border-radius:19px;border:1px solid rgba(199,154,66,.38);background:#10264b;box-shadow:0 14px 32px rgba(17,46,91,.12)}
+#publicLanding .pl-showcase-card img{display:block;width:100%;height:215px;object-fit:cover;transition:transform .35s ease;opacity:.94}
+#publicLanding .pl-showcase-card:hover img{transform:scale(1.04)}
+#publicLanding .pl-showcase-card:after{content:"";position:absolute;inset:25% 0 0;background:linear-gradient(180deg,transparent,rgba(7,22,47,.88))}
+#publicLanding .pl-showcase-caption{position:absolute;z-index:1;left:18px;right:16px;bottom:17px;color:#fff}
+#publicLanding .pl-showcase-caption b{display:block;font-size:17px;letter-spacing:-.2px}
+#publicLanding .pl-showcase-caption span{display:block;margin-top:5px;color:#e7edf8;font-size:12px;line-height:1.45}
+#publicLanding .pl-showcase-label{display:inline-block;margin-bottom:7px;padding:4px 8px;border-radius:99px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.36);font-size:9px;letter-spacing:.1em;font-weight:800}
+@media(max-width:800px){#publicLanding .pl-showcase{margin:0 0 30px;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}#publicLanding .pl-showcase-card,#publicLanding .pl-showcase-card img{min-height:165px;height:165px}#publicLanding .pl-showcase-caption{left:10px;bottom:10px}#publicLanding .pl-showcase-caption b{font-size:13px}#publicLanding .pl-showcase-caption span{font-size:10px}}
+@media(max-width:620px){#publicLanding .pl-showcase{grid-template-columns:1fr}#publicLanding .pl-showcase-card,#publicLanding .pl-showcase-card img{height:190px;min-height:190px}#publicLanding .pl-clock-inline{min-width:140px}#publicLanding .pl-links{gap:7px}}
 </style><div class="pl-wrap"><nav class="pl-nav"><div class="pl-brand"><span class="pl-mark">NR</span><span>NR BizPro</span></div><div class="pl-links"><a href="pricing.html">Pricing</a><a href="services.html">Services</a><a href="contact.html">Contact</a><button class="pl-web" id="plHms">HMS</button><button class="pl-web" id="plWebApp">Web App</button><button class="pl-login" id="plLogin">Login</button></div></nav><section class="pl-hero"><div><span class="pl-badge">UNIVERSAL BILLING & BUSINESS MANAGEMENT</span><h1>One platform.<br>Every business.</h1><p class="pl-sub">Create invoices, manage products and stock, track customers, and run your business from one simple workspace.</p><div class="pl-actions"><button class="pl-primary" id="plSignup">Create Business Account</button></div></div><div class="pl-card"><h3>Everything you need to bill</h3><div class="pl-feature"><span class="pl-check">✓</span><span>Fast billing with product and barcode support</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Products, pricing, GST and stock management</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Customer records, bill history and printing</span></div><div class="pl-feature"><span class="pl-check">✓</span><span>Business-specific tools for different categories</span></div></div></section>
+<section class="pl-showcase" aria-label="NR BizPro billing software highlights">
+  <article class="pl-showcase-card"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&amp;fit=crop&amp;w=900&amp;q=85" alt="Retail payment terminal and checkout counter" loading="lazy"><div class="pl-showcase-caption"><span class="pl-showcase-label">SMART BILLING</span><b>Fast Checkout & Invoices</b><span>Professional bills, GST and customer records in one workflow.</span></div></article>
+  <article class="pl-showcase-card"><img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&amp;fit=crop&amp;w=900&amp;q=85" alt="Business finance and accounting documents" loading="lazy"><div class="pl-showcase-caption"><span class="pl-showcase-label">BUSINESS CONTROL</span><b>Sales & Accounts</b><span>Track sales, payments, expenses and outstanding balances.</span></div></article>
+  <article class="pl-showcase-card"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&amp;fit=crop&amp;w=900&amp;q=85" alt="Business analytics dashboard on a computer screen" loading="lazy"><div class="pl-showcase-caption"><span class="pl-showcase-label">CLEAR INSIGHTS</span><b>Reports & Inventory</b><span>Understand stock movement and business performance at a glance.</span></div></article>
+</section>
 <section class="pl-section">
   <span class="pl-badge">BUILT FOR DIFFERENT BUSINESSES</span>
   <h2>One platform. Many business workflows.</h2>
@@ -180,6 +201,9 @@
 </section>
 <footer style="text-align:center;padding:0 0 20px;color:#718198;font-size:12px">© NR BizPro • Universal Billing & Business Management</footer></div>`;
     document.body.appendChild(landing);
+    const publicClock=document.getElementById('nrPublicClock');
+    const publicNav=landing.querySelector('.pl-links');
+    if(publicClock&&publicNav){publicClock.classList.add('pl-clock-inline');publicNav.insertBefore(publicClock,publicNav.firstChild);}
     const openAuth=mode=>{landing.remove();document.getElementById('authScreen')?.classList.remove('hidden');window.renderAuth?.(mode)};
     document.getElementById('plLogin').onclick=()=>openAuth('login');
     document.getElementById('plWebApp').onclick=()=>openAuth('login');
